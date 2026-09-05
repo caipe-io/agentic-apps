@@ -1,0 +1,13 @@
+# Default owners for repository changes.
+* @caipe-io/caipe-maintainers
+
+# Application runtimes
+/ui/apps/agentic-apps/finops/ @caipe-io/caipe-maintainers
+/ui/apps/agentic-apps/weather/ @caipe-io/caipe-maintainers
+/ui/apps/agentic-apps/litellm/ @caipe-io/caipe-maintainers
+/ui/apps/agentic-sdlc/ @caipe-io/caipe-maintainers
+
+# Runtime contracts and release automation
+/ui/apps/_lib/ @caipe-io/caipe-maintainers
+/build/ @caipe-io/caipe-maintainers
+/.github/ @caipe-io/caipe-maintainers

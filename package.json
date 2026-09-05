@@ -1,0 +1,19 @@
+{
+  "name": "@caipe/agentic-apps",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "CAIPE embedded agentic application runtimes.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "node scripts/check-syntax.mjs",
+    "smoke": "node scripts/smoke-test.mjs",
+    "test": "node --test $(find ui/apps -type f -name '*.test.mjs' -print)"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.28.0",
+    "zod": "3.25.76"
+  }
+}

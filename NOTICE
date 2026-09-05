@@ -1,0 +1,15 @@
+Third-party notices
+===================
+
+CAIPE Agentic Apps is distributed under the Apache License, Version 2.0.
+
+Weather Lab
+-----------
+Weather Lab uses Open-Meteo for geocoding, forecast, and air-quality data. Open-Meteo data is
+provided under CC BY 4.0. The runtime includes attribution and links to the applicable provider
+license and terms. Review the provider's current terms before commercial deployment.
+
+Runtime dependencies
+--------------------
+The application runtimes use the Model Context Protocol SDK and Zod. Their respective licenses
+and notices are included in the npm dependency metadata and must be retained in distributed images.
