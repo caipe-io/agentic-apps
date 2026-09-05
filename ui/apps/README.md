@@ -19,7 +19,6 @@ not an instruction channel. CAIPE gateway and CAS/OpenFGA remain the policy enfo
 | LiteLLM Operations | `agent-litellm-finops` | `litellm_app` | 3042 |
 | OSS Repo Report Card | `agent-oss-repo-report-card` | `oss_repo_report_card` | 3040 |
 | Jira Project Dashboard | `agent-jira-agent` | host-configured integration | 3041 |
-| Speakers Collective | `agent-speakers-collective` | host-configured integration | 3043 |
 
 The `/example` route is a static, network-free fixture for design and contract checks. It must not
 be used for operational decisions.

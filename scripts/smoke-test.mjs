@@ -7,7 +7,6 @@ const apps = [
   ["litellm", 3042, "ui/apps/agentic-apps/litellm/server.mjs", "LITELLM_APP_PORT", "AGENTIC_APP_LITELLM_JWT_DISABLED"],
   ["oss-repo-management", 3040, "ui/apps/agentic-apps/oss-repo-management/server.mjs", "OSS_REPO_MANAGEMENT_APP_PORT", "AGENTIC_APP_OSS_REPO_MANAGEMENT_JWT_DISABLED"],
   ["jira-project-dashboard", 3041, "ui/apps/agentic-apps/jira-project-dashboard/server.mjs", "JIRA_PROJECT_DASHBOARD_APP_PORT", "AGENTIC_APP_JIRA_PROJECT_DASHBOARD_JWT_DISABLED"],
-  ["speakers-collective", 3043, "ui/apps/agentic-apps/speakers-collective/server.mjs", "SPEAKERS_COLLECTIVE_APP_PORT", "AGENTIC_APP_SPEAKERS_COLLECTIVE_JWT_DISABLED"],
 ];
 
 const children = [];
