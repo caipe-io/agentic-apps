@@ -4,10 +4,10 @@
 
 import { createServer } from "node:http";
 
-import { handleAppMcpRequest } from "../_lib/app-mcp-server.mjs";
-import { renderAgenticAppConversationClient } from "../_lib/conversation-client.mjs";
-import { createRequiredAgenticAppJwtVerifier } from "../_lib/jwt-verify.mjs";
-import { authorizeAgenticAppRuntimeRequest } from "../_lib/runtime-authorization.mjs";
+import { handleAppMcpRequest } from "../../_lib/app-mcp-server.mjs";
+import { renderAgenticAppConversationClient } from "../../_lib/conversation-client.mjs";
+import { createRequiredAgenticAppJwtVerifier } from "../../_lib/jwt-verify.mjs";
+import { authorizeAgenticAppRuntimeRequest } from "../../_lib/runtime-authorization.mjs";
 import { registerAgenticSdlcMcpTools } from "./mcp.mjs";
 
 const port = Number(process.env.AGENTIC_SDLC_APP_PORT ?? "3030");

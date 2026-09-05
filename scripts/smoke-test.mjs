@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 const apps = [
   ["finops", 3010, "ui/apps/agentic-apps/finops/server.mjs", "FINOPS_APP_PORT", "AGENTIC_APP_FINOPS_JWT_DISABLED"],
   ["weather", 3020, "ui/apps/agentic-apps/weather/server.mjs", "WEATHER_APP_PORT", "AGENTIC_APP_WEATHER_JWT_DISABLED"],
-  ["agentic-sdlc", 3030, "ui/apps/agentic-sdlc/server.mjs", "AGENTIC_SDLC_APP_PORT", "AGENTIC_APP_AGENTIC_SDLC_JWT_DISABLED"],
+  ["agentic-sdlc", 3030, "ui/apps/agentic-apps/agentic-sdlc/server.mjs", "AGENTIC_SDLC_APP_PORT", "AGENTIC_APP_AGENTIC_SDLC_JWT_DISABLED"],
   ["litellm", 3042, "ui/apps/agentic-apps/litellm/server.mjs", "LITELLM_APP_PORT", "AGENTIC_APP_LITELLM_JWT_DISABLED"],
   ["oss-repo-management", 3040, "ui/apps/agentic-apps/oss-repo-management/server.mjs", "OSS_REPO_MANAGEMENT_APP_PORT", "AGENTIC_APP_OSS_REPO_MANAGEMENT_JWT_DISABLED"],
   ["jira-project-dashboard", 3041, "ui/apps/agentic-apps/jira-project-dashboard/server.mjs", "JIRA_PROJECT_DASHBOARD_APP_PORT", "AGENTIC_APP_JIRA_PROJECT_DASHBOARD_JWT_DISABLED"],

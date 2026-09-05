@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { mcpJson } from "../_lib/app-mcp-server.mjs";
+import { mcpJson } from "../../_lib/app-mcp-server.mjs";
 
 export function registerAgenticSdlcMcpTools(server, { getRepositorySnapshot, getRuntimeContract }) {
   server.registerTool(

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import test from "node:test";
 
-import { registerAgenticSdlcMcpTools } from "../agentic-sdlc/mcp.mjs";
+import { registerAgenticSdlcMcpTools } from "../agentic-apps/agentic-sdlc/mcp.mjs";
 import { registerFinOpsMcpTools } from "../agentic-apps/finops/mcp.mjs";
 import { registerLiteLlmMcpTools } from "../agentic-apps/litellm/mcp.mjs";
 import { sanitizeLiteLlmModelInfo } from "../agentic-apps/litellm/model-info.mjs";
