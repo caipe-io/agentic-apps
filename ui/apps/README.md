@@ -4,6 +4,11 @@ The runtimes in this directory implement the CAIPE embedded-app contract. Every 
 reviewable registration and manifest; source-backed interactive apps additionally use an
 app-agent-MCP triplet:
 
+> [!CAUTION]
+> These runtimes only work as CAIPE agentic apps. They must be deployed behind the CAIPE gateway
+> with CAIPE identity, authorization, agent, MCP, secret, and host-popup configuration. They are
+> not designed or supported to run as standalone applications outside CAIPE.
+
 1. `manifest.mjs` declares the mount path, routes, scopes, assistant binding, and capabilities.
 2. `deploy/caipe/agentic-app.json` registers the remote runtime, assistant popup binding, and readiness endpoint.
 3. `deploy/caipe/agent.yaml` binds the dedicated agent to an allowlisted MCP tool set.

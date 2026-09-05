@@ -2,12 +2,19 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
-Standalone, source-backed application runtimes for the [CAIPE](https://github.com/caipe-io/ai-platform-engineering) platform.
+Source-backed agentic-app runtimes for the [CAIPE](https://github.com/caipe-io/ai-platform-engineering) platform.
 The source-backed runtimes serve their dashboard, readiness and liveness endpoints, context endpoint,
 and app-scoped MCP endpoint;
 Jira Project Dashboard currently uses a host-configured agent integration and is included here so
 the runtime image has one source boundary. CAIPE deployment configuration
 remains in the separate `platform-apps-deployment` repository.
+
+> [!WARNING]
+> These applications are CAIPE agentic-app runtimes. They are intended to run inside the CAIPE
+> agentic-apps environment and are not standalone applications. Running a server or container by
+> itself does not provide the CAIPE gateway, user identity, authorization policy, agent bindings,
+> MCP services, secrets, or host popup integration that the apps require. They are not supported
+> for independent deployment or direct unauthenticated use.
 
 ## Included applications
 
