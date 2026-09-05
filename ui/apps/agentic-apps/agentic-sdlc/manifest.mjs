@@ -11,10 +11,11 @@ export const AGENTIC_SDLC_MANIFEST = {
   runtime: {
     kind: "proxied-next-zone",
     mountPath: "/apps/agentic-sdlc",
+    chrome: "iframe",
   },
   ui: {
     contractVersion: "1.0",
-    surface: "standalone",
+    surface: "hosted",
     routes: ["/", "/:owner/:repo", "/:owner/:repo/epics/:epicId"],
   },
   authorization: { resourceType: "agentic_app", launchAction: "use" },
@@ -23,7 +24,7 @@ export const AGENTIC_SDLC_MANIFEST = {
     showInTopNav: true,
     navOrder: 5,
     homeEligible: true,
-    overlays: ["chat"],
+    overlays: ["chat", "generative-ui"],
   },
   access: {
     requiredRoles: ["user"],
@@ -91,7 +92,7 @@ export const AGENTIC_SDLC_MANIFEST = {
     },
   ],
   health: {
-    endpoint: "/healthz",
+    endpoint: "/health/ready",
     timeoutMs: 2000,
     blockLaunchWhen: ["degraded", "unreachable"],
   },

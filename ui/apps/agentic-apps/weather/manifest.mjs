@@ -118,7 +118,7 @@ export const WEATHER_MANIFEST = {
     eventChannels: ["weather.forecast.updated", "weather.agent.updated"],
   },
   health: {
-    endpoint: "/healthz",
+    endpoint: "/health/ready",
     timeoutMs: 1500,
     blockLaunchWhen: ["degraded", "unreachable"],
   },

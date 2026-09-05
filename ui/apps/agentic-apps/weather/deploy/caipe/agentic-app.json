@@ -1,0 +1,20 @@
+{
+  "id": "weather",
+  "name": "Weather Lab",
+  "description": "Forecast, air quality, alerts, and outdoor guidance.",
+  "runtime": {
+    "type": "remote",
+    "target": "http://agentic-app-weather:3020",
+    "mountPath": "/apps/weather"
+  },
+  "visibility": "private",
+  "createdBy": "deployment-owner",
+  "requiredScopes": ["weather:read", "weather:agent", "agents:invoke"],
+  "assistant": {
+    "agentId": "agent-weather-agent",
+    "name": "Weather Assistant",
+    "label": "Ask Weather",
+    "contextEndpoint": "/api/context"
+  },
+  "healthEndpoint": "/health/ready"
+}

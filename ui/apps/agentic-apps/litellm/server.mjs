@@ -33,7 +33,7 @@ const server = createServer(async (request, response) => {
   const basePath = resolveAgenticAppRuntimeBasePath(request.headers, configuredBasePath, "litellm");
   const surface = resolveAgenticAppSurface(request.headers);
 
-  if (url.pathname === "/healthz") {
+  if (["/health/live", "/health/ready", "/healthz"].includes(url.pathname)) {
     sendJson(response, 200, {
       ok: true,
       app: "litellm",
@@ -80,6 +80,24 @@ const server = createServer(async (request, response) => {
     sendJson(response, authorization.status, {
       error: authorization.error,
       requiredScope: authorization.requiredScope,
+    });
+    return;
+  }
+
+  if (url.pathname === "/api/context" && request.method === "GET") {
+    sendJson(response, 200, {
+      version: "1.0",
+      appId: "litellm",
+      route: "/apps/litellm",
+      title: "LiteLLM Operations",
+      agentId,
+      mcpServerId: "litellm_app",
+      domainAnswersRequireMcp: true,
+      suggestedPrompts: [
+        "Explain the biggest LiteLLM spend and token drivers.",
+        "Which users or models should we investigate first?",
+        "Create a safe plan to reduce LLM spend.",
+      ],
     });
     return;
   }
@@ -476,6 +494,9 @@ function renderDashboard({ compact, basePath, appPath }) {
           context: {
             route: appPath,
             title: "LiteLLM operations dashboard",
+            agentId: configuredAgentId,
+            mcpServerId: "litellm_app",
+            domainAnswersRequireMcp: true,
             summary: "LiteLLM spend " + formatUsd(report.totalSpend) + ", " + compact(report.totalTokens) + " tokens, and " + compact(report.totalRequests) + " requests.",
             selection: JSON.stringify({ ...report, contributors: report.contributors.slice(0, 10) }).slice(0, 8000),
             resourceRefs: [
@@ -489,7 +510,7 @@ function renderDashboard({ compact, basePath, appPath }) {
               "Create a safe plan to reduce LLM spend.",
             ],
           },
-        }, "*");
+        }, window.location.origin);
       }
 
       function openAssistant() {
@@ -498,7 +519,7 @@ function renderDashboard({ compact, basePath, appPath }) {
           type: "caipe.agenticApp.assistant.open.v1",
           version: "1.0",
           appId: "litellm",
-        }, "*");
+        }, window.location.origin);
       }
 
       function setStatus(title, detail) { document.getElementById("status").innerHTML = "<strong>" + escapeHtml(title) + "</strong> · " + escapeHtml(detail); }

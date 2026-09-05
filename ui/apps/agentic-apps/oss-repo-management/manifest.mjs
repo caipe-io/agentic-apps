@@ -116,7 +116,7 @@ export const OSS_REPO_MANAGEMENT_MANIFEST = {
     eventChannels: ["oss-repo-management.dashboard.updated", "oss-repo-management.agent.updated"],
   },
   health: {
-    endpoint: "/healthz",
+    endpoint: "/health/ready",
     timeoutMs: 1500,
     blockLaunchWhen: ["degraded", "unreachable"],
   },

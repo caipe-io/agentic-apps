@@ -37,9 +37,22 @@ try {
       failures.push(`${entry.name}: /healthz did not become ready\n${entry.getOutput()}`);
       continue;
     }
+    const readiness = await fetch(`http://127.0.0.1:${entry.port}/health/ready`);
+    if (!readiness.ok) failures.push(`${entry.name}: /health/ready returned HTTP ${readiness.status}`);
+    const context = await fetch(`http://127.0.0.1:${entry.port}/api/context`);
+    if (!context.ok) failures.push(`${entry.name}: /api/context returned HTTP ${context.status}`);
     const page = await fetch(`http://127.0.0.1:${entry.port}/`);
-    if (!page.ok) failures.push(`${entry.name}: / returned HTTP ${page.status}`);
-    else console.log(`${entry.name}: health and root route passed`);
+    if (!page.ok) {
+      failures.push(`${entry.name}: / returned HTTP ${page.status}`);
+    } else {
+      const html = await page.text();
+      for (const messageType of ["caipe.agenticApp.context.v1", "caipe.agenticApp.assistant.open.v1"]) {
+        if (!html.includes(messageType)) failures.push(`${entry.name}: missing ${messageType}`);
+      }
+      if (!failures.some((failure) => failure.startsWith(`${entry.name}:`))) {
+        console.log(`${entry.name}: readiness, context, root, and popup contract passed`);
+      }
+    }
   }
 } finally {
   for (const { child } of children) child.kill("SIGTERM");

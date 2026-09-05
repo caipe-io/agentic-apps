@@ -1,0 +1,20 @@
+{
+  "id": "oss-repo-management",
+  "name": "OSS Repo Report Card",
+  "description": "Source-backed repository health and OSS readiness evidence.",
+  "runtime": {
+    "type": "remote",
+    "target": "http://agentic-app-oss-repo-management:3040",
+    "mountPath": "/apps/oss-repo-management"
+  },
+  "visibility": "private",
+  "createdBy": "deployment-owner",
+  "requiredScopes": ["oss-repo-management:read", "oss-repo-management:agent:invoke", "agents:invoke"],
+  "assistant": {
+    "agentId": "agent-oss-repo-report-card",
+    "name": "Repo Report Card Assistant",
+    "label": "Ask Report Card",
+    "contextEndpoint": "/api/context"
+  },
+  "healthEndpoint": "/health/ready"
+}

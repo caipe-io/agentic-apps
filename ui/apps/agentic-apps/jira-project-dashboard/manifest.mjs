@@ -90,7 +90,7 @@ export const JIRA_PROJECT_DASHBOARD_MANIFEST = {
     eventChannels: ["jira-project-dashboard.dashboard.updated", "jira-project-dashboard.agent.updated"],
   },
   health: {
-    endpoint: "/healthz",
+    endpoint: "/health/ready",
     timeoutMs: 1500,
     blockLaunchWhen: ["degraded", "unreachable"],
   },

@@ -1,0 +1,20 @@
+{
+  "id": "litellm",
+  "name": "LiteLLM Operations",
+  "description": "LiteLLM spend, token, request, model, and virtual-key operations.",
+  "runtime": {
+    "type": "remote",
+    "target": "http://agentic-app-litellm:3042",
+    "mountPath": "/apps/litellm"
+  },
+  "visibility": "private",
+  "createdBy": "deployment-owner",
+  "requiredScopes": ["litellm:read", "litellm:agent:invoke", "agents:invoke"],
+  "assistant": {
+    "agentId": "agent-litellm-finops",
+    "name": "LiteLLM Assistant",
+    "label": "Ask LiteLLM",
+    "contextEndpoint": "/api/context"
+  },
+  "healthEndpoint": "/health/ready"
+}

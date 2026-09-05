@@ -7,6 +7,7 @@ import { createServer } from "node:http";
 import { handleAppMcpRequest } from "../../_lib/app-mcp-server.mjs";
 import { renderAgenticAppConversationClient } from "../../_lib/conversation-client.mjs";
 import { createRequiredAgenticAppJwtVerifier } from "../../_lib/jwt-verify.mjs";
+import { renderMicrofrontendClient } from "../../_lib/microfrontend-client.mjs";
 import { authorizeAgenticAppRuntimeRequest } from "../../_lib/runtime-authorization.mjs";
 import { registerAgenticSdlcMcpTools } from "./mcp.mjs";
 
@@ -23,7 +24,7 @@ export function createAgenticSdlcReferenceServer() {
   return createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
 
-    if (url.pathname === "/healthz") {
+    if (["/health/live", "/health/ready", "/healthz"].includes(url.pathname)) {
       sendJson(response, 200, {
         ok: true,
         app: "agentic-sdlc",
@@ -67,6 +68,24 @@ export function createAgenticSdlcReferenceServer() {
       sendJson(response, authorization.status, {
         error: authorization.error,
         requiredScope: authorization.requiredScope,
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/context" && request.method === "GET") {
+      sendJson(response, 200, {
+        version: "1.0",
+        appId: "agentic-sdlc",
+        route: "/apps/agentic-sdlc",
+        title: "Agentic SDLC",
+        agentId: "agent-agentic-sdlc",
+        mcpServerId: "agentic_sdlc",
+        domainAnswersRequireMcp: true,
+        suggestedPrompts: [
+          "Summarize delivery risk from this SDLC dashboard.",
+          "Draft next engineering actions.",
+          "Explain which repository signal is missing.",
+        ],
       });
       return;
     }
@@ -209,13 +228,16 @@ export function renderAgenticSdlcHome(authorization = null) {
           <input id="agentId" aria-label="Agent id" value="agent-agentic-sdlc" />
           <input id="repoInput" aria-label="Repository" value="current workspace" />
           <button id="loadDashboard">Pull Delivery Dashboard</button>
+          <button id="openAssistant" type="button">Open Agentic SDLC Assistant</button>
         </div>
         <div id="dashboard" class="dashboard">Ask the custom <code>agentic-sdlc</code> CAIPE agent for a delivery-dashboard summary.</div>
       </section>
       ${renderAgenticAppConversationClient()}
+      ${renderMicrofrontendClient("agentic-sdlc")}
       <script>
         const dashboard = document.getElementById("dashboard");
         document.getElementById("loadDashboard").addEventListener("click", pullDeliveryDashboard);
+        document.getElementById("openAssistant").addEventListener("click", openAssistant);
 
         async function pullDeliveryDashboard() {
           const agentId = document.getElementById("agentId").value.trim() || "agent-agentic-sdlc";
@@ -254,6 +276,9 @@ export function renderAgenticSdlcHome(authorization = null) {
             context: {
               route: "/",
               title,
+              agentId,
+              mcpServerId: "agentic_sdlc",
+              domainAnswersRequireMcp: true,
               summary: selection.slice(0, 500),
               selection: selection.slice(0, 3000),
               resourceRefs: [{ kind: "agent", id: agentId }],
@@ -266,6 +291,15 @@ export function renderAgenticSdlcHome(authorization = null) {
           }, window.location.origin);
         }
 
+        function openAssistant() {
+          window.parent?.postMessage({
+            type: "caipe.agenticApp.assistant.open.v1",
+            version: "1.0",
+            appId: "agentic-sdlc",
+            prompt: "Summarize delivery risk from the current SDLC dashboard.",
+          }, window.location.origin);
+        }
+
         window.parent?.postMessage({
           type: "caipe.agenticApp.context.v1",
           version: "1.0",
@@ -273,6 +307,9 @@ export function renderAgenticSdlcHome(authorization = null) {
           context: {
             route: "/",
             title: "Agentic SDLC",
+            agentId: "agent-agentic-sdlc",
+            mcpServerId: "agentic_sdlc",
+            domainAnswersRequireMcp: true,
             summary: "User is viewing the external Agentic SDLC reference runtime.",
             suggestedPrompts: ["Summarize this repository workflow"]
           }

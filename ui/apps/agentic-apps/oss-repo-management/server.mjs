@@ -44,7 +44,7 @@ const server = createServer(async (request, response) => {
   );
   const surface = resolveAgenticAppSurface(request.headers);
 
-  if (url.pathname === "/healthz") {
+  if (["/health/live", "/health/ready", "/healthz"].includes(url.pathname)) {
     sendJson(response, 200, {
       ok: true,
       app: "oss-repo-management",
@@ -91,6 +91,24 @@ const server = createServer(async (request, response) => {
     sendJson(response, authorization.status, {
       error: authorization.error,
       requiredScope: authorization.requiredScope,
+    });
+    return;
+  }
+
+  if (url.pathname === "/api/context" && request.method === "GET") {
+    sendJson(response, 200, {
+      version: "1.0",
+      appId: "oss-repo-management",
+      route: "/apps/oss-repo-management",
+      title: "OSS Repo Report Card",
+      agentId: defaultGithubAgentId || "agent-oss-repo-report-card",
+      mcpServerId: "oss_repo_report_card",
+      domainAnswersRequireMcp: true,
+      suggestedPrompts: [
+        "Who are the maintainers or CODEOWNERS?",
+        "What needs maintainer attention in this report card?",
+        "Summarize foundation-readiness gaps.",
+      ],
     });
     return;
   }
@@ -1204,6 +1222,9 @@ function renderDashboard({ compact, basePath, authorization }) {
           context: {
             route: "/apps/oss-repo-management",
             title: "OSS Repo Report Card · " + dashboard.repo,
+            agentId: "agent-oss-repo-report-card",
+            mcpServerId: "oss_repo_report_card",
+            domainAnswersRequireMcp: true,
             summary: dashboard.summary + " Report generated " + (dashboard.generatedAt || "at an unknown time") + ". Context shared because: " + reason + ".",
             selection: JSON.stringify(snapshot),
             resourceRefs: [
@@ -1218,7 +1239,7 @@ function renderDashboard({ compact, basePath, authorization }) {
               "Summarize foundation-readiness gaps and recommended actions.",
             ],
           },
-        }, "*");
+        }, window.location.origin);
       }
 
       function downloadMarkdownReport() {
@@ -1282,7 +1303,7 @@ function renderDashboard({ compact, basePath, authorization }) {
           type: "caipe.agenticApp.assistant.open.v1",
           version: "1.0",
           appId: "oss-repo-management",
-        }, "*");
+        }, window.location.origin);
       }
 
       function persistRun(dashboard) {

@@ -39,7 +39,7 @@ const server = createServer(async (request, response) => {
   const basePath = resolveAgenticAppRuntimeBasePath(request.headers, configuredBasePath, "finops");
   const surface = resolveAgenticAppSurface(request.headers);
 
-  if (url.pathname === "/healthz") {
+  if (["/health/live", "/health/ready", "/healthz"].includes(url.pathname)) {
     sendJson(response, 200, {
       ok: true,
       app: "finops",
@@ -85,6 +85,24 @@ const server = createServer(async (request, response) => {
     sendJson(response, authorization.status, {
       error: authorization.error,
       requiredScope: authorization.requiredScope,
+    });
+    return;
+  }
+
+  if (url.pathname === "/api/context" && request.method === "GET") {
+    sendJson(response, 200, {
+      version: "1.0",
+      appId: "finops",
+      route: "/apps/finops",
+      title: "FinOps Command Center",
+      agentId: defaultAgentId,
+      mcpServerId: "finops_app",
+      domainAnswersRequireMcp: true,
+      suggestedPrompts: [
+        "Explain the biggest cost drivers in this FinOps context.",
+        "Which anomaly should a platform engineer investigate first?",
+        "Create a safe optimization action plan.",
+      ],
     });
     return;
   }
@@ -3260,6 +3278,9 @@ function renderDashboard({ compact, basePath, appPath }) {
           context: {
             route: appPath,
             title: "FinOps Command Center",
+            agentId: document.getElementById("agentId").value.trim() || defaultAgents[dataSource] || ${JSON.stringify(defaultAgentId)},
+            mcpServerId: "finops_app",
+            domainAnswersRequireMcp: true,
             summary,
             selection: (filteredContext + "\\n\\n" + state.lastAgentMessage).trim().slice(0, 3000),
             resourceRefs: [
@@ -3272,7 +3293,7 @@ function renderDashboard({ compact, basePath, appPath }) {
               dataSource === "litellm" ? "Create an action plan to reduce high LLM spend safely." : "Which anomaly should a platform engineer investigate first?",
             ],
           },
-        }, "*");
+        }, window.location.origin);
         document.getElementById("assistantStatus").textContent =
           "Shared dashboard context to FinOps chat from " + source + ".";
       }
@@ -3283,7 +3304,7 @@ function renderDashboard({ compact, basePath, appPath }) {
           type: "caipe.agenticApp.assistant.open.v1",
           version: "1.0",
           appId: "finops",
-        }, "*");
+        }, window.location.origin);
         document.getElementById("assistantStatus").textContent =
           "Opened Ask FinOps with the current dashboard context.";
       }

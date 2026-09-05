@@ -1,0 +1,20 @@
+{
+  "id": "jira-project-dashboard",
+  "name": "Jira Project Dashboard",
+  "description": "Jira project health, blockers, risks, and owner actions.",
+  "runtime": {
+    "type": "remote",
+    "target": "http://agentic-app-jira-project-dashboard:3041",
+    "mountPath": "/apps/jira-project-dashboard"
+  },
+  "visibility": "private",
+  "createdBy": "deployment-owner",
+  "requiredScopes": ["jira-project-dashboard:read", "jira-project-dashboard:agent:invoke", "agents:invoke"],
+  "assistant": {
+    "agentId": "agent-jira-agent",
+    "name": "Jira Ops Assistant",
+    "label": "Ask Jira Ops",
+    "contextEndpoint": "/api/context"
+  },
+  "healthEndpoint": "/health/ready"
+}

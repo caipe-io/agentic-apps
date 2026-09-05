@@ -117,7 +117,7 @@ export const LITELLM_MANIFEST = {
     eventChannels: ["litellm.usage.updated", "litellm.agent.analysis.completed"],
   },
   health: {
-    endpoint: "/healthz",
+    endpoint: "/health/ready",
     timeoutMs: 1500,
     blockLaunchWhen: ["degraded", "unreachable"],
   },

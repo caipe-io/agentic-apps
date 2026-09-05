@@ -1,0 +1,20 @@
+{
+  "id": "finops",
+  "name": "FinOps Command Center",
+  "description": "AWS and LiteLLM cost and usage analysis.",
+  "runtime": {
+    "type": "remote",
+    "target": "http://agentic-app-finops:3010",
+    "mountPath": "/apps/finops"
+  },
+  "visibility": "private",
+  "createdBy": "deployment-owner",
+  "requiredScopes": ["finops:read", "finops:agent:invoke", "agents:invoke"],
+  "assistant": {
+    "agentId": "agent-finops",
+    "name": "FinOps Assistant",
+    "label": "Ask FinOps",
+    "contextEndpoint": "/api/context"
+  },
+  "healthEndpoint": "/health/ready"
+}

@@ -3,7 +3,8 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 Standalone, source-backed application runtimes for the [CAIPE](https://github.com/caipe-io/ai-platform-engineering) platform.
-The source-backed runtimes serve their dashboard, health endpoint, and app-scoped MCP endpoint;
+The source-backed runtimes serve their dashboard, readiness and liveness endpoints, context endpoint,
+and app-scoped MCP endpoint;
 Jira Project Dashboard currently uses a host-configured agent integration and is included here so
 the runtime image has one source boundary. CAIPE deployment configuration
 remains in the separate `platform-apps-deployment` repository.
@@ -41,7 +42,7 @@ npm run smoke
 
 The smoke test runs all six servers with JWT verification disabled on loopback only. Production
 deployments must keep forwarded-bearer validation enabled and configure the corresponding
-`deploy/caipe/agent.yaml` and `mcp-server.yaml` files.
+`deploy/caipe/agentic-app.json`, `agent.yaml`, and `mcp-server.yaml` files where the app owns its MCP.
 
 ## Container image
 

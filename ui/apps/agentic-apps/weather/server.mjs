@@ -32,7 +32,7 @@ const server = createServer(async (request, response) => {
   const basePath = resolveAgenticAppRuntimeBasePath(request.headers, configuredBasePath, "weather");
   const surface = resolveAgenticAppSurface(request.headers);
 
-  if (url.pathname === "/healthz") {
+  if (["/health/live", "/health/ready", "/healthz"].includes(url.pathname)) {
     sendJson(response, 200, {
       ok: true,
       app: "weather",
@@ -80,6 +80,24 @@ const server = createServer(async (request, response) => {
     sendJson(response, authorization.status, {
       error: authorization.error,
       requiredScope: authorization.requiredScope,
+    });
+    return;
+  }
+
+  if (url.pathname === "/api/context" && request.method === "GET") {
+    sendJson(response, 200, {
+      version: "1.0",
+      appId: "weather",
+      route: "/apps/weather",
+      title: "Weather Lab",
+      agentId: defaultAgentId,
+      mcpServerId: "weather_app",
+      domainAnswersRequireMcp: true,
+      suggestedPrompts: [
+        "How is my day based on the current weather context?",
+        "Explain active weather and air quality risks.",
+        "Find the best outdoor or travel window.",
+      ],
     });
     return;
   }
@@ -1148,7 +1166,7 @@ function renderDashboard({ compact, basePath, appPath }) {
               "Summarize how this forecast affects outdoor work.",
             ],
           },
-        }, "*");
+        }, window.location.origin);
         setRunButtonBusy(false);
       }
 
@@ -1832,6 +1850,9 @@ function renderDashboard({ compact, basePath, appPath }) {
           context: {
             route: appPath,
             title: "Live weather for " + forecast.city,
+            agentId: defaultAgentId,
+            mcpServerId: "weather_app",
+            domainAnswersRequireMcp: true,
             summary: forecast.dailyGuidance?.howIsMyDay || forecast.current.condition + ", " + forecast.current.temperatureC + "C",
             selection: JSON.stringify({ ...compactForecast(forecast), selectedDay }).slice(0, 5000),
             resourceRefs: [
@@ -1844,7 +1865,7 @@ function renderDashboard({ compact, basePath, appPath }) {
               "Find the best outdoor or travel window.",
             ],
           },
-        }, "*");
+        }, window.location.origin);
       }
 
       function openAssistantChat() {
@@ -1854,7 +1875,7 @@ function renderDashboard({ compact, basePath, appPath }) {
           version: "1.0",
           appId: "weather",
           prompt: "How is my day based on the current forecast, air pollution, and national weather alerts?",
-        }, "*");
+        }, window.location.origin);
       }
 
       function compactForecast(forecast) {

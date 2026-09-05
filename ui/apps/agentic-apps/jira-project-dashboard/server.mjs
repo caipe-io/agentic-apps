@@ -31,7 +31,7 @@ const server = createServer(async (request, response) => {
   );
   const surface = resolveAgenticAppSurface(request.headers);
 
-  if (url.pathname === "/healthz") {
+  if (["/health/live", "/health/ready", "/healthz"].includes(url.pathname)) {
     sendJson(response, 200, {
       ok: true,
       app: "jira-project-dashboard",
@@ -61,6 +61,23 @@ const server = createServer(async (request, response) => {
     sendJson(response, authorization.status, {
       error: authorization.error,
       requiredScope: authorization.requiredScope,
+    });
+    return;
+  }
+
+  if (url.pathname === "/api/context" && request.method === "GET") {
+    sendJson(response, 200, {
+      version: "1.0",
+      appId: "jira-project-dashboard",
+      route: "/apps/jira-project-dashboard",
+      title: "Jira Project Dashboard",
+      agentId: defaultJiraAgentId,
+      source: "configured-agent",
+      suggestedPrompts: [
+        "What is blocking this Jira project?",
+        "Which stories are at risk?",
+        "Summarize the owner actions for this project.",
+      ],
     });
     return;
   }
@@ -823,18 +840,29 @@ function renderDashboard({ compact, basePath }) {
         if (!window.parent || window.parent === window || !state.dashboard) return;
         window.parent.postMessage({
           type: "caipe.agenticApp.context.v1",
+          version: "1.0",
           appId: "jira-project-dashboard",
           reason,
-          context: state.dashboard,
+          context: {
+            ...state.dashboard,
+            route: "/apps/jira-project-dashboard",
+            title: "Jira Project Dashboard",
+            agentId: "agent-jira-agent",
+            domainAnswersRequireMcp: true,
+          },
           resourceRefs: [{ kind: "agent", id: "jira-agent" }, { kind: "schema", id: "jira_project.dashboard.v1" }],
           suggestedPrompts: ["What is blocking this Jira project?", "Which stories are at risk?"],
-        }, "*");
+        }, window.location.origin);
       }
 
       function openAssistantChat() {
         publishAssistantContext("open-chat");
         if (!window.parent || window.parent === window) return;
-        window.parent.postMessage({ type: "caipe.agenticApp.assistant.open.v1", appId: "jira-project-dashboard" }, "*");
+        window.parent.postMessage({
+          type: "caipe.agenticApp.assistant.open.v1",
+          version: "1.0",
+          appId: "jira-project-dashboard",
+        }, window.location.origin);
       }
 
       function persistRun(dashboard) {

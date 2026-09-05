@@ -125,7 +125,7 @@ export const FINOPS_MANIFEST = {
     eventChannels: ["finops.cost.updated", "finops.litellm.updated", "finops.agent.analysis.completed"],
   },
   health: {
-    endpoint: "/healthz",
+    endpoint: "/health/ready",
     timeoutMs: 1500,
     blockLaunchWhen: ["degraded", "unreachable"],
   },
