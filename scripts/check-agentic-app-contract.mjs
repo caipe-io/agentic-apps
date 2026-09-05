@@ -7,7 +7,7 @@ const apps = [
   ["agentic-sdlc", "Agentic SDLC", "/apps/agentic-sdlc"],
   ["finops", "FinOps Command Center", "/apps/finops"],
   ["weather", "Weather Lab", "/apps/weather"],
-  ["litellm", "LiteLLM Usage Dashboard", "/apps/litellm-usage-dashboard"],
+  ["litellm", "LiteLLM Usage Dashboard", "/apps/litellm"],
   ["oss-repo-management", "OSS Repo Report Card", "/apps/oss-repo-management"],
   ["jira-project-dashboard", "Jira Project Dashboard", "/apps/jira-project-dashboard"],
 ];

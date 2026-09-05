@@ -8,7 +8,7 @@ export const LITELLM_MANIFEST = {
   apiVersion: "1.0",
   runtime: {
     kind: "proxied-next-zone",
-    mountPath: "/apps/litellm-usage-dashboard",
+    mountPath: "/apps/litellm",
     chrome: "iframe",
   },
   ui: {

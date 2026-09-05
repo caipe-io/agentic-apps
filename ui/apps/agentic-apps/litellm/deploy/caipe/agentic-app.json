@@ -5,7 +5,7 @@
   "runtime": {
     "type": "remote",
     "target": "http://agentic-app-litellm:3042",
-    "mountPath": "/apps/litellm-usage-dashboard"
+    "mountPath": "/apps/litellm"
   },
   "visibility": "private",
   "createdBy": "deployment-owner",

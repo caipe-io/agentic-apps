@@ -23,7 +23,7 @@ remains in the separate `platform-apps-deployment` repository.
 | FinOps Command Center | `/apps/finops` | 3010 | `agent-finops` | AWS and LiteLLM cost/usage workflows |
 | Weather Lab | `/apps/weather` | 3020 | `agent-weather-agent` | Open-Meteo forecast and air-quality data |
 | Agentic SDLC | `/apps/agentic-sdlc` | 3030 | `agent-agentic-sdlc` | Repository delivery and ship-loop workflows |
-| LiteLLM Usage Dashboard | `/apps/litellm-usage-dashboard` | 3042 | `agent-litellm-finops` | LiteLLM usage, spend, model, and key operations |
+| LiteLLM Usage Dashboard | `/apps/litellm` | 3042 | `agent-litellm-finops` | LiteLLM usage, spend, model, and key operations |
 | OSS Repo Report Card | `/apps/oss-repo-management` | 3040 | `agent-oss-repo-report-card` | Repository health and OSS readiness evidence |
 | Jira Project Dashboard | `/apps/jira-project-dashboard` | 3041 | `agent-jira-agent` | Jira project and delivery metrics |
 

@@ -17,7 +17,7 @@ import { sanitizeLiteLlmModelInfo } from "./model-info.mjs";
 
 const port = Number(process.env.LITELLM_APP_PORT ?? "3042");
 const configuredBasePath = normalizeBasePath(
-  process.env.LITELLM_APP_BASE_PATH ?? "/apps/litellm-usage-dashboard",
+  process.env.LITELLM_APP_BASE_PATH ?? "/apps/litellm",
 );
 const agentId = String(process.env.LITELLM_AGENT_ID ?? "agent-litellm-finops").trim();
 const litellmApiUrl = String(process.env.LITELLM_API_URL ?? "").replace(/\/+$/, "");
@@ -90,7 +90,7 @@ const server = createServer(async (request, response) => {
     sendJson(response, 200, {
       version: "1.0",
       appId: "litellm",
-      route: "/apps/litellm-usage-dashboard",
+      route: "/apps/litellm",
       title: "LiteLLM Usage Dashboard",
       agentId,
       mcpServerId: "litellm_app",
@@ -565,9 +565,9 @@ function buildLiteLlmResponseFormat() {
 }
 
 function normalizeBasePath(value) {
-  const normalized = String(value || "/apps/litellm-usage-dashboard").trim();
+  const normalized = String(value || "/apps/litellm").trim();
   const withLeadingSlash = normalized.startsWith("/") ? normalized : `/${normalized}`;
-  return withLeadingSlash.replace(/\/+$/, "") || "/apps/litellm-usage-dashboard";
+  return withLeadingSlash.replace(/\/+$/, "") || "/apps/litellm";
 }
 
 function sendJson(response, status, payload) {
