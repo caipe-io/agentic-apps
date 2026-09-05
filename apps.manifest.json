@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.0",
+  "apps": [
+    {
+      "id": "finops",
+      "displayName": "FinOps Command Center",
+      "sourcePath": "ui/apps/agentic-apps/finops",
+      "serverPath": "ui/apps/agentic-apps/finops/server.mjs",
+      "image": "agentic-apps-finops",
+      "port": 3010
+    },
+    {
+      "id": "weather",
+      "displayName": "Weather Lab",
+      "sourcePath": "ui/apps/agentic-apps/weather",
+      "serverPath": "ui/apps/agentic-apps/weather/server.mjs",
+      "image": "agentic-apps-weather",
+      "port": 3020
+    },
+    {
+      "id": "agentic-sdlc",
+      "displayName": "Agentic SDLC",
+      "sourcePath": "ui/apps/agentic-apps/agentic-sdlc",
+      "serverPath": "ui/apps/agentic-apps/agentic-sdlc/server.mjs",
+      "image": "agentic-apps-agentic-sdlc",
+      "port": 3030
+    },
+    {
+      "id": "litellm",
+      "displayName": "LiteLLM Usage Dashboard",
+      "sourcePath": "ui/apps/agentic-apps/litellm",
+      "serverPath": "ui/apps/agentic-apps/litellm/server.mjs",
+      "image": "agentic-apps-litellm-usage-dashboard",
+      "port": 3042
+    },
+    {
+      "id": "oss-repo-management",
+      "displayName": "OSS Repo Report Card",
+      "sourcePath": "ui/apps/agentic-apps/oss-repo-management",
+      "serverPath": "ui/apps/agentic-apps/oss-repo-management/server.mjs",
+      "image": "agentic-apps-oss-repo-management",
+      "port": 3040
+    },
+    {
+      "id": "jira-project-dashboard",
+      "displayName": "Jira Project Dashboard",
+      "sourcePath": "ui/apps/agentic-apps/jira-project-dashboard",
+      "serverPath": "ui/apps/agentic-apps/jira-project-dashboard/server.mjs",
+      "image": "agentic-apps-jira-project-dashboard",
+      "port": 3041
+    }
+  ]
+}

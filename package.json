@@ -1,6 +1,6 @@
 {
   "name": "@caipe/agentic-apps",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "description": "CAIPE embedded agentic application runtimes.",
@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "check": "node scripts/check-syntax.mjs && node scripts/check-agentic-app-contract.mjs",
+    "check": "node scripts/check-syntax.mjs && node scripts/check-agentic-app-contract.mjs && node scripts/check-app-image-manifest.mjs",
     "smoke": "node scripts/smoke-test.mjs",
     "test": "node --test $(find ui/apps -type f -name '*.test.mjs' -print)"
   },

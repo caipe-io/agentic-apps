@@ -1,11 +1,11 @@
 {
   "id": "litellm",
-  "name": "LiteLLM Operations",
+  "name": "LiteLLM Usage Dashboard",
   "description": "LiteLLM spend, token, request, model, and virtual-key operations.",
   "runtime": {
     "type": "remote",
     "target": "http://agentic-app-litellm:3042",
-    "mountPath": "/apps/litellm"
+    "mountPath": "/apps/litellm-usage-dashboard"
   },
   "visibility": "private",
   "createdBy": "deployment-owner",

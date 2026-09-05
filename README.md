@@ -16,7 +16,7 @@ remains in the separate `platform-apps-deployment` repository.
 | FinOps Command Center | `/apps/finops` | 3010 | `agent-finops` | AWS and LiteLLM cost/usage workflows |
 | Weather Lab | `/apps/weather` | 3020 | `agent-weather-agent` | Open-Meteo forecast and air-quality data |
 | Agentic SDLC | `/apps/agentic-sdlc` | 3030 | `agent-agentic-sdlc` | Repository delivery and ship-loop workflows |
-| LiteLLM Operations | `/apps/litellm` | 3042 | `agent-litellm-finops` | LiteLLM usage, spend, model, and key operations |
+| LiteLLM Usage Dashboard | `/apps/litellm-usage-dashboard` | 3042 | `agent-litellm-finops` | LiteLLM usage, spend, model, and key operations |
 | OSS Repo Report Card | `/apps/oss-repo-management` | 3040 | `agent-oss-repo-report-card` | Repository health and OSS readiness evidence |
 | Jira Project Dashboard | `/apps/jira-project-dashboard` | 3041 | `agent-jira-agent` | Jira project and delivery metrics |
 
@@ -44,11 +44,19 @@ The smoke test runs all six servers with JWT verification disabled on loopback o
 deployments must keep forwarded-bearer validation enabled and configure the corresponding
 `deploy/caipe/agentic-app.json`, `agent.yaml`, and `mcp-server.yaml` files where the app owns its MCP.
 
-## Container image
+## Container images
 
-The CI workflow publishes `ghcr.io/caipe-io/agentic-apps-runtime` from release tags beginning
-with `agentic-apps-`. The image contains the shared runtime libraries and all six application
-servers; deployment selects the server command and port.
+The [application image manifest](apps.manifest.json) is the source of truth for image builds.
+The release workflow builds every listed application in parallel and publishes one multi-architecture
+image per app, for example:
+
+```text
+ghcr.io/caipe-io/agentic-apps-finops:0.0.1
+ghcr.io/caipe-io/agentic-apps-litellm-usage-dashboard:0.0.1
+```
+
+Adding an application to `apps.manifest.json` is sufficient to add it to the build and publish
+matrix, provided it follows the standard app directory and `server.mjs` contract.
 
 ## LiteLLM data handling
 

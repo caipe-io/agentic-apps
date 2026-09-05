@@ -2,13 +2,13 @@ export const LITELLM_APP_ID = "litellm";
 
 export const LITELLM_MANIFEST = {
   id: LITELLM_APP_ID,
-  displayName: "LiteLLM Operations",
+  displayName: "LiteLLM Usage Dashboard",
   description:
     "An MCP-backed operating dashboard for LiteLLM spend, tokens, requests, model mix, and optimization actions.",
   apiVersion: "1.0",
   runtime: {
     kind: "proxied-next-zone",
-    mountPath: "/apps/litellm",
+    mountPath: "/apps/litellm-usage-dashboard",
     chrome: "iframe",
   },
   ui: {

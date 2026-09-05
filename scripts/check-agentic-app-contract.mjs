@@ -4,17 +4,17 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const apps = [
-  ["agentic-sdlc", "Agentic SDLC"],
-  ["finops", "FinOps Command Center"],
-  ["weather", "Weather Lab"],
-  ["litellm", "LiteLLM Operations"],
-  ["oss-repo-management", "OSS Repo Report Card"],
-  ["jira-project-dashboard", "Jira Project Dashboard"],
+  ["agentic-sdlc", "Agentic SDLC", "/apps/agentic-sdlc"],
+  ["finops", "FinOps Command Center", "/apps/finops"],
+  ["weather", "Weather Lab", "/apps/weather"],
+  ["litellm", "LiteLLM Usage Dashboard", "/apps/litellm-usage-dashboard"],
+  ["oss-repo-management", "OSS Repo Report Card", "/apps/oss-repo-management"],
+  ["jira-project-dashboard", "Jira Project Dashboard", "/apps/jira-project-dashboard"],
 ];
 
 const sourceRoot = "ui/apps/agentic-apps";
 
-for (const [appId, expectedName] of apps) {
+for (const [appId, expectedName, expectedMountPath] of apps) {
   const appRoot = join(sourceRoot, appId);
   const manifestModule = await import(pathToFileURL(join(appRoot, "manifest.mjs")));
   const manifest = Object.values(manifestModule).find(
@@ -22,7 +22,7 @@ for (const [appId, expectedName] of apps) {
   );
   assert.ok(manifest, `${appId}: manifest export is missing`);
   assert.equal(manifest.displayName, expectedName, `${appId}: display name drifted`);
-  assert.equal(manifest.runtime.mountPath, `/apps/${appId}`, `${appId}: mount path drifted`);
+  assert.equal(manifest.runtime.mountPath, expectedMountPath, `${appId}: mount path drifted`);
   assert.equal(manifest.runtime.chrome, "iframe", `${appId}: runtime must use the iframe chrome contract`);
   assert.equal(manifest.ui.surface, "hosted", `${appId}: UI surface must be hosted`);
   assert.equal(manifest.assistant?.enabled, true, `${appId}: assistant must be enabled`);
@@ -42,7 +42,7 @@ for (const [appId, expectedName] of apps) {
       ...registration,
       id: appId,
       name: expectedName,
-      runtime: { ...registration.runtime, mountPath: `/apps/${appId}` },
+      runtime: { ...registration.runtime, mountPath: expectedMountPath },
       assistant: {
         ...registration.assistant,
         agentId: manifest.assistant.agentId,

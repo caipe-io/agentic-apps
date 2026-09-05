@@ -7,4 +7,4 @@ remains in `platform-apps-deployment`.
 - Expand LiteLLM reporting to enumerate authorized virtual-key metadata and per-key usage without
   exposing key material.
 - Keep the registration and assistant popup contract checks in CI as new apps are added.
-- Publish versioned runtime images and document the promotion path for development and production.
+- Publish versioned per-application images from the manifest and document the promotion path for development and production.

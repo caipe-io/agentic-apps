@@ -16,7 +16,9 @@ import { registerLiteLlmMcpTools } from "./mcp.mjs";
 import { sanitizeLiteLlmModelInfo } from "./model-info.mjs";
 
 const port = Number(process.env.LITELLM_APP_PORT ?? "3042");
-const configuredBasePath = normalizeBasePath(process.env.LITELLM_APP_BASE_PATH ?? "/apps/litellm");
+const configuredBasePath = normalizeBasePath(
+  process.env.LITELLM_APP_BASE_PATH ?? "/apps/litellm-usage-dashboard",
+);
 const agentId = String(process.env.LITELLM_AGENT_ID ?? "agent-litellm-finops").trim();
 const litellmApiUrl = String(process.env.LITELLM_API_URL ?? "").replace(/\/+$/, "");
 const litellmApiToken = String(
@@ -88,8 +90,8 @@ const server = createServer(async (request, response) => {
     sendJson(response, 200, {
       version: "1.0",
       appId: "litellm",
-      route: "/apps/litellm",
-      title: "LiteLLM Operations",
+      route: "/apps/litellm-usage-dashboard",
+      title: "LiteLLM Usage Dashboard",
       agentId,
       mcpServerId: "litellm_app",
       domainAnswersRequireMcp: true,
@@ -130,7 +132,7 @@ const server = createServer(async (request, response) => {
 });
 
 server.listen(port, () => {
-  console.log(`LiteLLM Operations listening on http://localhost:${port}`);
+  console.log(`LiteLLM Usage Dashboard listening on http://localhost:${port}`);
   console.log(`Configure CAIPE with AGENTIC_APP_LITELLM_ORIGIN=http://localhost:${port}`);
 });
 
@@ -175,7 +177,7 @@ function renderDashboard({ compact, basePath, appPath }) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>LiteLLM Operations</title>
+    <title>LiteLLM Usage Dashboard</title>
     <style>
       :root {
         color-scheme: dark;
@@ -563,9 +565,9 @@ function buildLiteLlmResponseFormat() {
 }
 
 function normalizeBasePath(value) {
-  const normalized = String(value || "/apps/litellm").trim();
+  const normalized = String(value || "/apps/litellm-usage-dashboard").trim();
   const withLeadingSlash = normalized.startsWith("/") ? normalized : `/${normalized}`;
-  return withLeadingSlash.replace(/\/+$/, "") || "/apps/litellm";
+  return withLeadingSlash.replace(/\/+$/, "") || "/apps/litellm-usage-dashboard";
 }
 
 function sendJson(response, status, payload) {
