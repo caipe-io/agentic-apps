@@ -13,7 +13,17 @@ function jsonResponse(status, payload) {
   return {
     ok: status >= 200 && status < 300,
     status,
+    headers: { get: () => "application/json" },
     text: async () => JSON.stringify(payload),
+  };
+}
+
+function textResponse(status, contentType, body) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: { get: (name) => (name === "content-type" ? contentType : null) },
+    text: async () => body,
   };
 }
 
@@ -69,6 +79,29 @@ test("does not invoke the agent when conversation creation is denied", async () 
       message: "Build the dashboard",
     })`, context),
     /Access denied \[agent#can_use\]/,
+  );
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, "/api/chat/conversations");
+});
+
+test("includes gateway status and content type for non-JSON errors", async () => {
+  const calls = [];
+  const context = vm.createContext({
+    fetch: async (url, options) => {
+      calls.push({ url, options });
+      return textResponse(403, "text/html", "<html>Forbidden</html>");
+    },
+  });
+  vm.runInContext(agenticAppConversationClientSource, context);
+
+  await assert.rejects(
+    vm.runInContext(`invokeAgenticApp({
+      agentId: "agent-example",
+      appId: "example-dashboard",
+      title: "Example dashboard",
+      message: "Build the dashboard",
+    })`, context),
+    /Could not create dashboard conversation \(HTTP 403\) \[text\/html\] \(invalid JSON response\)/,
   );
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, "/api/chat/conversations");
