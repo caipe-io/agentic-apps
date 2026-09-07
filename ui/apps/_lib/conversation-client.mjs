@@ -6,7 +6,10 @@ async function readAgenticAppJsonResponse(response, fallbackMessage) {
     try {
       payload = JSON.parse(raw);
     } catch {
-      throw new Error(fallbackMessage + " (invalid JSON response)");
+      const status = response.status ? " (HTTP " + response.status + ")" : "";
+      const contentType = response.headers?.get?.("content-type");
+      const type = contentType ? " [" + contentType + "]" : "";
+      throw new Error(fallbackMessage + status + type + " (invalid JSON response)");
     }
   }
 

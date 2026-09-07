@@ -80,7 +80,7 @@ export const LITELLM_MANIFEST = {
         requiredScopes: ["litellm:read"],
       },
       {
-        action: "agent.invoke.litellm-finops",
+        action: "agent.invoke.litellm",
         description: "Invoke the configured LiteLLM MCP reporting agent",
         defaultEffect: "allow",
         requiredScopes: ["litellm:agent:invoke", "agents:invoke"],
@@ -89,7 +89,7 @@ export const LITELLM_MANIFEST = {
   },
   assistant: {
     enabled: true,
-    agentId: "agent-litellm-finops",
+    agentId: "agent-litellm",
     schemaVersions: ["1.0"],
     maxContextBytes: 12288,
     capability: "contextual-chat",
@@ -99,13 +99,14 @@ export const LITELLM_MANIFEST = {
   },
   agents: [
     {
-      id: "litellm-finops-agent",
-      displayName: "LiteLLM FinOps Agent",
+      id: "litellm-agent",
+      displayName: "LiteLLM Agent",
       required: true,
-      dynamicAgentId: "agent-litellm-finops",
+      dynamicAgentId: "agent-litellm",
       capabilities: [
         "litellm-mcp",
         "usage-reporting",
+        "virtual-key-budgets",
         "spend-analysis",
         "model-mix",
         "optimization-recommendations",

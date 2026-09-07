@@ -1,11 +1,16 @@
-id: litellm_app
-name: LiteLLM App MCP
-description: LiteLLM activity and model inventory tools.
+id: litellm
+name: LiteLLM MCP
+description: LiteLLM usage, spend, virtual-key, budget, and model reporting tools.
 transport: http
-endpoint: http://agentic-app-litellm:3042/mcp
+endpoint: http://ai-platform-engineering-litellm-mcp:8000/mcp/
 enabled: true
 authentication:
   mode: forwarded_oidc
 allowedTools:
-  - litellm_get_daily_activity
-  - litellm_get_model_info
+  - get_llm_token_usage_report
+  - get_llm_spend_by_model_report
+  - get_llm_usage_and_spend_by_user_report
+  - get_llm_top_models_report
+  - get_ls_keys_key_ls_get
+  - get_info_key_fn_key_info_get
+  - get_get_user_get

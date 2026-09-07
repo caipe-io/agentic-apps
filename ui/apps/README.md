@@ -20,10 +20,10 @@ not an instruction channel. CAIPE gateway and CAS/OpenFGA remain the policy enfo
 
 | App | Dedicated agent | MCP server | Port |
 | --- | --- | --- | ---: |
-| FinOps | `agent-finops` | `finops_app` | 3010 |
+| FinOps | `agent-finops` | `mcp-aws` | 3010 |
 | Weather | `agent-weather-agent` | `weather_app` | 3020 |
 | Agentic SDLC | `agent-agentic-sdlc` | `agentic_sdlc` | 3030 |
-| LiteLLM Usage Dashboard | `agent-litellm-finops` | `litellm_app` | 3042 |
+| LiteLLM Usage Dashboard | `agent-litellm` | `litellm` | 3042 |
 | OSS Repo Report Card | `agent-oss-repo-report-card` | `oss_repo_report_card` | 3040 |
 | Jira Project Dashboard | `agent-jira-agent` | host-configured integration | 3041 |
 

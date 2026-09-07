@@ -17,14 +17,11 @@ import { registerFinOpsMcpTools } from "./mcp.mjs";
 
 const port = Number(process.env.FINOPS_APP_PORT ?? "3010");
 const configuredBasePath = normalizeBasePath(process.env.FINOPS_APP_BASE_PATH ?? "/apps/finops");
-const defaultAwsAgentId = process.env.FINOPS_AWS_AGENT_ID ?? process.env.AWS_AGENT_ID ?? "agent-aws-cost-explorer";
-const defaultLiteLlmAgentId =
-  process.env.FINOPS_LITELLM_AGENT_ID ?? process.env.LITELLM_FINOPS_AGENT_ID ?? "agent-litellm-finops";
-const defaultDataSource = normalizeDataSource(process.env.FINOPS_DATA_SOURCE ?? "aws-cost-explorer");
-const defaultAgentId = process.env.FINOPS_AGENT_ID ?? agentIdForDataSource(defaultDataSource);
+const defaultAwsAgentId = process.env.FINOPS_AGENT_ID ?? process.env.FINOPS_AWS_AGENT_ID ?? "agent-finops";
+const defaultDataSource = "aws-cost-explorer";
+const defaultAgentId = defaultAwsAgentId;
 const defaultLookbackDays = Number(process.env.FINOPS_LOOKBACK_DAYS ?? "30");
-const defaultDashboardKind =
-  process.env.FINOPS_DASHBOARD_KIND ?? (defaultDataSource === "litellm" ? "llm-usage-by-user" : "cost-overview");
+const defaultDashboardKind = process.env.FINOPS_DASHBOARD_KIND ?? "cost-overview";
 const litellmApiUrl = (process.env.LITELLM_API_URL ?? "").replace(/\/+$/, "");
 const litellmApiToken = process.env.LITELLM_API_KEY ?? process.env.LITELLM_TOKEN ?? process.env.LITELLM_API_TOKEN ?? "";
 const litellmApiTimeoutMs = Math.max(5_000, Number(process.env.LITELLM_API_TIMEOUT ?? "30") * 1000);
@@ -44,7 +41,7 @@ const server = createServer(async (request, response) => {
       ok: true,
       app: "finops",
       runtime: "separate-process",
-      dataSource: "aws-cost-explorer-and-litellm-via-agent",
+      dataSource: "aws-cost-explorer-via-finops-agent",
       assistant: "context-aware",
       mcp: { endpoint: "/mcp", authentication: "forwarded-bearer" },
     });
@@ -58,7 +55,6 @@ const server = createServer(async (request, response) => {
       registerTools(mcpServer) {
         registerFinOpsMcpTools(mcpServer, {
           getCapabilities: buildFinOpsAgentPlan,
-          getLiteLlmDashboard: buildLiteLlmDashboardPayload,
         });
       },
     });
@@ -117,23 +113,6 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  if (url.pathname === "/api/litellm-dashboard") {
-    if (request.method !== "POST") {
-      sendJson(response, 405, { success: false, error: "method_not_allowed" });
-      return;
-    }
-
-    try {
-      const body = await readJsonBody(request);
-      const payload = await buildLiteLlmDashboardPayload(body);
-      sendJson(response, 200, { success: true, data: payload });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "LiteLLM dashboard pull failed.";
-      sendJson(response, 502, { success: false, error: message });
-    }
-    return;
-  }
-
   if (url.pathname === "/example") {
     response.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
@@ -173,15 +152,10 @@ function buildFinOpsAgentPlan() {
         agentId: defaultAwsAgentId,
         dashboardKinds: ["cost-overview", "service-breakdown", "anomaly-review", "savings-plan"],
       },
-      litellm: {
-        label: "LiteLLM",
-        agentId: defaultLiteLlmAgentId,
-        dashboardKinds: ["llm-usage-by-user", "llm-spend-by-model", "llm-token-usage", "llm-top-models"],
-      },
     },
     lookbackDays: defaultLookbackDays,
     dashboardKind: defaultDashboardKind,
-    endpoint: defaultDataSource === "litellm" ? "/api/litellm-dashboard" : "/api/v1/chat/invoke",
+    endpoint: "/api/v1/chat/invoke",
     prompt: buildDashboardPrompt(defaultDataSource, defaultLookbackDays, defaultDashboardKind),
     responseFormat: buildFinOpsDashboardResponseFormat(),
     expectedJsonShape: {
@@ -201,9 +175,6 @@ function buildFinOpsAgentPlan() {
 }
 
 function buildDashboardPrompt(dataSource, days, dashboardKind = "cost-overview") {
-  if (normalizeDataSource(dataSource) === "litellm") {
-    return buildLiteLlmPrompt(days, dashboardKind);
-  }
   return buildCostExplorerPrompt(days, dashboardKind);
 }
 
@@ -1444,7 +1415,6 @@ function renderDashboard({ compact, basePath, appPath }) {
           <div class="controls">
             <select id="dataSource" aria-label="Data source">
               <option value="aws-cost-explorer"${defaultDataSource === "aws-cost-explorer" ? " selected" : ""}>AWS Cost Explorer</option>
-              <option value="litellm"${defaultDataSource === "litellm" ? " selected" : ""}>LiteLLM</option>
             </select>
             <input id="agentId" aria-label="FinOps agent id" value="${escapeHtml(defaultAgentId)}" />
             <label class="inline-control" title="Period included in the dashboard refresh">
@@ -1470,10 +1440,6 @@ function renderDashboard({ compact, basePath, appPath }) {
               <option value="service-breakdown">Service breakdown</option>
               <option value="anomaly-review">Anomaly review</option>
               <option value="savings-plan">Savings plan</option>
-              <option value="llm-usage-by-user">LiteLLM usage by user</option>
-              <option value="llm-spend-by-model">LiteLLM spend by model</option>
-              <option value="llm-token-usage">LiteLLM token usage</option>
-              <option value="llm-top-models">LiteLLM top models</option>
             </select>
             <button id="runAnalysis">Run analysis</button>
           </div>
@@ -1713,11 +1679,9 @@ function renderDashboard({ compact, basePath, appPath }) {
       const defaultDataSource = ${JSON.stringify(defaultDataSource)};
       const defaultAgents = {
         "aws-cost-explorer": ${JSON.stringify(defaultAwsAgentId)},
-        litellm: ${JSON.stringify(defaultLiteLlmAgentId)},
       };
       const dashboardKindOptions = {
         "aws-cost-explorer": ["cost-overview", "service-breakdown", "anomaly-review", "savings-plan"],
-        litellm: ["llm-usage-by-user", "llm-spend-by-model", "llm-token-usage", "llm-top-models"],
       };
       const state = {
         analysis: null,
@@ -3510,11 +3474,11 @@ function normalizeBasePath(value) {
 }
 
 function normalizeDataSource(value) {
-  return String(value || "").toLowerCase() === "litellm" ? "litellm" : "aws-cost-explorer";
+  return "aws-cost-explorer";
 }
 
 function agentIdForDataSource(value) {
-  return normalizeDataSource(value) === "litellm" ? defaultLiteLlmAgentId : defaultAwsAgentId;
+  return defaultAwsAgentId;
 }
 
 function escapeHtml(value) {
