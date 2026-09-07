@@ -1,10 +1,10 @@
-id: finops_app
-name: FinOps App MCP
-description: FinOps runtime capability metadata.
+id: mcp-aws
+name: AWS MCP
+description: AWS Cost Explorer tools used by the dedicated FinOps agent.
 transport: http
-endpoint: http://agentic-app-finops:3010/mcp
+endpoint: http://mcp-aws:8000/mcp
 enabled: true
 authentication:
   mode: forwarded_oidc
 allowedTools:
-  - finops_get_capabilities
+  - aws_cli_execute
