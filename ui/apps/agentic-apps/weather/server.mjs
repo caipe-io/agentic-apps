@@ -1850,7 +1850,7 @@ function renderDashboard({ compact, basePath, appPath }) {
           context: {
             route: appPath,
             title: "Live weather for " + forecast.city,
-            agentId: defaultAgentId,
+            agentId: ${JSON.stringify(defaultAgentId)},
             mcpServerId: "weather_app",
             domainAnswersRequireMcp: true,
             summary: forecast.dailyGuidance?.howIsMyDay || forecast.current.condition + ", " + forecast.current.temperatureC + "C",

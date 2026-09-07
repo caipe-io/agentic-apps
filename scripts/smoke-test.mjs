@@ -49,6 +49,9 @@ try {
       for (const messageType of ["caipe.agenticApp.context.v1", "caipe.agenticApp.assistant.open.v1"]) {
         if (!html.includes(messageType)) failures.push(`${entry.name}: missing ${messageType}`);
       }
+      if (entry.name === "weather" && /\bagentId:\s*defaultAgentId\b/.test(html)) {
+        failures.push("weather: rendered browser script references server-only defaultAgentId");
+      }
       if (!failures.some((failure) => failure.startsWith(`${entry.name}:`))) {
         console.log(`${entry.name}: readiness, context, root, and popup contract passed`);
       }
