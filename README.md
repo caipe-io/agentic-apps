@@ -20,10 +20,10 @@ remains in the separate `platform-apps-deployment` repository.
 
 | Application | Mount path | Port | Dedicated agent | Purpose |
 | --- | --- | ---: | --- | --- |
-| FinOps Command Center | `/apps/finops` | 3010 | `agent-finops` | AWS and LiteLLM cost/usage workflows |
+| FinOps Command Center | `/apps/finops` | 3010 | `agent-finops` | AWS Cost Explorer workflows |
 | Weather Lab | `/apps/weather` | 3020 | `agent-weather-agent` | Open-Meteo forecast and air-quality data |
 | Agentic SDLC | `/apps/agentic-sdlc` | 3030 | `agent-agentic-sdlc` | Repository delivery and ship-loop workflows |
-| LiteLLM Usage Dashboard | `/apps/litellm` | 3042 | `agent-litellm-finops` | LiteLLM usage, spend, model, and key operations |
+| LiteLLM Usage Dashboard | `/apps/litellm` | 3042 | `agent-litellm` | LiteLLM usage, spend, model, and virtual-key operations |
 | OSS Repo Report Card | `/apps/oss-repo-management` | 3040 | `agent-oss-repo-report-card` | Repository health and OSS readiness evidence |
 | Jira Project Dashboard | `/apps/jira-project-dashboard` | 3041 | `agent-jira-agent` | Jira project and delivery metrics |
 
@@ -67,10 +67,11 @@ matrix, provided it follows the standard app directory and `server.mjs` contract
 
 ## LiteLLM data handling
 
-LiteLLM requests are made by the server-side runtime or the authorized LiteLLM MCP server. The
-dashboard and assistant may report data for available virtual keys, including safe key identifiers,
-owners, budgets, spend, token counts, requests, and model activity, but must never expose raw key
-material, bearer tokens, or other credentials. Access remains subject to CAIPE identity and policy.
+The dashboard reads LiteLLM usage through its server-side runtime, while contextual chat uses the
+dedicated `agent-litellm` agent and LiteLLM MCP server. It reports authorized virtual keys using
+opaque selectors and may show owners, budgets, spend, token counts, requests, model activity, and
+daily or monthly trends. Raw key material, bearer tokens, and other credentials never reach the
+browser. Access remains subject to CAIPE identity and policy.
 
 ## Governance
 

@@ -6,7 +6,7 @@ export const FINOPS_MANIFEST = {
   id: FINOPS_APP_ID,
   displayName: "FinOps Command Center",
   description:
-    "A real-data reference app that launches AWS Cost Explorer and LiteLLM usage analysis through FinOps agents and shares cost context with the CAIPE Assistant Overlay.",
+    "An AWS Cost Explorer dashboard that launches analysis through a dedicated FinOps agent and shares cost context with the CAIPE Assistant Overlay.",
   apiVersion: "1.0",
   runtime: {
     kind: "proxied-next-zone",
@@ -62,7 +62,7 @@ export const FINOPS_MANIFEST = {
     showInTopNav: false,
     navOrder: 20,
     homeEligible: false,
-    overlays: ["chat"],
+    overlays: ["chat", "generative-ui"],
   },
   access: {
     requiredRoles: ["user"],
@@ -88,14 +88,8 @@ export const FINOPS_MANIFEST = {
         requiredScopes: ["finops:agent:invoke"],
       },
       {
-        action: "agent.invoke.aws-cost-explorer",
-        description: "Invoke the configured AWS cost analysis agent",
-        defaultEffect: "allow",
-        requiredScopes: ["finops:agent:invoke", "agents:invoke"],
-      },
-      {
-        action: "agent.invoke.litellm-finops",
-        description: "Invoke the configured LiteLLM FinOps reporting agent",
+        action: "agent.invoke.finops",
+        description: "Invoke the dedicated AWS FinOps agent",
         defaultEffect: "allow",
         requiredScopes: ["finops:agent:invoke", "agents:invoke"],
       },
@@ -117,12 +111,12 @@ export const FINOPS_MANIFEST = {
       displayName: "FinOps Agent",
       required: true,
       dynamicAgentId: "agent-finops",
-      capabilities: ["aws-cost-explorer", "litellm-usage-reporting", "cost-anomaly-explanation", "savings-recommendation"],
+      capabilities: ["aws-cost-explorer", "cost-anomaly-explanation", "savings-recommendation"],
     },
   ],
   data: {
     apiBasePath: "/api/finops",
-    eventChannels: ["finops.cost.updated", "finops.litellm.updated", "finops.agent.analysis.completed"],
+    eventChannels: ["finops.cost.updated", "finops.agent.analysis.completed"],
   },
   health: {
     endpoint: "/health/ready",
@@ -130,7 +124,7 @@ export const FINOPS_MANIFEST = {
     blockLaunchWhen: ["degraded", "unreachable"],
   },
   catalog: {
-    categories: ["reference", "finops", "aws", "litellm"],
-    capabilities: ["aws-cost-explorer", "litellm-usage-reporting", "assistant-context-bridge", "optimization-workflows"],
+    categories: ["reference", "finops", "aws"],
+    capabilities: ["aws-cost-explorer", "assistant-context-bridge", "optimization-workflows"],
   },
 };

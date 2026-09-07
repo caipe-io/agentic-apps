@@ -33,11 +33,10 @@ const contracts = [
   },
   {
     name: "finops-app",
-    tools: ["finops_get_capabilities", "finops_get_litellm_dashboard"],
+    tools: ["finops_get_capabilities"],
     register(server) {
       registerFinOpsMcpTools(server, {
         getCapabilities: () => ({ sources: [] }),
-        getLiteLlmDashboard: async () => ({ spend: 0 }),
       });
     },
   },

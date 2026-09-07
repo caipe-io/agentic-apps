@@ -1,7 +1,7 @@
 {
   "id": "finops",
   "name": "FinOps Command Center",
-  "description": "AWS and LiteLLM cost and usage analysis.",
+  "description": "AWS Cost Explorer analysis and optimization.",
   "runtime": {
     "type": "remote",
     "target": "http://agentic-app-finops:3010",

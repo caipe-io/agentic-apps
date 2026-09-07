@@ -1,6 +1,6 @@
 id: finops_app
 name: FinOps App MCP
-description: FinOps capability and LiteLLM cost dashboard tools.
+description: FinOps runtime capability metadata.
 transport: http
 endpoint: http://agentic-app-finops:3010/mcp
 enabled: true
@@ -8,4 +8,3 @@ authentication:
   mode: forwarded_oidc
 allowedTools:
   - finops_get_capabilities
-  - finops_get_litellm_dashboard

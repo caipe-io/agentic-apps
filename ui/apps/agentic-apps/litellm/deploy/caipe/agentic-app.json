@@ -11,7 +11,7 @@
   "createdBy": "deployment-owner",
   "requiredScopes": ["litellm:read", "litellm:agent:invoke", "agents:invoke"],
   "assistant": {
-    "agentId": "agent-litellm-finops",
+    "agentId": "agent-litellm",
     "name": "LiteLLM Assistant",
     "label": "Ask LiteLLM",
     "contextEndpoint": "/api/context"
