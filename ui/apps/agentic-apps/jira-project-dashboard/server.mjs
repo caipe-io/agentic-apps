@@ -494,10 +494,6 @@ function renderDashboard({ compact, basePath }) {
         ].join(" ");
         try {
           updateAgentProgress("Running CAIPE structured invoke", "Jira: " + jiraAgentId + " • Project: " + project);
-          const agentReadiness = await ensureStructuredResponseAgent(jiraAgentId, "jira_project.dashboard.v1");
-          if (!agentReadiness.ok) {
-            throw new Error(agentReadiness.message);
-          }
           const invoked = await invokeAgenticApp({
             agentId: jiraAgentId,
             appId: "jira-project-dashboard",
@@ -755,39 +751,6 @@ function renderDashboard({ compact, basePath }) {
         const button = document.getElementById("runAnalysis");
         button.disabled = isBusy;
         button.textContent = isBusy ? "Running Jira project analysis..." : "Run Jira project analysis";
-      }
-
-      async function ensureStructuredResponseAgent(agentId, schemaId) {
-        try {
-          const response = await fetch("/api/dynamic-agents/agents/" + encodeURIComponent(agentId), {
-            headers: { accept: "application/json" },
-          });
-          if (!response.ok) return { ok: true };
-          const body = await response.json();
-          const agent = body.data || body;
-          if (hasStructuredResponseSchema(agent, schemaId)) return { ok: true };
-          return {
-            ok: false,
-            message:
-              "The selected Jira agent is not configured to emit " + schemaId +
-              ". Enable Structured Response middleware and include " + schemaId +
-              " in allowed_schema_ids.",
-          };
-        } catch {
-          return { ok: true };
-        }
-      }
-
-      function hasStructuredResponseSchema(agent, schemaId) {
-        const middleware = agent?.features?.middleware;
-        if (!Array.isArray(middleware)) return false;
-        const structuredResponse = middleware.find((entry) =>
-          entry?.type === "structured_response" && entry.enabled !== false
-        );
-        if (!structuredResponse) return false;
-        const allowedSchemaIds = String(structuredResponse.params?.allowed_schema_ids || "").trim();
-        if (!allowedSchemaIds) return true;
-        return allowedSchemaIds.split(",").map((item) => item.trim()).includes(schemaId);
       }
 
       async function consumeAgentStream(response) {
