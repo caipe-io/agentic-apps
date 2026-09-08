@@ -73,6 +73,14 @@ opaque selectors and may show owners, budgets, spend, token counts, requests, mo
 daily or monthly trends. Raw key material, bearer tokens, and other credentials never reach the
 browser. Access remains subject to CAIPE identity and policy.
 
+## FinOps AWS account selection
+
+Set `FINOPS_AWS_ACCOUNT_LIST` to the same comma-separated `profile:account-id` list configured on
+the AWS MCP server. The dashboard exposes canonical profile names, requires an explicit choice
+when multiple profiles are available, and passes only the selected profile to the FinOps agent.
+`FINOPS_AWS_DEFAULT_PROFILE` may select a valid default. When no account list is configured, the
+runtime retains the single-account environment-credential behavior.
+
 ## Governance
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [MAINTAINERS.md](MAINTAINERS.md), [SECURITY.md](SECURITY.md),
