@@ -8,6 +8,23 @@ const PERIOD_MONTHS = Object.freeze({
   "12m": 11,
 });
 
+const VIRTUAL_KEY_PAGE_SIZE = 100;
+
+/**
+ * Keep this request compatible with LiteLLM's bounded GET /key/list contract.
+ * In particular, that endpoint does not accept the sort_by/sort_order parameters
+ * used by several other LiteLLM list APIs, and recent releases reject sizes over
+ * 100 with HTTP 422.
+ */
+export function buildLiteLlmVirtualKeyListQuery(page = 1) {
+  const normalizedPage = Number.isSafeInteger(page) && page > 0 ? page : 1;
+  return {
+    page: normalizedPage,
+    size: VIRTUAL_KEY_PAGE_SIZE,
+    return_full_object: true,
+  };
+}
+
 export function prepareLiteLlmVirtualKeys(payload) {
   const sourceKeys = Array.isArray(payload?.keys)
     ? payload.keys

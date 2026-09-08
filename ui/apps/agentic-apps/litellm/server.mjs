@@ -14,6 +14,7 @@ import { renderStaticDashboardExample } from "../../_lib/static-dashboard-exampl
 import { registerLiteLlmMcpTools } from "./mcp.mjs";
 import { sanitizeLiteLlmModelInfo } from "./model-info.mjs";
 import {
+  buildLiteLlmVirtualKeyListQuery,
   buildLiteLlmUsageDashboard,
   prepareLiteLlmVirtualKeys,
   resolveLiteLlmUsageRange,
@@ -176,13 +177,10 @@ async function getLiteLlmModelInfo() {
 }
 
 async function getLiteLlmVirtualKeys() {
-  const payload = await fetchLiteLlmJson("/key/list", {
-    page: 1,
-    size: 200,
-    return_full_object: true,
-    sort_by: "key_alias",
-    sort_order: "asc",
-  });
+  const payload = await fetchLiteLlmJson(
+    "/key/list",
+    buildLiteLlmVirtualKeyListQuery(),
+  );
   return prepareLiteLlmVirtualKeys(payload);
 }
 
