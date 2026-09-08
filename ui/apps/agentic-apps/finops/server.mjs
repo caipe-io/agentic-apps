@@ -13,6 +13,12 @@ import {
   resolveAgenticAppSurface,
 } from "../../_lib/runtime-base-path.mjs";
 import { renderStaticDashboardExample } from "../../_lib/static-dashboard-examples.mjs";
+import {
+  buildAwsCostExplorerPrompt,
+  parseAwsAccountList,
+  resolveAwsProfile,
+  selectDefaultAwsProfile,
+} from "./aws-account-config.mjs";
 import { registerFinOpsMcpTools } from "./mcp.mjs";
 
 const port = Number(process.env.FINOPS_APP_PORT ?? "3010");
@@ -22,6 +28,13 @@ const defaultDataSource = "aws-cost-explorer";
 const defaultAgentId = defaultAwsAgentId;
 const defaultLookbackDays = Number(process.env.FINOPS_LOOKBACK_DAYS ?? "30");
 const defaultDashboardKind = process.env.FINOPS_DASHBOARD_KIND ?? "cost-overview";
+const configuredAwsAccounts = parseAwsAccountList(
+  process.env.FINOPS_AWS_ACCOUNT_LIST ?? process.env.AWS_ACCOUNT_LIST ?? "",
+);
+const defaultAwsProfile = selectDefaultAwsProfile(
+  configuredAwsAccounts,
+  process.env.FINOPS_AWS_DEFAULT_PROFILE ?? "",
+);
 const litellmApiUrl = (process.env.LITELLM_API_URL ?? "").replace(/\/+$/, "");
 const litellmApiToken = process.env.LITELLM_API_KEY ?? process.env.LITELLM_TOKEN ?? process.env.LITELLM_API_TOKEN ?? "";
 const litellmApiTimeoutMs = Math.max(5_000, Number(process.env.LITELLM_API_TIMEOUT ?? "30") * 1000);
@@ -113,6 +126,23 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (url.pathname === "/api/aws-analysis-request") {
+    if (request.method !== "POST") {
+      sendJson(response, 405, { success: false, error: "method_not_allowed" });
+      return;
+    }
+
+    try {
+      const body = await readJsonBody(request);
+      const analysisRequest = buildAwsAnalysisRequest(body);
+      sendJson(response, 200, { success: true, data: analysisRequest });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid AWS analysis request.";
+      sendJson(response, 400, { success: false, error: message, code: "invalid_aws_analysis_request" });
+    }
+    return;
+  }
+
   if (url.pathname === "/example") {
     response.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
@@ -151,12 +181,17 @@ function buildFinOpsAgentPlan() {
         label: "AWS Cost Explorer",
         agentId: defaultAwsAgentId,
         dashboardKinds: ["cost-overview", "service-breakdown", "anomaly-review", "savings-plan"],
+        accounts: configuredAwsAccounts.map(({ profile }) => ({ profile })),
+        profileRequired: configuredAwsAccounts.length > 0,
+        defaultProfile: defaultAwsProfile,
       },
     },
     lookbackDays: defaultLookbackDays,
     dashboardKind: defaultDashboardKind,
     endpoint: "/api/v1/chat/invoke",
-    prompt: buildDashboardPrompt(defaultDataSource, defaultLookbackDays, defaultDashboardKind),
+    prompt: configuredAwsAccounts.length && !defaultAwsProfile
+      ? null
+      : buildDashboardPrompt(defaultDataSource, defaultLookbackDays, defaultDashboardKind),
     responseFormat: buildFinOpsDashboardResponseFormat(),
     expectedJsonShape: {
       dataSource: "aws-cost-explorer",
@@ -175,22 +210,47 @@ function buildFinOpsAgentPlan() {
 }
 
 function buildDashboardPrompt(dataSource, days, dashboardKind = "cost-overview") {
-  return buildCostExplorerPrompt(days, dashboardKind);
+  const range = dateRangeForLookback(days);
+  return buildAwsCostExplorerPrompt({
+    dashboardKind,
+    period: {
+      label: `Last ${days} days`,
+      start: range.startDate,
+      end: range.endDate,
+    },
+    profile: defaultAwsProfile,
+  });
 }
 
-function buildCostExplorerPrompt(days, dashboardKind = "cost-overview") {
-  return [
-    `Build the ${dashboardKind} FinOps dashboard using AWS Cost Explorer for the last ${days} days.`,
-    "Do not call request_user_input or ask follow-up questions; this embedded dashboard request already includes the required parameters.",
-    "Use aws_cli_execute exactly once for the primary cost pull.",
-    "For aws_cli_execute: profile must be an empty string, region must be us-east-2, output_format must be json, and jq_filter must be omitted.",
-    "The command must not include the aws prefix, --profile, --region, --output, shell pipes, jq, file:// filters, or forecast calls.",
-    "Use this command shape only: ce get-cost-and-usage --time-period Start=<start-date>,End=<end-date> --granularity DAILY --metrics UnblendedCost --group-by Type=DIMENSION,Key=SERVICE Type=DIMENSION,Key=LINKED_ACCOUNT.",
-    "Use the structured response tool with the requested finops.dashboard.v1 schema, then provide a short explanation suitable for an embedded dashboard.",
-    "Include trend as daily total cost points and rawCost as raw Cost Explorer rows grouped by date, service, and account when available.",
-    "Set forecastCost to totalCost if a forecast cannot be derived from the returned data without another tool call.",
-    "Do not invent values. If AWS Cost Explorer is unavailable, explain what credential or permission is missing.",
-  ].join(" ");
+function buildAwsAnalysisRequest(body = {}) {
+  const dashboardKind = String(body.dashboardKind || "cost-overview");
+  const allowedDashboardKinds = ["cost-overview", "service-breakdown", "anomaly-review", "savings-plan"];
+  if (!allowedDashboardKinds.includes(dashboardKind)) {
+    throw new Error("Choose a supported AWS Cost Explorer dashboard.");
+  }
+
+  const start = normalizeIsoDate(body.startDate);
+  const end = normalizeIsoDate(body.endDate);
+  if (!start || !end || parseIsoDate(start) > parseIsoDate(end)) {
+    throw new Error("Choose a valid FinOps reporting period.");
+  }
+
+  const profile = resolveAwsProfile(configuredAwsAccounts, body.profile, defaultAwsProfile);
+  const period = {
+    label: String(body.periodLabel || `${start} to ${end}`).slice(0, 80),
+    start,
+    end,
+  };
+  return {
+    profile,
+    prompt: buildAwsCostExplorerPrompt({ dashboardKind, period, profile }),
+    clientContext: {
+      requestedDataSource: "aws-cost-explorer",
+      dashboardKind,
+      awsProfile: profile || null,
+      period,
+    },
+  };
 }
 
 function buildLiteLlmPrompt(days, dashboardKind = "llm-usage-by-user") {
@@ -691,7 +751,7 @@ function renderDashboard({ compact, basePath, appPath }) {
           radial-gradient(circle at 68% 95%, rgba(245, 158, 11, 0.10), transparent 28rem),
           #020617;
       }
-      main { max-width: 1340px; margin: 0 auto; padding: ${compact ? "14px" : "18px 18px 24px"}; }
+      main { max-width: 1340px; margin: 0 auto; padding: ${compact ? "14px 14px 96px" : "18px 18px 104px"}; }
       .hero, .panel, .assistant {
         border: 1px solid rgba(255,255,255,0.10);
         background: rgba(15, 23, 42, 0.62);
@@ -740,6 +800,7 @@ function renderDashboard({ compact, basePath, appPath }) {
       .inline-control input[type="month"] {
         min-width: 124px;
       }
+      .inline-control[hidden] { display: none; }
       .custom-period-control[hidden] { display: none; }
       .dashboard-tabs {
         display: flex;
@@ -1416,6 +1477,12 @@ function renderDashboard({ compact, basePath, appPath }) {
             <select id="dataSource" aria-label="Data source">
               <option value="aws-cost-explorer"${defaultDataSource === "aws-cost-explorer" ? " selected" : ""}>AWS Cost Explorer</option>
             </select>
+            <label class="inline-control" id="awsProfileControl" title="AWS account used for this Cost Explorer query">
+              AWS account
+              <select id="awsProfile" aria-label="AWS account">
+                ${renderAwsProfileOptions()}
+              </select>
+            </label>
             <input id="agentId" aria-label="FinOps agent id" value="${escapeHtml(defaultAgentId)}" />
             <label class="inline-control" title="Period included in the dashboard refresh">
               Period
@@ -1607,7 +1674,7 @@ function renderDashboard({ compact, basePath, appPath }) {
                 Share this dashboard with FinOps chat when you want explanation, follow-up analysis,
                 or an action plan.
               </p>
-              <button id="publishContext">Share to FinOps chat</button>
+              <button id="publishContext" disabled>Share to FinOps chat</button>
               <button class="ghost" id="openAssistantChat" type="button">Open Ask FinOps Chat</button>
               <div class="message" id="assistantStatus">Dashboard context has not been shared to FinOps chat yet.</div>
             </div>
@@ -1675,8 +1742,9 @@ function renderDashboard({ compact, basePath, appPath }) {
     <script>
       const basePath = ${JSON.stringify(basePath)};
       const appPath = ${JSON.stringify(appPath)};
-      const defaultPrompt = ${JSON.stringify(buildDashboardPrompt(defaultDataSource, defaultLookbackDays, defaultDashboardKind))};
       const defaultDataSource = ${JSON.stringify(defaultDataSource)};
+      const awsProfileRequired = ${JSON.stringify(configuredAwsAccounts.length > 0)};
+      const defaultAwsProfile = ${JSON.stringify(defaultAwsProfile)};
       const defaultAgents = {
         "aws-cost-explorer": ${JSON.stringify(defaultAwsAgentId)},
       };
@@ -1692,9 +1760,12 @@ function renderDashboard({ compact, basePath, appPath }) {
         activityEventCount: 0,
         debugEventCount: 0,
         initialAutoRunStarted: false,
+        hasSuccessfulAnalysis: false,
+        isRunning: false,
         runToken: 0,
       };
       const fontStorageKey = "agentic-app.fontPreferences";
+      const awsProfileStorageKey = "agentic-app.finops.awsProfile";
       const settingsToggle = document.getElementById("settingsToggle");
       const fontCustomizer = document.getElementById("fontCustomizer");
       const fontFamilySelect = document.getElementById("fontFamilySelect");
@@ -1702,6 +1773,7 @@ function renderDashboard({ compact, basePath, appPath }) {
 
       document.getElementById("runAnalysis").addEventListener("click", runFinOpsAgent);
       document.getElementById("dataSource").addEventListener("change", handleDataSourceChange);
+      document.getElementById("awsProfile").addEventListener("change", handleAwsProfileChange);
       document.getElementById("periodPreset").addEventListener("change", handlePeriodChange);
       document.getElementById("customMonth").addEventListener("change", handlePeriodChange);
       document.getElementById("publishContext").addEventListener("click", () => publishAssistantContext("manual"));
@@ -1729,6 +1801,7 @@ function renderDashboard({ compact, basePath, appPath }) {
         }
       });
       applyFontPreferences();
+      restoreAwsProfile();
       syncPeriodControls();
       syncDataSourceControls({ preserveAgent: true });
       bootstrapDashboard();
@@ -1751,7 +1824,12 @@ function renderDashboard({ compact, basePath, appPath }) {
           document.getElementById("agentTranscript").textContent = "Preparing FinOps dashboard...";
         });
         const dataSource = normalizeDataSource(document.getElementById("dataSource").value);
-        await loadCachedDashboard({ dataSource });
+        const loaded = await loadCachedDashboard({ dataSource });
+
+        if (!loaded && isAwsProfileMissing()) {
+          showAwsProfileRequired();
+          return;
+        }
 
         if (dataSource === "litellm" && !state.initialAutoRunStarted) {
           state.initialAutoRunStarted = true;
@@ -1765,7 +1843,69 @@ function renderDashboard({ compact, basePath, appPath }) {
         syncDataSourceControls();
         resetDashboardForDataSource(dataSource, "Switching to " + dataSourceLabel(dataSource) + "...");
         await loadCachedDashboard({ dataSource });
-        await runFinOpsAgent({ auto: true });
+        if (!isAwsProfileMissing()) {
+          await runFinOpsAgent({ auto: true });
+        } else {
+          showAwsProfileRequired();
+        }
+      }
+
+      async function handleAwsProfileChange() {
+        const profile = selectedAwsProfile();
+        try {
+          if (profile) localStorage.setItem(awsProfileStorageKey, profile);
+          else localStorage.removeItem(awsProfileStorageKey);
+        } catch {
+          // Account selection still works when browser storage is unavailable.
+        }
+        state.hasSuccessfulAnalysis = false;
+        state.analysis = emptyDashboardPayload("aws-cost-explorer");
+        state.lastAgentMessage = profile
+          ? "AWS account " + profile + " selected."
+          : "Select an AWS account before running analysis.";
+        renderAnalysis(state.analysis, state.lastAgentMessage);
+        syncActionAvailability();
+        if (profile) {
+          const loaded = await loadCachedDashboard({ dataSource: "aws-cost-explorer" });
+          if (loaded) return;
+          setDashboardStatus("idle", "Account selected", "AWS account: " + profile + "\\nRun analysis to refresh the dashboard.");
+          document.getElementById("agentTranscript").textContent =
+            "Ready to analyze AWS Cost Explorer data for " + profile + ".";
+        } else {
+          showAwsProfileRequired();
+        }
+      }
+
+      function restoreAwsProfile() {
+        const select = document.getElementById("awsProfile");
+        let stored = "";
+        try {
+          stored = localStorage.getItem(awsProfileStorageKey) || "";
+        } catch {
+          stored = "";
+        }
+        const preferred = stored || defaultAwsProfile;
+        if (preferred && Array.from(select.options).some((option) => option.value === preferred)) {
+          select.value = preferred;
+        }
+      }
+
+      function selectedAwsProfile() {
+        return document.getElementById("awsProfile").value.trim();
+      }
+
+      function isAwsProfileMissing() {
+        return normalizeDataSource(document.getElementById("dataSource").value) === "aws-cost-explorer"
+          && awsProfileRequired
+          && !selectedAwsProfile();
+      }
+
+      function showAwsProfileRequired() {
+        state.hasSuccessfulAnalysis = false;
+        syncActionAvailability();
+        setDashboardStatus("idle", "Select an AWS account", "Choose an AWS account before running Cost Explorer analysis.");
+        document.getElementById("agentTranscript").textContent =
+          "Select an AWS account above, then run analysis. No agent request has been sent.";
       }
 
       function handlePeriodChange() {
@@ -1812,6 +1952,8 @@ function renderDashboard({ compact, basePath, appPath }) {
         if (!validKinds.includes(kindSelect.value)) {
           kindSelect.value = validKinds[0];
         }
+        document.getElementById("awsProfileControl").hidden = dataSource !== "aws-cost-explorer";
+        syncActionAvailability();
         renderDashboardCopy(dataSource);
       }
 
@@ -1868,32 +2010,10 @@ function renderDashboard({ compact, basePath, appPath }) {
         return Math.max(1, Math.round((end.getTime() - start.getTime()) / msPerDay) + 1);
       }
 
-      function exclusiveEndDate(endDate) {
-        const end = new Date(endDate + "T00:00:00Z");
-        end.setUTCDate(end.getUTCDate() + 1);
-        return end.toISOString().slice(0, 10);
-      }
-
-      function buildClientDashboardPrompt(dataSource, periodInput, dashboardKind) {
+      function buildClientLiteLlmPrompt(periodInput, dashboardKind) {
         const period = typeof periodInput === "number"
           ? clientPeriodFromDays(periodInput, "Last " + periodInput + " days", "last-" + periodInput + "-days")
           : periodInput || resolveSelectedPeriod();
-        if (normalizeDataSource(dataSource) !== "litellm") {
-          return [
-            "Build the " + dashboardKind + " FinOps dashboard using AWS Cost Explorer for " + period.label + " (" + period.start + " through " + period.end + ").",
-            "Do not call request_user_input or ask follow-up questions; this embedded dashboard request already includes the required parameters.",
-            "Use aws_cli_execute exactly once for the primary cost pull.",
-            "For aws_cli_execute: profile must be an empty string, region must be us-east-2, output_format must be json, and jq_filter must be omitted.",
-            "The command must not include the aws prefix, --profile, --region, --output, shell pipes, jq, file:// filters, or forecast calls.",
-            "Use this command shape only: ce get-cost-and-usage --time-period Start=" + period.start + ",End=" + exclusiveEndDate(period.end) + " --granularity DAILY --metrics UnblendedCost --group-by Type=DIMENSION,Key=SERVICE Type=DIMENSION,Key=LINKED_ACCOUNT.",
-            "Use submit_structured_response with the requested finops.dashboard.v1 schema before the final explanation.",
-            "Include trend as daily total cost points and rawCost as raw Cost Explorer rows grouped by date, service, and account when available.",
-            "Set dataSource to aws-cost-explorer.",
-            "Set forecastCost to totalCost if a forecast cannot be derived from the returned data without another tool call.",
-            "Do not invent values. If AWS Cost Explorer is unavailable, explain what credential or permission is missing."
-          ].join(" ");
-        }
-
         const toolByKind = {
           "llm-usage-by-user": "get_llm_usage_and_spend_by_user_report",
           "llm-spend-by-model": "get_llm_spend_by_model_report",
@@ -1945,11 +2065,13 @@ function renderDashboard({ compact, basePath, appPath }) {
 
       function resetDashboardForDataSource(dataSource, message) {
         const normalized = normalizeDataSource(dataSource);
+        state.hasSuccessfulAnalysis = false;
         state.analysis = emptyDashboardPayload(normalized);
         state.lastAgentMessage = message || dataSourceLabel(normalized) + " dashboard selected.";
         state.selectedService = "";
         state.selectedDate = "";
         renderAnalysis(state.analysis, state.lastAgentMessage);
+        syncActionAvailability();
         setDashboardStatus("active", "Updating...", dataSourceLabel(normalized) + " live refresh is starting.");
       }
 
@@ -1957,6 +2079,7 @@ function renderDashboard({ compact, basePath, appPath }) {
         return {
           status: "structured",
           dataSource: normalizeDataSource(dataSource),
+          awsProfile: "",
           currency: "USD",
           totalCost: 0,
           forecastCost: 0,
@@ -1973,6 +2096,7 @@ function renderDashboard({ compact, basePath, appPath }) {
       async function loadCachedDashboard(options = {}) {
         try {
           const targetDataSource = normalizeDataSource(options.dataSource || document.getElementById("dataSource").value);
+          const targetAwsProfile = targetDataSource === "aws-cost-explorer" ? selectedAwsProfile() : "";
           const response = await fetch("/api/agentic-apps/finops-cache", {
             headers: { accept: "application/json" },
           });
@@ -1983,9 +2107,11 @@ function renderDashboard({ compact, basePath, appPath }) {
             : result.data?.item
               ? [result.data.item]
               : [];
-          state.runs = allRuns.filter((run) =>
-            normalizeDataSource(run?.dataSource || run?.payload?.dataSource) === targetDataSource
-          );
+          state.runs = allRuns.filter((run) => {
+            if (normalizeDataSource(run?.dataSource || run?.payload?.dataSource) !== targetDataSource) return false;
+            if (targetDataSource !== "aws-cost-explorer" || !awsProfileRequired) return true;
+            return String(run?.awsProfile || run?.payload?.awsProfile || "") === targetAwsProfile;
+          });
           const cached = state.runs[0];
           renderRunHistory();
           if (!cached?.payload) return false;
@@ -2002,14 +2128,18 @@ function renderDashboard({ compact, basePath, appPath }) {
 
       async function runFinOpsAgent(options = {}) {
         const dataSource = normalizeDataSource(document.getElementById("dataSource").value);
+        if (isAwsProfileMissing()) {
+          showAwsProfileRequired();
+          return;
+        }
         const agentId = document.getElementById("agentId").value.trim() || defaultAgents[dataSource] || ${JSON.stringify(defaultAgentId)};
         const period = resolveSelectedPeriod();
         const days = period.lookbackDays;
         const dashboardKind = document.getElementById("dashboardKind").value || ${JSON.stringify(defaultDashboardKind)};
-        const prompt = buildClientDashboardPrompt(dataSource, period, dashboardKind);
         const isAutoRun = options && options.auto === true;
         const runToken = ++state.runToken;
 
+        state.hasSuccessfulAnalysis = false;
         state.selectedService = "";
         state.selectedDate = "";
         initializeActivityFeed();
@@ -2022,6 +2152,7 @@ function renderDashboard({ compact, basePath, appPath }) {
 
         try {
           if (dataSource === "litellm") {
+            const prompt = buildClientLiteLlmPrompt(period, dashboardKind);
             updateAgentProgress("agent", "Pulling LiteLLM aggregate data", "Calling the FinOps app LiteLLM dashboard endpoint.");
             const response = await fetch(appRoute("/api/litellm-dashboard"), {
               method: "POST",
@@ -2043,6 +2174,7 @@ function renderDashboard({ compact, basePath, appPath }) {
 
             const liveRun = result.data || {};
             state.analysis = normalizeDashboardPayload(liveRun.analysis || liveRun, dataSource);
+            state.hasSuccessfulAnalysis = true;
             const content = liveRun.content || "LiteLLM dashboard data loaded.";
             state.lastAgentMessage = content;
             updateAgentProgress("shape", "Rendering LiteLLM dashboard", "Direct aggregate output received from LiteLLM.");
@@ -2055,21 +2187,38 @@ function renderDashboard({ compact, basePath, appPath }) {
               "Updated " + new Date().toLocaleTimeString(),
               "Agent: " + agentId + "\\nData: " + dataSourceLabel(dataSource) + "\\nPeriod: " + period.label + "\\nRows: " + state.analysis.services.length + "\\nTrend points: " + state.analysis.trend.length + "\\nRaw rows: " + state.analysis.rawCost.length + "\\nStructured output: direct",
             );
+            syncActionAvailability();
             publishAssistantContext("litellm-dashboard");
             return;
           }
 
-          updateAgentProgress("agent", "Running CAIPE structured invoke", "Agent: " + agentId);
+          const profile = selectedAwsProfile();
+          updateAgentProgress("prepare", "Validating AWS analysis request", "AWS account: " + (profile || "environment credentials"));
+          const requestResponse = await fetch(appRoute("/api/aws-analysis-request"), {
+            method: "POST",
+            headers: { "content-type": "application/json", accept: "application/json" },
+            body: JSON.stringify({
+              profile,
+              dashboardKind,
+              periodLabel: period.label,
+              startDate: period.start,
+              endDate: period.end,
+            }),
+          });
+          const requestPayload = await requestResponse.json().catch(() => ({}));
+          if (!requestResponse.ok || requestPayload.success === false) {
+            throw new Error(requestPayload.error || "The AWS analysis request is invalid.");
+          }
+          const preparedRequest = requestPayload.data || {};
+          updateAgentProgress("agent", "Running CAIPE structured invoke", "Agent: " + agentId + " • AWS account: " + (preparedRequest.profile || "environment credentials"));
           const invokeResult = await invokeAgenticApp({
             agentId,
             appId: "finops",
-            title: "FinOps dashboard · " + period.label,
-            message: prompt,
+            title: "FinOps dashboard · " + (preparedRequest.profile ? preparedRequest.profile + " · " : "") + period.label,
+            message: preparedRequest.prompt,
             clientContext: {
-              requestedDataSource: dataSource,
-              dashboardKind,
+              ...preparedRequest.clientContext,
               lookbackDays: days,
-              period,
               response_format: ${JSON.stringify(buildFinOpsDashboardResponseFormat())},
             },
           });
@@ -2083,10 +2232,12 @@ function renderDashboard({ compact, basePath, appPath }) {
             throw new Error("No finops.dashboard.v1 structured output received");
           }
           state.analysis = normalizeDashboardPayload(structuredOutput, dataSource);
+          state.analysis.awsProfile = preparedRequest.profile || "";
+          state.hasSuccessfulAnalysis = true;
           renderAnalysis(state.analysis, content);
           if (state.analysis.status === "structured") {
             updateAgentProgress("save", "Saving run history", "Captured " + state.analysis.services.length + " rows, " + state.analysis.trend.length + " trend points, " + state.analysis.rawCost.length + " raw rows.");
-            await saveCachedDashboard(agentId, dashboardKind, period, state.analysis, content, dataSource);
+            await saveCachedDashboard(agentId, dashboardKind, period, state.analysis, content, dataSource, preparedRequest.profile || "");
           }
           updateAgentProgress("done", "Run complete", "Dashboard updated from structured agent invoke.");
           setDashboardStatus(
@@ -2094,14 +2245,16 @@ function renderDashboard({ compact, basePath, appPath }) {
             "Updated " + new Date().toLocaleTimeString(),
             "Agent: " + agentId + "\\nData: " + dataSourceLabel(dataSource) + "\\nPeriod: " + period.label + "\\nRows: " + state.analysis.services.length + "\\nTrend points: " + state.analysis.trend.length + "\\nRaw rows: " + state.analysis.rawCost.length + "\\nStructured output: " + (state.analysis.status === "structured" ? "yes" : "no"),
           );
+          syncActionAvailability();
           publishAssistantContext("agent-analysis");
         } catch (error) {
           const message = error instanceof Error ? error.message : "Failed to call FinOps agent";
+          state.hasSuccessfulAnalysis = false;
           document.getElementById("agentTranscript").textContent =
-            "The FinOps analysis service is not reachable from this session yet. " + message;
+            "FinOps could not update this dashboard. " + message;
           updateAgentProgress("error", "Live run failed", message);
           setDashboardStatus("error", "Update failed", message);
-          publishAssistantContext("agent-unavailable");
+          syncActionAvailability();
         } finally {
           if (runToken === state.runToken) {
             setRunButtonBusy(false);
@@ -2109,7 +2262,7 @@ function renderDashboard({ compact, basePath, appPath }) {
         }
       }
 
-      async function saveCachedDashboard(agentId, dashboardKind, period, analysis, content, dataSource) {
+      async function saveCachedDashboard(agentId, dashboardKind, period, analysis, content, dataSource, awsProfile = "") {
         try {
           const response = await fetch("/api/agentic-apps/finops-cache", {
             method: "POST",
@@ -2117,6 +2270,7 @@ function renderDashboard({ compact, basePath, appPath }) {
             body: JSON.stringify({
               agentId,
               dataSource: normalizeDataSource(dataSource),
+              awsProfile,
               dashboardKind,
               lookbackDays: period?.lookbackDays ?? ${JSON.stringify(defaultLookbackDays)},
               periodLabel: period?.label || "",
@@ -2145,12 +2299,19 @@ function renderDashboard({ compact, basePath, appPath }) {
         if (!run?.payload) return;
         const dataSource = normalizeDataSource(run.dataSource || run.payload?.dataSource || "aws-cost-explorer");
         document.getElementById("dataSource").value = dataSource;
+        const runProfile = String(run.awsProfile || run.payload?.awsProfile || "");
+        if (runProfile && Array.from(document.getElementById("awsProfile").options).some((option) => option.value === runProfile)) {
+          document.getElementById("awsProfile").value = runProfile;
+        }
         syncDataSourceControls({ preserveAgent: true });
         state.analysis = normalizeDashboardPayload(run.payload, dataSource);
+        state.analysis.awsProfile = runProfile;
+        state.hasSuccessfulAnalysis = true;
         state.lastAgentMessage = run.lastAgentMessage || JSON.stringify(run.payload, null, 2);
         state.selectedService = "";
         state.selectedDate = "";
         renderAnalysis(state.analysis, state.lastAgentMessage);
+        syncActionAvailability();
         setDashboardStatus(
           "done",
           "Updated " + new Date(run.updatedAt || run.createdAt || Date.now()).toLocaleTimeString(),
@@ -2288,12 +2449,27 @@ function renderDashboard({ compact, basePath, appPath }) {
       }
 
       function setRunButtonBusy(isBusy) {
-        const button = document.getElementById("runAnalysis");
-        if (!button.dataset.defaultLabel) {
-          button.dataset.defaultLabel = button.textContent || "Run AWS Cost Explorer analysis";
+        state.isRunning = isBusy;
+        syncActionAvailability();
+      }
+
+      function syncActionAvailability() {
+        const runButton = document.getElementById("runAnalysis");
+        if (!runButton.dataset.defaultLabel) {
+          runButton.dataset.defaultLabel = runButton.textContent || "Run analysis";
         }
-        button.disabled = isBusy;
-        button.textContent = isBusy ? "Running live analysis..." : button.dataset.defaultLabel;
+        runButton.disabled = state.isRunning || isAwsProfileMissing();
+        runButton.textContent = state.isRunning
+          ? "Running live analysis..."
+          : isAwsProfileMissing()
+            ? "Select AWS account"
+            : runButton.dataset.defaultLabel;
+
+        const publishButton = document.getElementById("publishContext");
+        publishButton.disabled = !state.hasSuccessfulAnalysis;
+        publishButton.title = state.hasSuccessfulAnalysis
+          ? "Share the current successful dashboard with FinOps chat"
+          : "Run a successful analysis before sharing dashboard context";
       }
 
       function applyFontPreferences(preferences = readFontPreferences()) {
@@ -2552,6 +2728,7 @@ function renderDashboard({ compact, basePath, appPath }) {
         return {
           status: "structured",
           dataSource,
+          awsProfile: String(json.awsProfile || ""),
           currency: String(json.currency || "USD"),
           startDate: String(json.startDate || json.start_date || ""),
           endDate: String(json.endDate || json.end_date || ""),
@@ -3226,6 +3403,11 @@ function renderDashboard({ compact, basePath, appPath }) {
       }
 
       function publishAssistantContext(source) {
+        if (!state.hasSuccessfulAnalysis || !state.analysis) {
+          document.getElementById("assistantStatus").textContent =
+            "Run a successful analysis before sharing dashboard context.";
+          return false;
+        }
         const analysis = state.analysis;
         const dataSource = normalizeDataSource(analysis?.dataSource || document.getElementById("dataSource").value);
         const summary = analysis
@@ -3250,6 +3432,9 @@ function renderDashboard({ compact, basePath, appPath }) {
             resourceRefs: [
               { kind: "agent", id: document.getElementById("agentId").value.trim() || defaultAgents[dataSource] || ${JSON.stringify(defaultAgentId)} },
               { kind: "datasource", id: dataSource },
+              ...(dataSource === "aws-cost-explorer" && selectedAwsProfile()
+                ? [{ kind: "aws-profile", id: selectedAwsProfile() }]
+                : []),
             ],
             suggestedPrompts: [
               dataSource === "litellm" ? "Explain the biggest LiteLLM usage and spend drivers in this dashboard." : "Explain the biggest AWS cost drivers in this FinOps context.",
@@ -3260,17 +3445,20 @@ function renderDashboard({ compact, basePath, appPath }) {
         }, window.location.origin);
         document.getElementById("assistantStatus").textContent =
           "Shared dashboard context to FinOps chat from " + source + ".";
+        return true;
       }
 
       function openAssistantChat() {
-        publishAssistantContext("chat-open");
+        const shared = publishAssistantContext("chat-open");
         window.parent?.postMessage({
           type: "caipe.agenticApp.assistant.open.v1",
           version: "1.0",
           appId: "finops",
         }, window.location.origin);
         document.getElementById("assistantStatus").textContent =
-          "Opened Ask FinOps with the current dashboard context.";
+          shared
+            ? "Opened Ask FinOps with the current dashboard context."
+            : "Opened Ask FinOps without dashboard context. Run an analysis to share live data.";
       }
 
       function card(label, value) {
@@ -3479,6 +3667,18 @@ function normalizeDataSource(value) {
 
 function agentIdForDataSource(value) {
   return defaultAwsAgentId;
+}
+
+function renderAwsProfileOptions() {
+  if (!configuredAwsAccounts.length) {
+    return '<option value="">Environment credentials</option>';
+  }
+  const placeholder = defaultAwsProfile
+    ? ""
+    : '<option value="" selected disabled>Select an AWS account</option>';
+  return placeholder + configuredAwsAccounts.map(({ profile }) =>
+    `<option value="${escapeHtml(profile)}"${profile === defaultAwsProfile ? " selected" : ""}>${escapeHtml(profile)}</option>`
+  ).join("");
 }
 
 function escapeHtml(value) {
