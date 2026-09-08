@@ -2,10 +2,26 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildLiteLlmVirtualKeyListQuery,
   buildLiteLlmUsageDashboard,
   prepareLiteLlmVirtualKeys,
   resolveLiteLlmUsageRange,
 } from "./usage.mjs";
+
+test("uses only supported bounded LiteLLM key-list parameters", () => {
+  assert.deepEqual(buildLiteLlmVirtualKeyListQuery(), {
+    page: 1,
+    size: 100,
+    return_full_object: true,
+  });
+  assert.deepEqual(buildLiteLlmVirtualKeyListQuery(2), {
+    page: 2,
+    size: 100,
+    return_full_object: true,
+  });
+  assert.equal("sort_by" in buildLiteLlmVirtualKeyListQuery(), false);
+  assert.equal("sort_order" in buildLiteLlmVirtualKeyListQuery(), false);
+});
 
 test("sanitizes virtual keys without exposing upstream key material", () => {
   const prepared = prepareLiteLlmVirtualKeys({
