@@ -69,6 +69,17 @@ for (const [appId, expectedName, expectedMountPath] of apps) {
   ]) {
     assert.ok(server.includes(requiredText), `${appId}: missing ${requiredText}`);
   }
+
+  if (appId === "jira-project-dashboard") {
+    assert.ok(
+      server.includes("response_format:"),
+      `${appId}: dashboard invocation must provide its structured response schema`,
+    );
+    assert.ok(
+      !server.includes("ensureStructuredResponseAgent"),
+      `${appId}: runtime agent metadata must not block a request-scoped response format`,
+    );
+  }
 }
 
 console.log(`Validated latest Agentic App registration and popup contract for ${apps.length} apps.`);
