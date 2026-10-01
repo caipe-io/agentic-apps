@@ -27,6 +27,10 @@ not an instruction channel. CAIPE gateway and CAS/OpenFGA remain the policy enfo
 | OSS Repo Report Card | `agent-oss-repo-report-card` | `oss_repo_report_card` | 3040 |
 | Jira Project Dashboard | `agent-jira-agent` | host-configured integration | 3041 |
 
+The Agentic SDLC [native-package example](agentic-apps/agentic-sdlc/native-package/README.md)
+is an optional React surface for trusted CAIPE hosts. It does not change the
+default iframe runtime or the app-agent-MCP registrations.
+
 The `/example` route is a static, network-free fixture for design and contract checks. It must not
 be used for operational decisions.
 

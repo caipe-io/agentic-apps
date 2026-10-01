@@ -27,6 +27,11 @@ remains in the separate `platform-apps-deployment` repository.
 | OSS Repo Report Card | `/apps/oss-repo-management` | 3040 | `agent-oss-repo-report-card` | Repository health and OSS readiness evidence |
 | Jira Project Dashboard | `/apps/jira-project-dashboard` | 3041 | `agent-jira-agent` | Jira project and delivery metrics |
 
+Agentic SDLC also has an [opt-in native UI package](ui/apps/agentic-apps/agentic-sdlc/native-package/README.md)
+for the trusted CAIPE extension contract. It renders at `/sdlc` in a derived CAIPE
+image and reuses the same separate runtime and agent. The iframe deployment
+remains the default until a deployment explicitly selects the native package.
+
 The source-backed applications follow the CAIPE app-agent-MCP triplet:
 
 ```text

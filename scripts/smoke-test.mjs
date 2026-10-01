@@ -41,6 +41,17 @@ try {
     if (!readiness.ok) failures.push(`${entry.name}: /health/ready returned HTTP ${readiness.status}`);
     const context = await fetch(`http://127.0.0.1:${entry.port}/api/context`);
     if (!context.ok) failures.push(`${entry.name}: /api/context returned HTTP ${context.status}`);
+    if (entry.name === "agentic-sdlc") {
+      const nativeContext = await fetch(`http://127.0.0.1:${entry.port}/api/agentic-sdlc/context`);
+      if (!nativeContext.ok) {
+        failures.push(`${entry.name}: native context returned HTTP ${nativeContext.status}`);
+      } else {
+        const payload = await nativeContext.json();
+        if (payload.route !== "/sdlc" || payload.appId !== entry.name) {
+          failures.push(`${entry.name}: native context shape is invalid`);
+        }
+      }
+    }
     const page = await fetch(`http://127.0.0.1:${entry.port}/`);
     if (!page.ok) {
       failures.push(`${entry.name}: / returned HTTP ${page.status}`);
