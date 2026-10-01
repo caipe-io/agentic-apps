@@ -1,0 +1,105 @@
+.caipe-weather-native {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2.5rem);
+  color: hsl(var(--foreground));
+}
+
+.caipe-weather-native *,
+.caipe-weather-native *::before,
+.caipe-weather-native *::after { box-sizing: inherit; }
+
+.caipe-weather-native__header {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: end;
+  margin-bottom: 1.5rem;
+}
+
+.caipe-weather-native h1 {
+  margin: 0;
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+}
+
+.caipe-weather-native h2 { margin: 0.5rem 0; font-size: 1.2rem; }
+.caipe-weather-native p { line-height: 1.5; }
+
+.caipe-weather-native__eyebrow {
+  margin: 0;
+  color: hsl(var(--primary));
+  font-size: 0.73rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.caipe-weather-native__muted { color: hsl(var(--muted-foreground)); }
+.caipe-weather-native__form { display: grid; gap: 0.4rem; }
+.caipe-weather-native__form label { font-weight: 600; }
+.caipe-weather-native__form-row { display: flex; gap: 0.6rem; }
+
+.caipe-weather-native input {
+  min-width: 10rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid hsl(var(--input));
+  border-radius: var(--radius, 0.75rem);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font: inherit;
+}
+
+.caipe-weather-native button {
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: var(--radius, 0.75rem);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.caipe-weather-native button:disabled { cursor: wait; opacity: 0.65; }
+.caipe-weather-native button:focus-visible,
+.caipe-weather-native input:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.caipe-weather-native__error { color: hsl(var(--destructive)); }
+
+.caipe-weather-native__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 780px) {
+  .caipe-weather-native__grid { grid-template-columns: 1fr; }
+}
+
+.caipe-weather-native__card {
+  min-width: 0;
+  padding: 1.4rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius, 0.75rem);
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+}
+
+.caipe-weather-native__temperature {
+  margin: 0.5rem 0;
+  font-size: clamp(2.7rem, 5vw, 4rem);
+  font-weight: 700;
+}
+
+.caipe-weather-native__days { display: grid; gap: 0.2rem; }
+.caipe-weather-native__day {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+  gap: 0.7rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid hsl(var(--border));
+}
+.caipe-weather-native__day span:nth-child(2) { color: hsl(var(--muted-foreground)); }
+.caipe-weather-native li { margin-top: 0.5rem; overflow-wrap: anywhere; }

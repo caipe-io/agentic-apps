@@ -27,6 +27,10 @@ remains in the separate `platform-apps-deployment` repository.
 | OSS Repo Report Card | `/apps/oss-repo-management` | 3040 | `agent-oss-repo-report-card` | Repository health and OSS readiness evidence |
 | Jira Project Dashboard | `/apps/jira-project-dashboard` | 3041 | `agent-jira-agent` | Jira project and delivery metrics |
 
+Weather Lab also has an [opt-in native UI example](ui/apps/agentic-apps/weather/native-package/README.md)
+for trusted CAIPE hosts. It renders at `/weather` using the same runtime; the
+iframe route remains available for comparison.
+
 The source-backed applications follow the CAIPE app-agent-MCP triplet:
 
 ```text
