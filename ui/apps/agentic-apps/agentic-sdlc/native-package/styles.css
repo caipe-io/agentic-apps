@@ -1,0 +1,132 @@
+.caipe-sdlc-native {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: clamp(1rem, 4vw, 3rem);
+  color: hsl(var(--foreground));
+}
+
+.caipe-sdlc-native *,
+.caipe-sdlc-native *::before,
+.caipe-sdlc-native *::after {
+  box-sizing: inherit;
+}
+
+.caipe-sdlc-native__card {
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius, 0.75rem);
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+}
+
+.caipe-sdlc-native__eyebrow {
+  margin: 0 0 0.4rem;
+  color: hsl(var(--primary));
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.caipe-sdlc-native h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+}
+
+.caipe-sdlc-native__intro {
+  max-width: 65ch;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.6;
+}
+
+.caipe-sdlc-native__status {
+  display: inline-block;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8rem;
+}
+
+.caipe-sdlc-native__form {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1.75rem;
+}
+
+.caipe-sdlc-native__form label {
+  font-weight: 600;
+}
+
+.caipe-sdlc-native__form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.caipe-sdlc-native input {
+  flex: 1 1 16rem;
+  min-width: 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid hsl(var(--input));
+  border-radius: var(--radius, 0.75rem);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font: inherit;
+}
+
+.caipe-sdlc-native button {
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: var(--radius, 0.75rem);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.caipe-sdlc-native button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.caipe-sdlc-native button:focus-visible,
+.caipe-sdlc-native input:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.caipe-sdlc-native__dashboard {
+  min-height: 8rem;
+  margin-top: 1.75rem;
+  padding: 1rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius, 0.75rem);
+  background: hsl(var(--background));
+}
+
+.caipe-sdlc-native__dashboard p {
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+}
+
+.caipe-sdlc-native__dashboard pre {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font: inherit;
+}
+
+.caipe-sdlc-native__error {
+  color: hsl(var(--destructive)) !important;
+}
+
+.caipe-sdlc-native button.caipe-sdlc-native__link {
+  margin-top: 1rem;
+  padding: 0;
+  background: transparent;
+  color: hsl(var(--primary));
+  text-decoration: underline;
+}

@@ -1,0 +1,38 @@
+# Optional native-package alternative to the iframe installation. Merge this
+# entry into the deployment-owned agentic_apps catalog; do not install the same
+# app ID twice. The separate MCP and agent registrations remain unchanged.
+agentic_apps:
+  packages:
+    - package_id: agentic-sdlc
+      source: example
+      manifest:
+        id: agentic-sdlc
+        displayName: Agentic SDLC
+        description: Repository delivery and ship-loop dashboard.
+        apiVersion: "1.0"
+        auth:
+          mode: app-scoped-token
+        runtime:
+          kind: proxied-next-zone
+          origin: http://agentic-app-agentic-sdlc:3030
+          mountPath: /apps/agentic-sdlc
+          preserveMountPath: false
+        surfaces:
+          showInHub: false
+        access:
+          requiredRoles: [user]
+          tokenScopes: ["sdlc:read"]
+          policyActions:
+            - action: native-context
+              method: GET
+              path: /api/agentic-sdlc/context
+              defaultEffect: allow
+              requiredScopes: ["sdlc:read"]
+  installations:
+    - app_id: agentic-sdlc
+      package_id: agentic-sdlc
+      installed: true
+      enabled: true
+      visible: false
+      runtime_mount_path: /apps/agentic-sdlc
+      runtime_origin_override: http://agentic-app-agentic-sdlc:3030

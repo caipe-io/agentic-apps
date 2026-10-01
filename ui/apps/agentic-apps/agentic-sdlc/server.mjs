@@ -72,15 +72,16 @@ export function createAgenticSdlcReferenceServer() {
       return;
     }
 
-    if (url.pathname === "/api/context" && request.method === "GET") {
+    if ((url.pathname === "/api/context" || url.pathname === "/api/agentic-sdlc/context") && request.method === "GET") {
       sendJson(response, 200, {
         version: "1.0",
         appId: "agentic-sdlc",
-        route: "/apps/agentic-sdlc",
+        route: url.pathname === "/api/context" ? "/apps/agentic-sdlc" : "/sdlc",
         title: "Agentic SDLC",
         agentId: "agent-agentic-sdlc",
         mcpServerId: "agentic_sdlc",
         domainAnswersRequireMcp: true,
+        ...(url.pathname === "/api/agentic-sdlc/context" ? { authorization: authorization.summary } : {}),
         suggestedPrompts: [
           "Summarize delivery risk from this SDLC dashboard.",
           "Draft next engineering actions.",
