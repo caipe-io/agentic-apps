@@ -1,6 +1,6 @@
 {
   "name": "@caipe/weather-native",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Trusted native Weather Lab example for CAIPE",
   "type": "module",
   "license": "Apache-2.0",
@@ -10,7 +10,7 @@
     "./manifest": "./manifest.json",
     "./styles.css": "./styles.css"
   },
-  "files": ["index.mjs", "client.mjs", "routes.mjs", "manifest.json", "styles.css", "README.md"],
+  "files": ["index.mjs", "client.mjs", "routes.mjs", "manifest.json", "styles.css", "README.md", "installation.example.yaml"],
   "peerDependencies": {
     "next": "^16.0.0",
     "next-auth": "^4.24.0",

@@ -52,16 +52,22 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
         with:
           repository: caipe-io/ai-platform-engineering
-          ref: 6dff8796bca9057ba566b23cfff415689869dbd6
+          ref: 8c1e27b9de78ee5df49b1acaa0eb984303d50f7a
           path: caipe-host
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "24"
-      - name: Check the native extension contract
-        run: node caipe-host/ui/scripts/check-native-extension.mjs ui/apps/agentic-apps/weather/native-package
-      - name: Verify publishable package contents
-        run: npm pack ./ui/apps/agentic-apps/weather/native-package --dry-run
+      - name: Check the shared app manifest
+        run: node caipe-host/ui/native-extension-sdk/bin/check-manifest.mjs ui/apps/agentic-apps/weather/native-package/manifest.json
+      - name: Check the published native artifact
+        run: |
+          set -eu
+          artifact_directory=$(mktemp -d)
+          npm pack ./ui/apps/agentic-apps/weather/native-package --pack-destination "$artifact_directory"
+          mkdir "$artifact_directory/unpacked"
+          tar -xzf "$artifact_directory/caipe-weather-native-0.2.0.tgz" -C "$artifact_directory/unpacked" --strip-components=1
+          node caipe-host/ui/scripts/check-native-extension.mjs "$artifact_directory/unpacked"
 
   image-matrix:
     name: Resolve application image matrix

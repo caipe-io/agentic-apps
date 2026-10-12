@@ -1,0 +1,12 @@
+# Use this with a CAIPE UI image containing the pinned native package.
+# Select hosted for the existing iframe at /apps/weather; native uses /weather.
+agentic_apps:
+  installations:
+    - app_id: weather
+      app_version: 0.2.0
+      installed: true
+      enabled: true
+      visible: true
+      selected_ui_profile: native
+      bindings:
+        runtimeOrigin: https://runtime.example.test
