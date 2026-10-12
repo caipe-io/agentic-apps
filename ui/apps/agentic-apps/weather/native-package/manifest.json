@@ -6,7 +6,7 @@
   "version": "0.2.0",
   "ui": {
     "profiles": [
-      { "id": "native", "mode": "native-package", "package": "@caipe/weather-native", "contractVersion": "1.1" },
+      { "id": "native", "mode": "native-package", "package": "@caipe/weather-native", "contractVersion": "2.0" },
       { "id": "hosted", "mode": "iframe" }
     ],
     "routes": [{ "id": "weather", "path": "/weather" }],

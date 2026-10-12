@@ -131,4 +131,4 @@ function WeatherNative({ pathname, navigate, setBreadcrumbs }) {
   );
 }
 
-export default { contractVersion: "1.1", Component: WeatherNative };
+export default { contractVersion: "2.0", Component: WeatherNative };

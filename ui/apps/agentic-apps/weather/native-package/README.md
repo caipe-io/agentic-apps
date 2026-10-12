@@ -2,7 +2,7 @@
 
 This small React package is an **opt-in** native UI for the existing Weather
 Lab runtime. It publishes `AgenticAppManifest` **2.0**, while its React component
-ABI remains **1.1**, without adding or changing a backend service. The same
+ABI is also **2.0** with SDK/checker **2.0.0**, without changing a backend service. The same
 manifest declares `native` and `hosted` UI profiles. The installation selects
 one profile; `/apps/weather` redirects to `/weather` when native is selected,
 and embeds the existing runtime when hosted is selected. It does not expose
@@ -42,7 +42,7 @@ overridden in runtime configuration. Set `selected_ui_profile` explicitly
 to `native` or `hosted`. The package version must match `app_version`.
 
 CI validates the package against pinned Phase 1 CAIPE commit
-`8c1e27b9de78ee5df49b1acaa0eb984303d50f7a` (PR #2852, not yet merged).
+`d876829c20f39c5ee76da9b4e5fa0fe2b2530054` (PR #2852, not yet merged).
 MCP/agent declarations reference existing registries; they do not install
 those resources or grant access. `requestedPermissions` is empty.
 Native-only host capability references are optional in this multi-profile
