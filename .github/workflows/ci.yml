@@ -39,7 +39,7 @@ jobs:
         run: npm run smoke
 
   weather-native-package:
-    name: Validate Weather native package
+    name: Validate app manifests and native package against SDK 2.0
     runs-on: ubuntu-latest
     steps:
       - name: Harden runner
@@ -59,7 +59,7 @@ jobs:
         with:
           node-version: "24"
       - name: Check the shared app manifest
-        run: node caipe-host/ui/native-extension-sdk/bin/check-manifest.mjs ui/apps/agentic-apps/weather/native-package/manifest.json
+        run: node scripts/check-shared-manifests.mjs caipe-host
       - name: Check the published native artifact
         run: |
           set -eu

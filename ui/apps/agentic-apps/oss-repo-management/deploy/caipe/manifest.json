@@ -1,0 +1,132 @@
+{
+  "id": "oss-repo-management",
+  "displayName": "OSS Repo Report Card",
+  "description": "A source-backed OSS report card with activity and contributor trends, OpenSSF and GitHub security signals, foundation-readiness criteria, timestamped reports, CAS-protected credentials, and CAIPE context sharing.",
+  "apiVersion": "2.0",
+  "version": "0.0.3",
+  "ui": {
+    "profiles": [
+      {
+        "id": "hosted",
+        "mode": "iframe"
+      }
+    ],
+    "routes": [
+      {
+        "id": "home",
+        "path": "/apps/oss-repo-management"
+      }
+    ],
+    "assistant": {
+      "agentId": "agent-oss-repo-report-card",
+      "label": "Ask Report Card",
+      "name": "Repo Report Card Assistant"
+    }
+  },
+  "api": {
+    "mounts": []
+  },
+  "auth": {
+    "mode": "app-scoped-token"
+  },
+  "runtime": {
+    "kind": "proxied-next-zone",
+    "mountPath": "/apps/oss-repo-management"
+  },
+  "surfaces": {
+    "showInHub": true,
+    "navOrder": 40,
+    "homeEligible": false
+  },
+  "access": {
+    "requiredRoles": [
+      "user"
+    ],
+    "tokenScopes": [
+      "oss-repo-management:read",
+      "oss-repo-management:agent:invoke",
+      "agents:invoke"
+    ],
+    "policyActions": [
+      {
+        "action": "proxy:GET",
+        "description": "Read OSS repository pages and data through the app gateway",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "oss-repo-management:read"
+        ]
+      },
+      {
+        "action": "proxy:HEAD",
+        "description": "Probe OSS repository pages through the app gateway",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "oss-repo-management:read"
+        ]
+      },
+      {
+        "action": "proxy:POST",
+        "description": "Run embedded GitHub repository agent",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "oss-repo-management:agent:invoke"
+        ]
+      },
+      {
+        "action": "agent.invoke.github",
+        "description": "Invoke the configured GitHub repository agent",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "oss-repo-management:agent:invoke",
+          "agents:invoke"
+        ]
+      }
+    ]
+  },
+  "provides": {
+    "mcp": [
+      "oss_repo_report_card"
+    ],
+    "agents": [
+      "agent-oss-repo-report-card"
+    ],
+    "workflows": []
+  },
+  "consumes": {
+    "platformApis": [
+      {
+        "id": "app.gateway",
+        "version": "1.0",
+        "required": true
+      },
+      {
+        "id": "agents.invocation",
+        "version": "1.0",
+        "required": false
+      }
+    ]
+  },
+  "requestedPermissions": [],
+  "health": {
+    "endpoint": "/health/ready",
+    "timeoutMs": 1500
+  },
+  "catalog": {
+    "categories": [
+      "oss",
+      "github",
+      "report-card"
+    ],
+    "capabilities": [
+      "github-rest-api",
+      "activity-trends",
+      "contributor-health",
+      "security-posture",
+      "openssf-scorecard",
+      "foundation-readiness",
+      "timestamped-reports",
+      "optional-agent",
+      "structured-output"
+    ]
+  }
+}

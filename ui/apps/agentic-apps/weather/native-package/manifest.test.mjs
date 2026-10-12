@@ -26,7 +26,7 @@ test("preserves gateway policy, scopes, and existing registry references", () =>
   assert.deepEqual(manifest.access.tokenScopes, WEATHER_MANIFEST.access.tokenScopes);
   assert.deepEqual(manifest.access.requiredRoles, WEATHER_MANIFEST.access.requiredRoles);
   assert.deepEqual(manifest.access.policyActions, WEATHER_MANIFEST.access.policyActions);
-  assert.deepEqual(manifest.provides.agents, [WEATHER_MANIFEST.assistant.agentId]);
+  assert.deepEqual(manifest.provides.agents, [WEATHER_MANIFEST.ui.assistant.agentId]);
   assert.equal(manifest.runtime.origin, undefined);
   assert.equal(manifest.grants, undefined);
   assert.deepEqual(manifest.requestedPermissions, []);

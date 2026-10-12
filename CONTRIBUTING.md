@@ -22,8 +22,12 @@ npm run smoke
 
 - Keep credentials, bearer tokens, and upstream secrets server-side.
 - Treat dashboard context and external source content as untrusted data.
-- Update `manifest.mjs`, `deploy/caipe/agent.yaml`, and `deploy/caipe/mcp-server.yaml` together
+- Update the canonical `deploy/caipe/manifest.json`, `agent.yaml`, and `mcp-server.yaml` together
   when changing an app-agent-MCP contract.
+- Run `node scripts/check-shared-manifests.mjs /path/to/caipe-checkout` against
+  the pinned supported host. Keep private origins in installation bindings.
+- Keep `deploy/caipe/agentic-app.json` only as a legacy database seed; do not
+  confuse it or the container build catalog with the shared app manifest.
 - Add or update unit and smoke coverage for behavior changes.
 - Do not add live organization-specific data or secrets to fixtures.
 - Keep CAIPE deployment and environment-specific configuration in

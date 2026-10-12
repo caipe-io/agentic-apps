@@ -1,0 +1,126 @@
+{
+  "id": "finops",
+  "displayName": "FinOps Command Center",
+  "description": "An AWS Cost Explorer dashboard that launches analysis through a dedicated FinOps agent and shares cost context with the CAIPE Assistant Overlay.",
+  "apiVersion": "2.0",
+  "version": "0.0.3",
+  "ui": {
+    "profiles": [
+      {
+        "id": "hosted",
+        "mode": "iframe"
+      }
+    ],
+    "routes": [
+      {
+        "id": "home",
+        "path": "/apps/finops"
+      }
+    ],
+    "assistant": {
+      "agentId": "agent-finops",
+      "label": "Ask FinOps",
+      "name": "FinOps Assistant"
+    }
+  },
+  "api": {
+    "mounts": []
+  },
+  "auth": {
+    "mode": "app-scoped-token"
+  },
+  "runtime": {
+    "kind": "proxied-next-zone",
+    "mountPath": "/apps/finops"
+  },
+  "surfaces": {
+    "showInHub": true,
+    "navOrder": 20,
+    "homeEligible": false
+  },
+  "access": {
+    "requiredRoles": [
+      "user"
+    ],
+    "tokenScopes": [
+      "finops:read",
+      "finops:agent:invoke",
+      "agents:invoke"
+    ],
+    "policyActions": [
+      {
+        "action": "proxy:GET",
+        "description": "Read FinOps pages and data through the app gateway",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "finops:read"
+        ]
+      },
+      {
+        "action": "proxy:HEAD",
+        "description": "Probe FinOps pages through the app gateway",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "finops:read"
+        ]
+      },
+      {
+        "action": "proxy:POST",
+        "description": "Run FinOps actions through the app gateway",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "finops:agent:invoke"
+        ]
+      },
+      {
+        "action": "agent.invoke.finops",
+        "description": "Invoke the dedicated AWS FinOps agent",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "finops:agent:invoke",
+          "agents:invoke"
+        ]
+      }
+    ]
+  },
+  "provides": {
+    "mcp": [
+      "mcp-aws"
+    ],
+    "agents": [
+      "agent-finops"
+    ],
+    "workflows": []
+  },
+  "consumes": {
+    "platformApis": [
+      {
+        "id": "app.gateway",
+        "version": "1.0",
+        "required": true
+      },
+      {
+        "id": "agents.invocation",
+        "version": "1.0",
+        "required": false
+      }
+    ]
+  },
+  "requestedPermissions": [],
+  "health": {
+    "endpoint": "/health/ready",
+    "timeoutMs": 1500
+  },
+  "catalog": {
+    "categories": [
+      "reference",
+      "finops",
+      "aws"
+    ],
+    "capabilities": [
+      "aws-cost-explorer",
+      "assistant-context-bridge",
+      "optimization-workflows"
+    ]
+  }
+}

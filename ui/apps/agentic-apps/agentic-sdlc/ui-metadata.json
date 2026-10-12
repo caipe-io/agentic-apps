@@ -1,0 +1,30 @@
+{
+  "assistantContext": {
+    "schemaVersions": [
+      "1.0"
+    ],
+    "maxContextBytes": 8192,
+    "capability": "sdlc-assistant",
+    "suggestions": true
+  },
+  "agents": [
+    {
+      "id": "agentic-sdlc-agent",
+      "displayName": "Agentic SDLC Agent",
+      "required": true,
+      "dynamicAgentId": "agent-agentic-sdlc",
+      "capabilities": [
+        "spec-driven-development",
+        "ship-loop",
+        "repository-delivery"
+      ]
+    }
+  ],
+  "data": {
+    "apiBasePath": "/api/agentic-sdlc",
+    "eventChannels": [
+      "sdlc.repo.updated",
+      "sdlc.ship_loop.updated"
+    ]
+  }
+}

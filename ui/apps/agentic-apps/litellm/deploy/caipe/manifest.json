@@ -1,0 +1,120 @@
+{
+  "id": "litellm",
+  "displayName": "LiteLLM Usage Dashboard",
+  "description": "An MCP-backed operating dashboard for LiteLLM spend, tokens, requests, model mix, and optimization actions.",
+  "apiVersion": "2.0",
+  "version": "0.0.3",
+  "ui": {
+    "profiles": [
+      {
+        "id": "hosted",
+        "mode": "iframe"
+      }
+    ],
+    "routes": [
+      {
+        "id": "home",
+        "path": "/apps/litellm"
+      }
+    ],
+    "assistant": {
+      "agentId": "agent-litellm",
+      "label": "Ask LiteLLM",
+      "name": "LiteLLM Assistant"
+    }
+  },
+  "api": {
+    "mounts": []
+  },
+  "auth": {
+    "mode": "app-scoped-token"
+  },
+  "runtime": {
+    "kind": "proxied-next-zone",
+    "mountPath": "/apps/litellm"
+  },
+  "surfaces": {
+    "showInHub": true,
+    "navOrder": 25,
+    "homeEligible": false
+  },
+  "access": {
+    "requiredRoles": [
+      "user"
+    ],
+    "tokenScopes": [
+      "litellm:read",
+      "litellm:agent:invoke",
+      "agents:invoke"
+    ],
+    "policyActions": [
+      {
+        "action": "proxy:GET",
+        "description": "Read LiteLLM dashboard pages through the app gateway",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "litellm:read"
+        ]
+      },
+      {
+        "action": "proxy:HEAD",
+        "description": "Probe LiteLLM dashboard pages through the app gateway",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "litellm:read"
+        ]
+      },
+      {
+        "action": "agent.invoke.litellm",
+        "description": "Invoke the configured LiteLLM MCP reporting agent",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "litellm:agent:invoke",
+          "agents:invoke"
+        ]
+      }
+    ]
+  },
+  "provides": {
+    "mcp": [
+      "litellm"
+    ],
+    "agents": [
+      "agent-litellm"
+    ],
+    "workflows": []
+  },
+  "consumes": {
+    "platformApis": [
+      {
+        "id": "app.gateway",
+        "version": "1.0",
+        "required": true
+      },
+      {
+        "id": "agents.invocation",
+        "version": "1.0",
+        "required": false
+      }
+    ]
+  },
+  "requestedPermissions": [],
+  "health": {
+    "endpoint": "/health/ready",
+    "timeoutMs": 1500
+  },
+  "catalog": {
+    "categories": [
+      "finops",
+      "llm-operations",
+      "litellm"
+    ],
+    "capabilities": [
+      "litellm-mcp",
+      "usage-reporting",
+      "spend-analysis",
+      "token-analysis",
+      "assistant-context-bridge"
+    ]
+  }
+}

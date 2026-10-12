@@ -1,0 +1,52 @@
+{
+  "preferences": {
+    "schemaVersion": "1.0",
+    "fields": [
+      {
+        "key": "density",
+        "label": "Dashboard density",
+        "type": "enum",
+        "default": "compact",
+        "options": [
+          {
+            "label": "Compact",
+            "value": "compact"
+          },
+          {
+            "label": "Comfortable",
+            "value": "comfortable"
+          }
+        ]
+      }
+    ]
+  },
+  "assistantContext": {
+    "schemaVersions": [
+      "1.0"
+    ],
+    "maxContextBytes": 12288,
+    "capability": "contextual-chat",
+    "suggestions": true
+  },
+  "agents": [
+    {
+      "id": "jira-agent",
+      "displayName": "Jira Agent",
+      "required": true,
+      "dynamicAgentId": "agent-jira-agent",
+      "capabilities": [
+        "jira-issues",
+        "sprint-summary",
+        "blocker-analysis",
+        "project-risk"
+      ]
+    }
+  ],
+  "data": {
+    "apiBasePath": "/api/jira-project-dashboard",
+    "eventChannels": [
+      "jira-project-dashboard.dashboard.updated",
+      "jira-project-dashboard.agent.updated"
+    ]
+  }
+}
