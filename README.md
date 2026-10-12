@@ -29,7 +29,41 @@ remains in the separate `platform-apps-deployment` repository.
 
 Weather Lab also has an [opt-in native UI example](ui/apps/agentic-apps/weather/native-package/README.md)
 for trusted CAIPE hosts. It renders at `/weather` using the same runtime; the
-iframe route remains available for comparison.
+installation selects either the native or iframe profile for this app ID.
+
+## Shared app contract 2.0
+
+Each app's `deploy/caipe/manifest.json` is its strict `AgenticAppManifest` 2.0
+publisher declaration. `manifest.mjs` re-exports that JSON without maintaining
+a second app record. The six existing dashboards remain iframe applications;
+the opt-in native package uses component ABI 2.0 and SDK/checker 2.0.0.
+
+- Manifests declare identity/version, UI profiles/routes, authentication,
+  HTTP policy, and existing agent/MCP registry references.
+- Use each app's `installation.example.yaml` to select a profile and bind its
+  private runtime origin. Default examples remain hidden from the catalog.
+- Capability references and empty permission requests do not provision agents,
+  MCP servers, or grants. Existing service authorization remains enforced.
+- `ui-metadata.json` retains app-owned preferences/context metadata outside the
+  strict host declaration. It is not automatically loaded by the Phase 1 host.
+- `deploy/caipe/agentic-app.json` is a **legacy database-seeding payload** for
+  older deployments, not the shared 2.0 publisher manifest. It is retained for
+  migration compatibility alongside agent/MCP deployment metadata.
+- Existing context and popup message protocols remain version 1.0. Manifest
+  2.0 does not implement a new iframe lifecycle SDK or change the trust model.
+
+This migration depends on [CAIPE PR #2852](https://github.com/caipe-io/ai-platform-engineering/pull/2852).
+Publisher CI pins the host contract at
+`d876829c20f39c5ee76da9b4e5fa0fe2b2530054`. Verify locally with:
+
+```bash
+node scripts/check-shared-manifests.mjs /path/to/caipe-checkout
+```
+
+For a hosted deployment, add the app's manifest under `agentic_apps.packages`
+and configure its installation. For a compiled native distribution, configure
+**only the installation**; its pinned package supplies the manifest. Do not
+repeat a compiled app declaration in the runtime catalog.
 
 The source-backed applications follow the CAIPE app-agent-MCP triplet:
 
@@ -52,8 +86,9 @@ npm run smoke
 ```
 
 The smoke test runs all six servers with JWT verification disabled on loopback only. Production
-deployments must keep forwarded-bearer validation enabled and configure the corresponding
-`deploy/caipe/agentic-app.json`, `agent.yaml`, and `mcp-server.yaml` files where the app owns its MCP.
+deployments must keep forwarded-bearer validation enabled and configure the shared
+manifest/installation plus agent and MCP registration where the app owns them.
+Older database-backed deployments can continue using the legacy seed payload.
 
 ## Container images
 

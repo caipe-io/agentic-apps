@@ -1,0 +1,117 @@
+{
+  "id": "jira-project-dashboard",
+  "displayName": "Jira Project Dashboard",
+  "description": "A Jira project command center for sprint health, blockers, at-risk work, owner asks, and structured project recommendations from a CAIPE Jira agent.",
+  "apiVersion": "2.0",
+  "version": "0.0.3",
+  "ui": {
+    "profiles": [
+      {
+        "id": "hosted",
+        "mode": "iframe"
+      }
+    ],
+    "routes": [
+      {
+        "id": "home",
+        "path": "/apps/jira-project-dashboard"
+      }
+    ],
+    "assistant": {
+      "agentId": "agent-jira-agent",
+      "label": "Ask Jira Ops",
+      "name": "Jira Ops Assistant"
+    }
+  },
+  "api": {
+    "mounts": []
+  },
+  "auth": {
+    "mode": "app-scoped-token"
+  },
+  "runtime": {
+    "kind": "proxied-next-zone",
+    "mountPath": "/apps/jira-project-dashboard"
+  },
+  "surfaces": {
+    "showInHub": true,
+    "navOrder": 41,
+    "homeEligible": false
+  },
+  "access": {
+    "requiredRoles": [
+      "user"
+    ],
+    "tokenScopes": [
+      "jira-project-dashboard:read",
+      "jira-project-dashboard:agent:invoke",
+      "agents:invoke"
+    ],
+    "policyActions": [
+      {
+        "action": "proxy:GET",
+        "description": "Read Jira dashboard pages and data through the app gateway",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "jira-project-dashboard:read"
+        ]
+      },
+      {
+        "action": "proxy:HEAD",
+        "description": "Probe Jira dashboard pages through the app gateway",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "jira-project-dashboard:read"
+        ]
+      },
+      {
+        "action": "proxy:POST",
+        "description": "Run embedded Jira project agent",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "jira-project-dashboard:agent:invoke"
+        ]
+      }
+    ]
+  },
+  "provides": {
+    "mcp": [],
+    "agents": [
+      "agent-jira-agent"
+    ],
+    "workflows": []
+  },
+  "consumes": {
+    "platformApis": [
+      {
+        "id": "app.gateway",
+        "version": "1.0",
+        "required": true
+      },
+      {
+        "id": "agents.invocation",
+        "version": "1.0",
+        "required": false
+      }
+    ]
+  },
+  "requestedPermissions": [],
+  "health": {
+    "endpoint": "/health/ready",
+    "timeoutMs": 1500
+  },
+  "catalog": {
+    "categories": [
+      "project-management",
+      "jira"
+    ],
+    "capabilities": [
+      "jira-issues",
+      "sprint-summary",
+      "blocker-analysis",
+      "embedded-agent",
+      "action-cards",
+      "structured-output"
+    ]
+  }
+}

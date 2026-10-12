@@ -1,0 +1,12 @@
+# Add this manifest to agentic_apps.packages when no native package is compiled.
+# Replace the reserved example origin with the private runtime service origin.
+agentic_apps:
+  installations:
+    - app_id: oss-repo-management
+      app_version: 0.0.3
+      installed: true
+      enabled: true
+      visible: false
+      selected_ui_profile: hosted
+      bindings:
+        runtimeOrigin: https://runtime.example.test

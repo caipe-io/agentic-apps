@@ -21,12 +21,15 @@ for (const [appId, expectedName, expectedMountPath] of apps) {
     (value) => value && typeof value === "object" && value.id === appId,
   );
   assert.ok(manifest, `${appId}: manifest export is missing`);
+  assert.equal(manifest.apiVersion, "2.0", `${appId}: shared app manifest version must be 2.0`);
+  assert.equal(manifest.version, JSON.parse(await readFile("package.json", "utf8")).version, `${appId}: publisher version drifted`);
   assert.equal(manifest.displayName, expectedName, `${appId}: display name drifted`);
   assert.equal(manifest.runtime.mountPath, expectedMountPath, `${appId}: mount path drifted`);
-  assert.equal(manifest.runtime.chrome, "iframe", `${appId}: runtime must use the iframe chrome contract`);
-  assert.equal(manifest.ui.surface, "hosted", `${appId}: UI surface must be hosted`);
-  assert.equal(manifest.assistant?.enabled, true, `${appId}: assistant must be enabled`);
-  assert.ok(manifest.assistant?.agentId, `${appId}: assistant agent binding is missing`);
+  assert.deepEqual(manifest.ui.profiles, [{ id: "hosted", mode: "iframe" }], `${appId}: UI profile must be hosted`);
+  assert.deepEqual(manifest.ui.routes, [{ id: "home", path: expectedMountPath }], `${appId}: canonical route drifted`);
+  assert.ok(manifest.ui.assistant?.agentId, `${appId}: assistant agent reference is missing`);
+  assert.equal(manifest.runtime.origin, undefined, `${appId}: private origins belong in installation bindings`);
+  assert.deepEqual(manifest.requestedPermissions, [], `${appId}: migration must not request new permissions`);
   assert.equal(manifest.health?.endpoint, "/health/ready", `${appId}: readiness endpoint drifted`);
 
   const registration = JSON.parse(await readFile(join(appRoot, "deploy/caipe/agentic-app.json"), "utf8"));
@@ -34,7 +37,7 @@ for (const [appId, expectedName, expectedMountPath] of apps) {
   assert.ok(registration.runtime?.target, `${appId}: runtime target is missing`);
   assert.equal(registration.visibility, "private", `${appId}: registration must default to private visibility`);
   assert.equal(registration.createdBy, "deployment-owner", `${appId}: registration owner is missing`);
-  assert.equal(registration.assistant?.name, manifest.assistant.agentName, `${appId}: assistant name drifted`);
+  assert.equal(registration.assistant?.name, manifest.ui.assistant.name, `${appId}: assistant name drifted`);
   assert.ok(registration.assistant?.label, `${appId}: assistant popup label is missing`);
   assert.deepEqual(
     registration,
@@ -45,7 +48,7 @@ for (const [appId, expectedName, expectedMountPath] of apps) {
       runtime: { ...registration.runtime, mountPath: expectedMountPath },
       assistant: {
         ...registration.assistant,
-        agentId: manifest.assistant.agentId,
+        agentId: manifest.ui.assistant.agentId,
         contextEndpoint: "/api/context",
       },
       healthEndpoint: "/health/ready",
@@ -82,4 +85,4 @@ for (const [appId, expectedName, expectedMountPath] of apps) {
   }
 }
 
-console.log(`Validated latest Agentic App registration and popup contract for ${apps.length} apps.`);
+console.log(`Validated shared AgenticAppManifest 2.0 and legacy seed/context compatibility for ${apps.length} apps.`);

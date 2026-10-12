@@ -1,0 +1,98 @@
+{
+  "preferences": {
+    "schemaVersion": "1.0",
+    "fields": [
+      {
+        "key": "density",
+        "label": "Dashboard density",
+        "type": "enum",
+        "default": "comfortable",
+        "options": [
+          {
+            "label": "Compact",
+            "value": "compact"
+          },
+          {
+            "label": "Comfortable",
+            "value": "comfortable"
+          }
+        ]
+      },
+      {
+        "key": "textScale",
+        "label": "Text size",
+        "type": "enum",
+        "default": "default",
+        "options": [
+          {
+            "label": "Small",
+            "value": "small"
+          },
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Large",
+            "value": "large"
+          },
+          {
+            "label": "Extra large",
+            "value": "xl"
+          }
+        ]
+      },
+      {
+        "key": "defaultRange",
+        "label": "Default usage range",
+        "type": "enum",
+        "default": "30d",
+        "options": [
+          {
+            "label": "7 days",
+            "value": "7d"
+          },
+          {
+            "label": "30 days",
+            "value": "30d"
+          },
+          {
+            "label": "90 days",
+            "value": "90d"
+          }
+        ]
+      }
+    ]
+  },
+  "assistantContext": {
+    "schemaVersions": [
+      "1.0"
+    ],
+    "maxContextBytes": 12288,
+    "capability": "contextual-chat",
+    "suggestions": true
+  },
+  "agents": [
+    {
+      "id": "litellm-agent",
+      "displayName": "LiteLLM Agent",
+      "required": true,
+      "dynamicAgentId": "agent-litellm",
+      "capabilities": [
+        "litellm-mcp",
+        "usage-reporting",
+        "virtual-key-budgets",
+        "spend-analysis",
+        "model-mix",
+        "optimization-recommendations"
+      ]
+    }
+  ],
+  "data": {
+    "apiBasePath": "/api/litellm",
+    "eventChannels": [
+      "litellm.usage.updated",
+      "litellm.agent.analysis.completed"
+    ]
+  }
+}

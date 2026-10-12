@@ -1,0 +1,94 @@
+{
+  "preferences": {
+    "schemaVersion": "1.0",
+    "fields": [
+      {
+        "key": "density",
+        "label": "Dashboard density",
+        "type": "enum",
+        "default": "compact",
+        "options": [
+          {
+            "label": "Compact",
+            "value": "compact"
+          },
+          {
+            "label": "Comfortable",
+            "value": "comfortable"
+          }
+        ]
+      },
+      {
+        "key": "textScale",
+        "label": "Text size",
+        "type": "enum",
+        "default": "default",
+        "options": [
+          {
+            "label": "Small",
+            "value": "small"
+          },
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Large",
+            "value": "large"
+          },
+          {
+            "label": "Extra large",
+            "value": "xl"
+          }
+        ]
+      },
+      {
+        "key": "units",
+        "label": "Weather units",
+        "type": "enum",
+        "default": "us",
+        "options": [
+          {
+            "label": "US customary",
+            "value": "us"
+          },
+          {
+            "label": "Metric",
+            "value": "metric"
+          }
+        ]
+      }
+    ]
+  },
+  "assistantContext": {
+    "schemaVersions": [
+      "1.0"
+    ],
+    "maxContextBytes": 8192,
+    "capability": "contextual-chat",
+    "suggestions": true
+  },
+  "agents": [
+    {
+      "id": "weather-agent",
+      "displayName": "Weather Agent",
+      "required": true,
+      "dynamicAgentId": "agent-weather-agent",
+      "capabilities": [
+        "open-meteo-forecast",
+        "air-quality-readout",
+        "national-weather-alerts",
+        "daily-guidance",
+        "forecast-explanation",
+        "chart-annotation"
+      ]
+    }
+  ],
+  "data": {
+    "apiBasePath": "/api/weather",
+    "eventChannels": [
+      "weather.forecast.updated",
+      "weather.agent.updated"
+    ]
+  }
+}

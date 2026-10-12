@@ -1,0 +1,95 @@
+{
+  "preferences": {
+    "schemaVersion": "1.0",
+    "fields": [
+      {
+        "key": "density",
+        "label": "Dashboard density",
+        "type": "enum",
+        "default": "compact",
+        "options": [
+          {
+            "label": "Compact",
+            "value": "compact"
+          },
+          {
+            "label": "Comfortable",
+            "value": "comfortable"
+          }
+        ]
+      },
+      {
+        "key": "textScale",
+        "label": "Text size",
+        "type": "enum",
+        "default": "default",
+        "options": [
+          {
+            "label": "Small",
+            "value": "small"
+          },
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Large",
+            "value": "large"
+          },
+          {
+            "label": "Extra large",
+            "value": "xl"
+          }
+        ]
+      },
+      {
+        "key": "defaultRange",
+        "label": "Default cost range",
+        "type": "enum",
+        "default": "30d",
+        "options": [
+          {
+            "label": "7 days",
+            "value": "7d"
+          },
+          {
+            "label": "30 days",
+            "value": "30d"
+          },
+          {
+            "label": "90 days",
+            "value": "90d"
+          }
+        ]
+      }
+    ]
+  },
+  "assistantContext": {
+    "schemaVersions": [
+      "1.0"
+    ],
+    "maxContextBytes": 8192,
+    "capability": "contextual-chat",
+    "suggestions": true
+  },
+  "agents": [
+    {
+      "id": "finops-agent",
+      "displayName": "FinOps Agent",
+      "required": true,
+      "dynamicAgentId": "agent-finops",
+      "capabilities": [
+        "aws-cost-explorer",
+        "cost-anomaly-explanation",
+        "savings-recommendation"
+      ]
+    }
+  ],
+  "data": {
+    "apiBasePath": "/api/finops",
+    "eventChannels": [
+      "finops.cost.updated",
+      "finops.agent.analysis.completed"
+    ]
+  }
+}

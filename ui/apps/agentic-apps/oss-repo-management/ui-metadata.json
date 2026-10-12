@@ -1,0 +1,84 @@
+{
+  "preferences": {
+    "schemaVersion": "1.0",
+    "fields": [
+      {
+        "key": "density",
+        "label": "Dashboard density",
+        "type": "enum",
+        "default": "compact",
+        "options": [
+          {
+            "label": "Compact",
+            "value": "compact"
+          },
+          {
+            "label": "Comfortable",
+            "value": "comfortable"
+          }
+        ]
+      },
+      {
+        "key": "textScale",
+        "label": "Text size",
+        "type": "enum",
+        "default": "default",
+        "options": [
+          {
+            "label": "Small",
+            "value": "small"
+          },
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Large",
+            "value": "large"
+          },
+          {
+            "label": "Extra large",
+            "value": "xl"
+          }
+        ]
+      },
+      {
+        "key": "staleDays",
+        "label": "Stale issue threshold (days)",
+        "type": "number",
+        "default": 30,
+        "min": 1,
+        "max": 365
+      }
+    ]
+  },
+  "assistantContext": {
+    "schemaVersions": [
+      "1.0"
+    ],
+    "maxContextBytes": 12288,
+    "capability": "contextual-chat",
+    "suggestions": true
+  },
+  "agents": [
+    {
+      "id": "github-agent",
+      "displayName": "OSS Repo Report Card Agent",
+      "required": true,
+      "dynamicAgentId": "agent-oss-repo-report-card",
+      "capabilities": [
+        "github-issues",
+        "pull-request-context",
+        "repository-risk",
+        "maintainer-actions"
+      ]
+    }
+  ],
+  "data": {
+    "apiBasePath": "/api/oss-repo-management",
+    "eventChannels": [
+      "oss-repo-management.dashboard.updated",
+      "oss-repo-management.agent.updated"
+    ]
+  }
+}

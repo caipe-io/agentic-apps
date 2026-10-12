@@ -1,0 +1,122 @@
+{
+  "id": "agentic-sdlc",
+  "displayName": "Agentic SDLC",
+  "description": "Spec-driven development, ship loop coordination, and SDLC workflows integrated with CAIPE agents.",
+  "apiVersion": "2.0",
+  "version": "0.0.3",
+  "ui": {
+    "profiles": [
+      {
+        "id": "hosted",
+        "mode": "iframe"
+      }
+    ],
+    "routes": [
+      {
+        "id": "home",
+        "path": "/apps/agentic-sdlc"
+      }
+    ],
+    "assistant": {
+      "agentId": "agent-agentic-sdlc",
+      "label": "Ask Agentic SDLC",
+      "name": "Agentic SDLC Assistant"
+    }
+  },
+  "api": {
+    "mounts": []
+  },
+  "auth": {
+    "mode": "app-scoped-token"
+  },
+  "runtime": {
+    "kind": "proxied-next-zone",
+    "mountPath": "/apps/agentic-sdlc"
+  },
+  "surfaces": {
+    "showInHub": true,
+    "navOrder": 5,
+    "homeEligible": true
+  },
+  "access": {
+    "requiredRoles": [
+      "user"
+    ],
+    "tokenScopes": [
+      "agents:invoke",
+      "sdlc:read"
+    ],
+    "policyActions": [
+      {
+        "action": "proxy:GET",
+        "description": "Read Agentic SDLC pages through the app gateway",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "sdlc:read"
+        ]
+      },
+      {
+        "action": "proxy:HEAD",
+        "description": "Probe Agentic SDLC pages through the app gateway",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "sdlc:read"
+        ]
+      },
+      {
+        "action": "proxy:POST",
+        "description": "Run Agentic SDLC actions through the app gateway",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "agents:invoke"
+        ]
+      },
+      {
+        "action": "webhook.github.repo-events",
+        "description": "Forward GitHub webhook events to Agentic SDLC",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "sdlc:read"
+        ]
+      }
+    ]
+  },
+  "provides": {
+    "mcp": [
+      "agentic_sdlc"
+    ],
+    "agents": [
+      "agent-agentic-sdlc"
+    ],
+    "workflows": []
+  },
+  "consumes": {
+    "platformApis": [
+      {
+        "id": "app.gateway",
+        "version": "1.0",
+        "required": true
+      },
+      {
+        "id": "agents.invocation",
+        "version": "1.0",
+        "required": false
+      }
+    ]
+  },
+  "requestedPermissions": [],
+  "health": {
+    "endpoint": "/health/ready",
+    "timeoutMs": 2000
+  },
+  "catalog": {
+    "categories": [
+      "sdlc",
+      "platform"
+    ],
+    "capabilities": [
+      "spec",
+      "ship-loop"
+    ]
+  }
+}

@@ -2,20 +2,47 @@
   "id": "weather",
   "displayName": "Weather Lab",
   "description": "Live weather dashboard using the existing Weather app runtime",
-  "contractVersion": "1.1",
-  "hostPaths": ["/weather"],
-  "navigation": {
-    "label": "Weather Lab",
-    "href": "/weather",
-    "placement": "after-chat",
-    "icon": "layout-grid"
+  "apiVersion": "2.0",
+  "version": "0.2.0",
+  "ui": {
+    "profiles": [
+      { "id": "native", "mode": "native-package", "package": "@caipe/weather-native", "contractVersion": "2.0" },
+      { "id": "hosted", "mode": "iframe" }
+    ],
+    "routes": [{ "id": "weather", "path": "/weather" }],
+    "navigation": { "label": "Weather Lab", "routeRef": "weather", "placement": "after-chat", "icon": "layout-grid" }
   },
   "api": {
-    "appId": "weather",
-    "basePath": "/api/agentic-apps/runtime/weather",
     "mounts": ["/api/copilotkit/weather-agent"]
   },
   "auth": {
     "mode": "app-scoped-token"
+  },
+  "runtime": { "kind": "proxied-next-zone", "mountPath": "/apps/weather" },
+  "surfaces": { "showInHub": true, "navOrder": 30, "homeEligible": false },
+  "access": {
+    "requiredRoles": ["user"],
+    "tokenScopes": ["weather:read", "weather:agent", "agents:invoke"],
+    "policyActions": [
+      { "action": "proxy:GET", "description": "Read Weather pages and provider data through the app gateway", "defaultEffect": "allow", "requiredScopes": ["weather:read"] },
+      { "action": "proxy:HEAD", "description": "Probe Weather pages through the app gateway", "defaultEffect": "allow", "requiredScopes": ["weather:read"] },
+      { "action": "proxy:POST", "description": "Run embedded weather agent actions", "defaultEffect": "allow", "requiredScopes": ["weather:agent"] },
+      { "action": "agent.invoke.weather", "description": "Invoke the configured Weather agent", "defaultEffect": "allow", "requiredScopes": ["weather:agent", "agents:invoke"] }
+    ]
+  },
+  "provides": { "mcp": ["weather_app"], "agents": ["agent-weather-agent"], "workflows": [] },
+  "consumes": {
+    "platformApis": [
+      { "id": "host.navigation", "version": "1.0", "required": false },
+      { "id": "host.breadcrumbs", "version": "1.0", "required": false },
+      { "id": "host.theme", "version": "1.0", "required": false },
+      { "id": "app.gateway", "version": "1.0", "required": true }
+    ]
+  },
+  "requestedPermissions": [],
+  "health": { "endpoint": "/health/ready", "timeoutMs": 1500 },
+  "catalog": {
+    "categories": ["reference", "weather"],
+    "capabilities": ["open-meteo", "air-quality", "national-weather-alerts", "daily-guidance", "embedded-agent", "forecast-charts"]
   }
 }

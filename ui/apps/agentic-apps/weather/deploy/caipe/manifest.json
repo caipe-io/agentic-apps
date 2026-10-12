@@ -1,0 +1,128 @@
+{
+  "id": "weather",
+  "displayName": "Weather Lab",
+  "description": "A real Open-Meteo powered reference app with forecast, air quality, national alert context, embedded weather actions, charts, and CAIPE context sharing.",
+  "apiVersion": "2.0",
+  "version": "0.0.3",
+  "ui": {
+    "profiles": [
+      {
+        "id": "hosted",
+        "mode": "iframe"
+      }
+    ],
+    "routes": [
+      {
+        "id": "home",
+        "path": "/apps/weather"
+      }
+    ],
+    "assistant": {
+      "agentId": "agent-weather-agent",
+      "label": "Ask Weather",
+      "name": "Weather Assistant"
+    }
+  },
+  "api": {
+    "mounts": []
+  },
+  "auth": {
+    "mode": "app-scoped-token"
+  },
+  "runtime": {
+    "kind": "proxied-next-zone",
+    "mountPath": "/apps/weather"
+  },
+  "surfaces": {
+    "showInHub": true,
+    "navOrder": 30,
+    "homeEligible": false
+  },
+  "access": {
+    "requiredRoles": [
+      "user"
+    ],
+    "tokenScopes": [
+      "weather:read",
+      "weather:agent",
+      "agents:invoke"
+    ],
+    "policyActions": [
+      {
+        "action": "proxy:GET",
+        "description": "Read Weather pages and provider data through the app gateway",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "weather:read"
+        ]
+      },
+      {
+        "action": "proxy:HEAD",
+        "description": "Probe Weather pages through the app gateway",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "weather:read"
+        ]
+      },
+      {
+        "action": "proxy:POST",
+        "description": "Run embedded weather agent actions",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "weather:agent"
+        ]
+      },
+      {
+        "action": "agent.invoke.weather",
+        "description": "Invoke the configured Weather agent",
+        "defaultEffect": "allow",
+        "requiredScopes": [
+          "weather:agent",
+          "agents:invoke"
+        ]
+      }
+    ]
+  },
+  "provides": {
+    "mcp": [
+      "weather_app"
+    ],
+    "agents": [
+      "agent-weather-agent"
+    ],
+    "workflows": []
+  },
+  "consumes": {
+    "platformApis": [
+      {
+        "id": "app.gateway",
+        "version": "1.0",
+        "required": true
+      },
+      {
+        "id": "agents.invocation",
+        "version": "1.0",
+        "required": false
+      }
+    ]
+  },
+  "requestedPermissions": [],
+  "health": {
+    "endpoint": "/health/ready",
+    "timeoutMs": 1500
+  },
+  "catalog": {
+    "categories": [
+      "reference",
+      "weather"
+    ],
+    "capabilities": [
+      "open-meteo",
+      "air-quality",
+      "national-weather-alerts",
+      "daily-guidance",
+      "embedded-agent",
+      "forecast-charts"
+    ]
+  }
+}
