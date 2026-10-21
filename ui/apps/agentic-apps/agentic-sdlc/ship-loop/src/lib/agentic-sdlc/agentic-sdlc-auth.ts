@@ -1,4 +1,6 @@
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 
 let jwks: ReturnType<typeof createRemoteJWKSet> | undefined;
 export type AgenticSdlcReader = {
@@ -67,26 +69,71 @@ async function exchangeGitHubToken(req: Request): Promise<string> {
   const origin = process.env.AGENTIC_SDLC_CAIPE_API_ORIGIN;
   if (!origin || !(await requireAgenticSdlcReader(req)))
     throw new Error("Connected GitHub access is unavailable");
-  const response = await fetch(new URL("/api/credentials/exchange", origin), {
-    method: "POST",
-    redirect: "error",
-    signal: AbortSignal.timeout(15000),
-    headers: {
-      authorization: "Bearer " + bearer(req),
-      "content-type": "application/json",
-      "x-caipe-credential-caller": "internal_service",
-      "x-caipe-credential-audience": "caipe-credential-service",
-    },
-    body: JSON.stringify({ provider: "github" }),
-    cache: "no-store",
-  });
-  if (!response.ok)
-    throw new Error("Connect GitHub in CAIPE to inspect this repository");
-  const payload = await response.json();
+  const payload = await exchangeWithCredentialService(
+    new URL("/api/credentials/exchange", origin),
+    bearer(req),
+  );
   const token = payload.data?.access_token;
   if (typeof token !== "string" || !token)
     throw new Error("Connected GitHub credentials are unavailable");
   return token;
+}
+
+// Node fetch attaches Sec-Fetch-Mode even on server requests. The credential
+// broker rejects browser metadata, so use the Node HTTP transport here. Only
+// the verified caller bearer and explicit internal-service headers are sent.
+function exchangeWithCredentialService(
+  url: URL,
+  callerToken: string,
+): Promise<{ data?: { access_token?: unknown } }> {
+  return new Promise((resolve, reject) => {
+    const transport = url.protocol === "https:" ? httpsRequest : httpRequest;
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) {
+      reject(new Error("Credential service origin is invalid"));
+      return;
+    }
+    const body = JSON.stringify({ provider: "github" });
+    const request = transport(url, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer " + callerToken,
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(body),
+        "x-caipe-credential-caller": "internal_service",
+        "x-caipe-credential-audience": "caipe-credential-service",
+      },
+    }, (response) => {
+      if (response.statusCode !== 200) {
+        response.resume();
+        reject(new Error("Connect GitHub in CAIPE to inspect this repository"));
+        return;
+      }
+      const chunks: Buffer[] = [];
+      let length = 0;
+      response.on("data", (chunk: Buffer) => {
+        length += chunk.length;
+        if (length > 65536) {
+          response.destroy(new Error("Credential response is too large"));
+          return;
+        }
+        chunks.push(chunk);
+      });
+      response.on("error", () => reject(new Error("Credential service unavailable")));
+      response.on("end", () => {
+        try {
+          resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+        } catch {
+          reject(new Error("Credential service returned an invalid response"));
+        }
+      });
+    });
+    const timeout = setTimeout(() => {
+      request.destroy(new Error("Credential service request timed out"));
+    }, 15000);
+    request.on("close", () => clearTimeout(timeout));
+    request.on("error", () => reject(new Error("Credential service unavailable")));
+    request.end(body);
+  });
 }
 export async function canReadRepository(
   req: Request,
