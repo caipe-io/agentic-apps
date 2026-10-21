@@ -21,7 +21,8 @@
  */
 
 import { Activity, Circle, RadioTower, Sparkles, Zap } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { usePrefersReducedMotion } from "../visualizations/use-prefers-reduced-motion";
 
 import { CollapsiblePanel } from "@/components/agentic-sdlc/CollapsiblePanel";
 import { useInsightsFetch } from "@/hooks/use-insights-fetch";
@@ -45,6 +46,13 @@ const STAGES = [
   { id: "deliver", label: "Deliver", angle: 126, color: "#a78bfa" },
   { id: "observe", label: "Observe", angle: 198, color: "#fbbf24" },
 ] as const;
+
+export type RingStage = {
+  id: string;
+  label: string;
+  angle: number;
+  color: string;
+};
 
 interface HeatmapBin {
   hour_offset: number;
@@ -222,11 +230,15 @@ function Heatmap({ heatmap }: { heatmap: HeatmapBin[] }) {
 /* SVG ring (default)                                                          */
 /* -------------------------------------------------------------------------- */
 
-function SvgRing({
+export function SvgRing({
   eventsPerMin,
   failures,
   size = 208,
   subtle = false,
+  stages = STAGES,
+  caption = "ship-loop",
+  value,
+  accessibleLabel = "Ship-loop ring with five stages",
 }: {
   eventsPerMin: number;
   failures: FailureModesSummary | null;
@@ -234,21 +246,27 @@ function SvgRing({
   size?: number;
   /** Subtle mode for the corner mini ring: drops labels, smaller text. */
   subtle?: boolean;
+  stages?: readonly RingStage[];
+  caption?: string;
+  value?: string;
+  accessibleLabel?: string;
 }) {
   const [tick, setTick] = useState(0);
+  const reducedMotion = usePrefersReducedMotion();
+  const gradientId = `ring-glow-${useId().replace(/:/g, "")}`;
   const speedScale = Math.max(0.4, Math.min(3, eventsPerMin / 5));
   useEffect(() => {
     const mq =
       typeof window !== "undefined"
         ? window.matchMedia("(prefers-reduced-motion: reduce)")
         : null;
-    if (mq?.matches) return; // honour reduced-motion
+    if (mq?.matches || reducedMotion) return; // honour reduced-motion
     const handle = window.setInterval(
       () => setTick((t) => (t + 1) % 360),
       40 / speedScale,
     );
     return () => window.clearInterval(handle);
-  }, [speedScale]);
+  }, [speedScale, reducedMotion]);
 
   const stageStroke = subtle ? 1.5 : 2;
   const stageRadius = subtle ? 9 : 12;
@@ -265,15 +283,15 @@ function SvgRing({
       style={{ width: size, height: size }}
       className="mx-auto"
       role="img"
-      aria-label="Ship-loop ring with five stages"
+      aria-label={accessibleLabel}
     >
       <defs>
-        <radialGradient id="ring-glow" cx="50%" cy="50%" r="50%">
+        <radialGradient id={gradientId} cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor={`rgba(99,102,241,${glowStartAlpha})`} />
           <stop offset="100%" stopColor="rgba(99,102,241,0)" />
         </radialGradient>
       </defs>
-      <circle cx="100" cy="100" r="95" fill="url(#ring-glow)" />
+      <circle cx="100" cy="100" r="95" fill={`url(#${gradientId})`} />
       <circle
         cx="100"
         cy="100"
@@ -283,7 +301,7 @@ function SvgRing({
         strokeWidth="0.5"
         strokeDasharray="2 3"
       />
-      {STAGES.map((s) => {
+      {stages.map((s) => {
         const x = 100 + Math.cos((s.angle * Math.PI) / 180) * 70;
         const y = 100 + Math.sin((s.angle * Math.PI) / 180) * 70;
         return (
@@ -316,7 +334,7 @@ function SvgRing({
         const r = 70;
         const x = 100 + Math.cos((angle * Math.PI) / 180) * r;
         const y = 100 + Math.sin((angle * Math.PI) / 180) * r;
-        const colour = STAGES[i % STAGES.length].color;
+        const colour = stages[i % stages.length].color;
         return (
           <circle
             key={i}
@@ -337,7 +355,7 @@ function SvgRing({
         letterSpacing="1"
         className="uppercase"
       >
-        ship-loop
+        {caption}
       </text>
       <text
         x="100"
@@ -347,7 +365,8 @@ function SvgRing({
         fontWeight="700"
         fill="rgba(241,245,249,0.95)"
       >
-        {typeof failures?.total === "number" ? failures.total : 0} issues
+        {value ??
+          `${typeof failures?.total === "number" ? failures.total : 0} issues`}
       </text>
     </svg>
   );
@@ -357,16 +376,30 @@ function SvgRing({
 /* Cinematic ring (canvas)                                                    */
 /* -------------------------------------------------------------------------- */
 
-function CinematicRing({ eventsPerMin }: { eventsPerMin: number }) {
+export function CinematicRing({
+  eventsPerMin,
+  stages = STAGES,
+  caption = "",
+  value = "",
+  accessibleLabel = "Ship-loop ring (cinematic)",
+}: {
+  eventsPerMin: number;
+  stages?: readonly RingStage[];
+  caption?: string;
+  value?: string;
+  accessibleLabel?: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const fallback = useRef(false);
+  const [fallback, setFallback] = useState(false);
+  const reducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
+    if (reducedMotion) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) {
-      fallback.current = true;
+      setFallback(true);
       return;
     }
     const dpr = window.devicePixelRatio || 1;
@@ -404,7 +437,7 @@ function CinematicRing({ eventsPerMin }: { eventsPerMin: number }) {
       ctx.setLineDash([]);
 
       // Stages
-      for (const s of STAGES) {
+      for (const s of stages) {
         const a = (s.angle * Math.PI) / 180;
         const x = cx + Math.cos(a) * 80;
         const y = cy + Math.sin(a) * 80;
@@ -428,7 +461,7 @@ function CinematicRing({ eventsPerMin }: { eventsPerMin: number }) {
         const a = (angle * Math.PI) / 180;
         const x = cx + Math.cos(a) * r;
         const y = cy + Math.sin(a) * r;
-        const colour = STAGES[i % STAGES.length].color;
+        const colour = stages[i % stages.length].color;
         ctx.fillStyle = colour;
         ctx.globalAlpha = 0.4 + (i % 6) / 15;
         ctx.beginPath();
@@ -437,19 +470,35 @@ function CinematicRing({ eventsPerMin }: { eventsPerMin: number }) {
         ctx.globalAlpha = 1;
       }
 
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(148,163,184,0.8)";
+      ctx.font = "10px system-ui, sans-serif";
+      ctx.fillText(caption, cx, cy - 5);
+      ctx.fillStyle = "rgba(241,245,249,0.95)";
+      ctx.font = "bold 22px system-ui, sans-serif";
+      ctx.fillText(value, cx, cy + 20);
       t += speed;
       raf = requestAnimationFrame(frame);
     }
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [eventsPerMin]);
+  }, [eventsPerMin, stages, caption, value, reducedMotion]);
 
-  if (fallback.current) {
-    return <SvgRing eventsPerMin={eventsPerMin} failures={null} />;
+  if (fallback || reducedMotion) {
+    return (
+      <SvgRing
+        eventsPerMin={eventsPerMin}
+        failures={null}
+        stages={stages}
+        caption={caption || "ship-loop"}
+        value={value || undefined}
+        accessibleLabel={accessibleLabel}
+      />
+    );
   }
   return (
     <div className="flex justify-center">
-      <canvas ref={canvasRef} aria-label="Ship-loop ring (cinematic)" />
+      <canvas ref={canvasRef} role="img" aria-label={accessibleLabel} />
       <Zap
         className="absolute right-3 top-3 h-3 w-3 text-amber-300"
         aria-hidden
