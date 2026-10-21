@@ -23,7 +23,8 @@
       "sourcePath": "ui/apps/agentic-apps/agentic-sdlc",
       "serverPath": "ui/apps/agentic-apps/agentic-sdlc/server.mjs",
       "image": "agentic-apps-agentic-sdlc",
-      "port": 3030
+      "port": 3030,
+      "dockerfile": "build/Dockerfile.agentic-sdlc"
     },
     {
       "id": "litellm",

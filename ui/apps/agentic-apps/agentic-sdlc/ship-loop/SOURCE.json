@@ -1,0 +1,9 @@
+{
+  "repository": "cisco-eti/ai-platform-engineering-mirror",
+  "commit": "bec846785861ec69b02f54c4647eb5d9a2c34285",
+  "license": "Apache-2.0",
+  "scope": "Agentic SDLC UI, API, projections, hooks and neutral UI dependencies; host integrations replaced by app adapters",
+  "fixes": {
+    "sse_bus_and_stream": "fdcd63318f4605e7656f4888231f590eec04436e"
+  }
+}

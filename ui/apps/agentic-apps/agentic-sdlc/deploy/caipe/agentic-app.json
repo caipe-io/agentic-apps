@@ -1,20 +1,27 @@
 {
   "id": "agentic-sdlc",
   "name": "Agentic SDLC",
-  "description": "Repository delivery, ship-loop coordination, and SDLC workflows.",
+  "description": "Repository Ship Loop dashboard with source-backed PR reviews and delivery state.",
   "runtime": {
     "type": "remote",
     "target": "http://agentic-app-agentic-sdlc:3030",
-    "mountPath": "/apps/agentic-sdlc"
+    "mountPath": "/apps/agentic-sdlc",
+    "preserveMountPath": true
   },
   "visibility": "private",
   "createdBy": "deployment-owner",
-  "requiredScopes": ["sdlc:read", "agents:invoke"],
+  "requiredScopes": [
+    "sdlc:read",
+    "agents:invoke"
+  ],
   "assistant": {
     "agentId": "agent-agentic-sdlc",
     "name": "Agentic SDLC Assistant",
     "label": "Ask Agentic SDLC",
     "contextEndpoint": "/api/context"
   },
-  "healthEndpoint": "/health/ready"
+  "healthEndpoint": "/health/ready",
+  "auth": {
+    "mode": "forward-user-access-token"
+  }
 }

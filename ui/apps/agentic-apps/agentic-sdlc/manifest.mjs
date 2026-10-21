@@ -12,7 +12,9 @@ export const AGENTIC_SDLC_MANIFEST = {
     kind: "proxied-next-zone",
     mountPath: "/apps/agentic-sdlc",
     chrome: "iframe",
+    preserveMountPath: true,
   },
+  auth: { mode: "forward-user-access-token" },
   ui: {
     contractVersion: "1.0",
     surface: "hosted",
@@ -83,11 +85,11 @@ export const AGENTIC_SDLC_MANIFEST = {
     {
       provider: "github",
       channel: "repo-events",
-      upstreamPath: "/webhooks/github",
+      upstreamPath: "/apps/agentic-sdlc/api/agentic-sdlc/webhooks/github",
       allowedMethods: ["POST"],
       verificationOwner: "app",
       preservedHeaders: ["x-github-event", "x-github-delivery", "x-hub-signature-256"],
-      maxBodyBytes: 131072,
+      maxBodyBytes: 1048576,
       policyAction: "webhook.github.repo-events",
     },
   ],

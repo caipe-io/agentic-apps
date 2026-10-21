@@ -36,6 +36,13 @@ Signed-in user -> CAIPE app gateway -> app runtime -> dedicated agent -> app MCP
 Dashboard context is untrusted navigation context. Agents must call the declared MCP tools for
 factual answers. Runtime tokens and upstream credentials stay server-side.
 
+## Agentic SDLC Ship Loop
+
+The full Ship Loop UI and PR review dashboard are in
+[`agentic-sdlc/ship-loop`](ui/apps/agentic-apps/agentic-sdlc/ship-loop/README.md).
+Its image uses a dedicated Next.js build while retaining the CAIPE app gateway,
+connected-user GitHub access and separate autonomous-review execution.
+
 ## Local development
 
 Requirements: Node.js 22 or newer and Docker for container checks.

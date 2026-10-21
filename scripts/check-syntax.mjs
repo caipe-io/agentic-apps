@@ -10,6 +10,7 @@ async function collectMjs(directory) {
   const files = [];
   for (const entry of entries) {
     const path = join(directory, entry.name);
+    if (entry.isDirectory() && ["node_modules", ".next", ".git"].includes(entry.name)) continue;
     if (entry.isDirectory()) files.push(...(await collectMjs(path)));
     else if (entry.isFile() && path.endsWith(".mjs")) files.push(path);
   }

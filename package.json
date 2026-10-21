@@ -10,10 +10,10 @@
   "scripts": {
     "check": "node scripts/check-syntax.mjs && node scripts/check-agentic-app-contract.mjs && node scripts/check-app-image-manifest.mjs",
     "smoke": "node scripts/smoke-test.mjs",
-    "test": "node --test $(find ui/apps -type f -name '*.test.mjs' -print)"
+    "test": "node --test $(find ui/apps -type d \\( -name node_modules -o -name .next \\) -prune -o -type f -name '*.test.mjs' -print)"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.28.0",
+    "@modelcontextprotocol/sdk": "1.32.1",
     "zod": "3.25.76"
   }
 }
