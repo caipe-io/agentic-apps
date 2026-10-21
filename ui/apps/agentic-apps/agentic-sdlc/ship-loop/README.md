@@ -103,7 +103,7 @@ empty state retain that scope; label choices come from this same snapshot.
   login, or human reviews submitted by me (including history). Team review
   requests are not expanded. Personal filters are disabled if caller identity
   cannot be retrieved. Agent-marked reviews do not count as human reviews.
-- **Human review:** current-head approval present, changes requested, awaiting
+- **GitHub review:** current-head approval present, changes requested, awaiting
   review, or comment present. Dismissed and earlier-head approvals never count
   as approval of the current head. These are review signals, not a complete
   branch protection evaluation or permission to merge.
@@ -119,7 +119,7 @@ an always-visible extra row. The original header animation remains compact.
 ### Agent outcome protocol
 
 The reviewer continues to publish a GitHub **COMMENT** review. An outcome is
-advisory and separate from human GitHub approval, CI, and conformance claims.
+advisory and separate from non-agent GitHub approval, CI, and conformance claims.
 Never infer no findings from review presence, prose or a passing check.
 
 Configure both reviewer-login and task-ID allowlists. The review must be from

@@ -167,12 +167,13 @@ export function PrReviewDashboard({
           </option>
         </select>
         <select
-          aria-label="Filter by review"
+          aria-label="Filter by GitHub review"
+          title="Current-head non-agent review signals. Does not evaluate branch protection; older approvals are excluded."
           value={review}
           onChange={(event) => setReview(event.target.value)}
           className="max-w-48 rounded-md border border-border bg-background px-3 py-2 text-sm"
         >
-          <option value="">Human review</option>
+          <option value="">GitHub review</option>
           {[
             "awaiting review",
             "changes requested",

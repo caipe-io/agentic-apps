@@ -164,7 +164,7 @@ export async function getPrDashboard(
                 trustedTasks.has(marker[1]),
             );
           };
-          // Keep human decisions distinct from COMMENT-only agent reports and
+          // Keep non-agent GitHub decisions distinct from COMMENT-only agent reports and
           // from approvals on an older head. A dismissed decision revokes it.
           const latestByReviewer = new Map<string, string>();
           for (const r of reviews)
@@ -180,7 +180,7 @@ export async function getPrDashboard(
               );
           const decisions = [...latestByReviewer.values()];
           const reviewStatus =
-            reviewResult.status === "rejected"
+            reviewResult.status === "rejected" || reviews.length === 100
               ? "unknown"
               : decisions.includes("CHANGES_REQUESTED")
                 ? "changes requested"
@@ -204,7 +204,7 @@ export async function getPrDashboard(
             .filter((r) => r.commit_id === pr.head.sha)
             .at(-1);
           let agentStatus: PrDashboardItem["agent_review"]["status"] =
-            reviewResult.status === "rejected"
+            reviewResult.status === "rejected" || reviews.length === 100
               ? "unknown"
               : latestAgent
                 ? "reviewed"
@@ -213,7 +213,7 @@ export async function getPrDashboard(
                   : submittedAgentReviews.length
                     ? "unverified"
                     : "not_reviewed";
-          if (latestAgent) {
+          if (latestAgent && reviews.length < 100) {
             const marker = taskMarker(latestAgent)!;
             const verdicts = [
               ...(latestAgent.body || "").matchAll(
@@ -373,6 +373,6 @@ export async function getPrDashboard(
       checks_per_head: 100,
       inline_comments_per_pr: 30,
     },
-    note: "Human review signals and agent-reported verdicts are advisory, not merge permission or compliance certification. Approvals shown are for the current head. Inline comments may include resolved threads. Newest 20 matching pull requests are shown.",
+    note: "GitHub review signals and agent-reported verdicts are advisory, not merge permission or compliance certification. Approvals shown are for the current head. Inline comments may include resolved threads. Newest 20 matching pull requests are shown.",
   };
 }
