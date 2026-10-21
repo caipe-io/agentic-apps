@@ -5,10 +5,11 @@ export default function AppLink({
   href,
   ...props
 }: ComponentProps<typeof NextLink>) {
-  const normalize = (s: string) =>
-    s.startsWith("/apps/agentic-sdlc")
-      ? s.slice("/apps/agentic-sdlc".length) || "/"
-      : s;
+  const normalize = (s: string) => {
+    if (!s.startsWith("/apps/agentic-sdlc")) return s;
+    const tail = s.slice("/apps/agentic-sdlc".length);
+    return tail.startsWith("/") ? tail : "/" + tail;
+  };
   const target =
     typeof href === "string"
       ? normalize(href)
