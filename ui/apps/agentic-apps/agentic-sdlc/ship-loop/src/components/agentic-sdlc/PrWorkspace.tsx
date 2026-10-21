@@ -24,8 +24,11 @@ export function PrWorkspaceHome() {
   useAgenticSdlcPortfolioLiveRefresh({ enabled: true });
 
   useEffect(() => {
-    const stop = new AbortController();
+    let active: AbortController | undefined;
     async function load() {
+      active?.abort();
+      const stop = new AbortController();
+      active = stop;
       setError("");
       try {
         const response = await fetch(
@@ -64,7 +67,7 @@ export function PrWorkspaceHome() {
     void load();
     window.addEventListener("agentic-sdlc:portfolio-synced", load);
     return () => {
-      stop.abort();
+      active?.abort();
       window.removeEventListener("agentic-sdlc:portfolio-synced", load);
     };
   }, [retry]);
