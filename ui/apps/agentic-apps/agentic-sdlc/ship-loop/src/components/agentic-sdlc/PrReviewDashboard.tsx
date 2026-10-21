@@ -391,7 +391,7 @@ function PrCard({ pr }: { pr: PrDashboardItem }) {
                     {comment.outdated ? " · outdated diff" : ""}
                   </p>
                   <p className="mt-3 whitespace-pre-wrap break-words leading-relaxed">
-                    {comment.body.replace(/<!--[^]*?-->/g, "").trim()}
+                    {comment.body}
                   </p>
                 </div>
               ))}
