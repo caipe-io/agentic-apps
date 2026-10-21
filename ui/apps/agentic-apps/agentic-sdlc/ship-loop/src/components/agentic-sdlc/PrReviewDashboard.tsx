@@ -9,7 +9,6 @@ import {
   Search,
 } from "lucide-react";
 import type { PrDashboardItem } from "@/lib/agentic-sdlc/pr-dashboard";
-import { PrReviewVisuals } from "./PrReviewVisuals";
 
 type Snapshot = {
   generated_at: string;
@@ -21,12 +20,10 @@ export function PrReviewDashboard({
   owner,
   repo,
   revision = 0,
-  showVisuals = false,
 }: {
   owner: string;
   repo: string;
   revision?: number;
-  showVisuals?: boolean;
 }) {
   const [state, setState] = useState("open");
   const [query, setQuery] = useState("");
@@ -177,9 +174,6 @@ export function PrReviewDashboard({
           Snapshot {new Date(data.generated_at).toLocaleString()}. {data.note}{" "}
           Search applies to this snapshot.
         </p>
-      )}
-      {showVisuals && !error && (
-        <PrReviewVisuals items={data ? visible : null} />
       )}
       {data && visible.length === 0 && (
         <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">

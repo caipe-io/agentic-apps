@@ -55,13 +55,7 @@ with a repository selector, current-head review/CI summaries, searchable PRs,
 inline feedback and a PR-only activity feed. It hides the issue/Epic, deployment,
 simulation and panel-configuration views. Direct Epic links return to the
 repository workspace. Leave this variable unset to retain the full Ship Loop.
-The PR workspace preserves the original gradient atmosphere and animated delivery
-loop, plus an SVG/cinematic review ring, PR swim lanes and a recent-update
-timeline. The loop animation illustrates the workflow. Cards and counts share
-the PR list's authorized GitHub snapshot and search filter, with no extra
-GitHub queries or synthetic activity metrics. Reduced-motion preferences keep
-a static graphic. Lanes prioritize closed state, missing evidence or non-passing
-checks, then posted current-head feedback. They never establish merge readiness.
+The original animated delivery-loop graphic remains as a compact 360px header illustration. The workspace keeps the PR list and does not add visual boards or extra GitHub queries.
 
 This is a presentation choice, not an authorization boundary or ingestion filter.
 All existing webhook ingestion, persisted history, credentials and MCP routes

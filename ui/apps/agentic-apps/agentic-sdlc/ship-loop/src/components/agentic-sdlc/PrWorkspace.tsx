@@ -75,11 +75,10 @@ export function PrWorkspaceHome() {
 
   const repository = repos?.find((r) => r.full_name === selected);
   return (
-    <main className="relative isolate mx-auto flex w-full max-w-[1600px] flex-col gap-6 p-5 pb-24 md:p-8 md:pb-24">
-      <PrWorkspaceBackdrop />
-      <PrWorkspaceHero
+    <main className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 p-5 pb-24 md:p-8 md:pb-24">
+      <CompactPrHeader
         title="Pull request reviews"
-        subtitle="Follow agent feedback, current-head CI checks and inline code comments, with the delivery loop in view."
+        subtitle="Follow agent feedback, current-head CI checks and inline code comments in one workspace."
       />
       {error ? (
         <div
@@ -159,8 +158,7 @@ export function PrRepoWorkspace({
   repo: string;
 }) {
   return (
-    <main className="relative isolate mx-auto flex w-full max-w-[1600px] flex-col gap-6 p-5 pb-24 md:p-8 md:pb-24">
-      <PrWorkspaceBackdrop />
+    <main className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 p-5 pb-24 md:p-8 md:pb-24">
       <Link
         href="/"
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
@@ -168,7 +166,7 @@ export function PrRepoWorkspace({
         <ArrowLeft className="h-4 w-4" aria-hidden />
         All repositories
       </Link>
-      <PrWorkspaceHero
+      <CompactPrHeader
         title={`${owner}/${repo}`}
         subtitle="Agent reviews, CI evidence and inline feedback for each PR head."
         action={
@@ -176,7 +174,7 @@ export function PrRepoWorkspace({
             href={`https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary hover:bg-primary/20"
+            className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
           >
             Open GitHub PRs
             <ExternalLink className="h-3.5 w-3.5" aria-hidden />
@@ -199,12 +197,7 @@ function PrWorkspacePanels({ owner, repo }: { owner: string; repo: string }) {
         </p>
         <LiveStatusIndicator status={live.status} label="PR events" />
       </div>
-      <PrReviewDashboard
-        key={`${owner}/${repo}`}
-        owner={owner}
-        repo={repo}
-        showVisuals
-      />
+      <PrReviewDashboard key={`${owner}/${repo}`} owner={owner} repo={repo} />
       <RepoEventFeed
         key={`${owner}/${repo}:events`}
         owner={owner}
@@ -215,38 +208,7 @@ function PrWorkspacePanels({ owner, repo }: { owner: string; repo: string }) {
   );
 }
 
-function PrWorkspaceBackdrop() {
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
-    >
-      <div
-        className="absolute -left-40 -top-32 h-[640px] w-[640px] rounded-full opacity-30 blur-3xl"
-        style={{
-          background:
-            "radial-gradient(closest-side, hsl(var(--gradient-start) / 0.4), transparent)",
-        }}
-      />
-      <div
-        className="absolute -right-32 -top-16 h-[600px] w-[600px] rounded-full opacity-25 blur-3xl"
-        style={{
-          background:
-            "radial-gradient(closest-side, hsl(var(--gradient-mid) / 0.4), transparent)",
-        }}
-      />
-      <div
-        className="absolute left-1/3 top-[360px] h-[500px] w-[500px] rounded-full opacity-20 blur-3xl"
-        style={{
-          background:
-            "radial-gradient(closest-side, hsl(var(--gradient-end) / 0.35), transparent)",
-        }}
-      />
-    </div>
-  );
-}
-
-function PrWorkspaceHero({
+function CompactPrHeader({
   title,
   subtitle,
   action,
@@ -256,26 +218,19 @@ function PrWorkspaceHero({
   action?: ReactNode;
 }) {
   return (
-    <header className="grid items-center gap-6 py-2 lg:grid-cols-12 lg:py-4">
-      <div className="space-y-4 lg:col-span-5">
+    <header className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="min-w-0 space-y-2">
         <p className="flex items-center gap-2 text-sm font-medium text-primary">
           <GitPullRequest className="h-4 w-4" aria-hidden />
           Agentic SDLC
         </p>
-        <h1 className="gradient-text break-words text-3xl font-semibold leading-tight tracking-tight md:text-4xl">
+        <h1 className="break-words text-2xl font-semibold tracking-tight">
           {title}
         </h1>
-        <p className="max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
-          {subtitle}
-        </p>
+        <p className="max-w-3xl text-sm text-muted-foreground">{subtitle}</p>
         {action}
       </div>
-      <div className="lg:col-span-7">
-        <AgenticSdlcAnimation />
-        <p className="-mt-2 text-center text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
-          Delivery lifecycle · PR review workspace
-        </p>
-      </div>
+      <AgenticSdlcAnimation className="max-w-[360px] md:w-[360px]" />
     </header>
   );
 }
