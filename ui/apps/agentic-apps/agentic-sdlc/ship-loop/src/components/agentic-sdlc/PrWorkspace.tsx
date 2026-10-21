@@ -1,11 +1,12 @@
 "use client";
 
 import { ArrowLeft, ExternalLink, GitPullRequest, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "./AppLink";
 import { LiveStatusIndicator } from "./LiveStatusIndicator";
 import { PrReviewDashboard } from "./PrReviewDashboard";
 import { RepoEventFeed } from "./RepoEventFeed";
+import { AgenticSdlcAnimation } from "./visualizations/AgenticSdlcAnimation";
 import { useAgenticSdlcPortfolioLiveRefresh } from "@/hooks/use-agentic-sdlc-portfolio-live-refresh";
 import { useRepoAgenticSdlcLiveRefresh } from "@/hooks/use-repo-agentic-sdlc-live-refresh";
 
@@ -75,19 +76,10 @@ export function PrWorkspaceHome() {
   const repository = repos?.find((r) => r.full_name === selected);
   return (
     <main className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 p-5 pb-24 md:p-8 md:pb-24">
-      <header className="space-y-2">
-        <p className="flex items-center gap-2 text-sm font-medium text-primary">
-          <GitPullRequest className="h-4 w-4" aria-hidden />
-          Agentic SDLC
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Pull request reviews
-        </h1>
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          Follow agent feedback, current-head CI checks and inline code comments
-          in one workspace.
-        </p>
-      </header>
+      <CompactPrHeader
+        title="Pull request reviews"
+        subtitle="Follow agent feedback, current-head CI checks and inline code comments in one workspace."
+      />
       {error ? (
         <div
           role="alert"
@@ -174,28 +166,21 @@ export function PrRepoWorkspace({
         <ArrowLeft className="h-4 w-4" aria-hidden />
         All repositories
       </Link>
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-primary">
-            PR review workspace
-          </p>
-          <h1 className="break-all text-2xl font-semibold tracking-tight md:text-3xl">
-            {owner}/{repo}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Agent reviews, CI evidence and inline feedback for each PR head.
-          </p>
-        </div>
-        <a
-          href={`https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:border-primary/50"
-        >
-          Open GitHub PRs
-          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-        </a>
-      </header>
+      <CompactPrHeader
+        title={`${owner}/${repo}`}
+        subtitle="Agent reviews, CI evidence and inline feedback for each PR head."
+        action={
+          <a
+            href={`https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+          >
+            Open GitHub PRs
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+          </a>
+        }
+      />
       <PrWorkspacePanels owner={owner} repo={repo} />
     </main>
   );
@@ -220,5 +205,32 @@ function PrWorkspacePanels({ owner, repo }: { owner: string; repo: string }) {
         scope="pull_requests"
       />
     </>
+  );
+}
+
+function CompactPrHeader({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string;
+  subtitle: string;
+  action?: ReactNode;
+}) {
+  return (
+    <header className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="min-w-0 space-y-2">
+        <p className="flex items-center gap-2 text-sm font-medium text-primary">
+          <GitPullRequest className="h-4 w-4" aria-hidden />
+          Agentic SDLC
+        </p>
+        <h1 className="break-words text-2xl font-semibold tracking-tight">
+          {title}
+        </h1>
+        <p className="max-w-3xl text-sm text-muted-foreground">{subtitle}</p>
+        {action}
+      </div>
+      <AgenticSdlcAnimation className="max-w-[360px] md:w-[360px]" />
+    </header>
   );
 }
