@@ -51,6 +51,12 @@ export const AGENTIC_SDLC_MANIFEST = {
         requiredScopes: ["agents:invoke"],
       },
       {
+        action: "proxy:PUT",
+        description: "Save the current user's Agentic SDLC panel preferences",
+        defaultEffect: "allow",
+        requiredScopes: ["sdlc:read"],
+      },
+      {
         action: "webhook.github.repo-events",
         description: "Forward GitHub webhook events to Agentic SDLC",
         defaultEffect: "allow",
@@ -94,7 +100,7 @@ export const AGENTIC_SDLC_MANIFEST = {
     },
   ],
   health: {
-    endpoint: "/health/ready",
+    endpoint: "/apps/agentic-sdlc/health/ready",
     timeoutMs: 2000,
     blockLaunchWhen: ["degraded", "unreachable"],
   },

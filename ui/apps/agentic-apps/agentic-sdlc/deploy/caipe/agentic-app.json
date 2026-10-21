@@ -20,7 +20,7 @@
     "label": "Ask Agentic SDLC",
     "contextEndpoint": "/api/context"
   },
-  "healthEndpoint": "/health/ready",
+  "healthEndpoint": "/apps/agentic-sdlc/health/ready",
   "auth": {
     "mode": "forward-user-access-token"
   }

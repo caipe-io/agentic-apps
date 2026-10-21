@@ -27,7 +27,10 @@ for (const [appId, expectedName, expectedMountPath] of apps) {
   assert.equal(manifest.ui.surface, "hosted", `${appId}: UI surface must be hosted`);
   assert.equal(manifest.assistant?.enabled, true, `${appId}: assistant must be enabled`);
   assert.ok(manifest.assistant?.agentId, `${appId}: assistant agent binding is missing`);
-  assert.equal(manifest.health?.endpoint, "/health/ready", `${appId}: readiness endpoint drifted`);
+  const expectedHealthEndpoint = manifest.runtime.preserveMountPath
+    ? `${expectedMountPath}/health/ready`
+    : "/health/ready";
+  assert.equal(manifest.health?.endpoint, expectedHealthEndpoint, `${appId}: readiness endpoint drifted`);
 
   const registration = JSON.parse(await readFile(join(appRoot, "deploy/caipe/agentic-app.json"), "utf8"));
   assert.equal(registration.runtime?.type, "remote", `${appId}: runtime type must be remote`);
@@ -48,7 +51,7 @@ for (const [appId, expectedName, expectedMountPath] of apps) {
         agentId: manifest.assistant.agentId,
         contextEndpoint: "/api/context",
       },
-      healthEndpoint: "/health/ready",
+      healthEndpoint: expectedHealthEndpoint,
     },
     `${appId}: registration shape is invalid`,
   );
