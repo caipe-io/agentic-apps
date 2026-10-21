@@ -195,12 +195,16 @@ function eventCategory(ev: AgenticSdlcEvent): FeedCategory {
     return "attention";
   }
   if (
+    ev.github_event_type?.startsWith("check_") ||
+    ev.github_event_type === "workflow_run"
+  )
+    return "check";
+  if (
     ev.artifact_kind === "pull_request" ||
     ev.github_event_type === "pull_request"
   ) {
     return "pull_request";
   }
-  if (ev.github_event_type?.startsWith("check_")) return "check";
   if (
     ev.github_event_type === "issues" ||
     ev.github_event_type === "sub_issues"
@@ -311,10 +315,14 @@ async function handle(
   const replay = url.searchParams.get("replay") === "true";
   const windowHours = replay ? parseWindowHours(url) : null;
   const events = await getAgenticSdlcEventsCollection();
-  const scanLimit = Math.min(
-    MAX_SCAN_LIMIT,
-    Math.max(limit * page * 3, limit + 1),
-  );
+  const scoped = url.searchParams.get("scope") === "pull_requests";
+  const filtered =
+    url.searchParams.has("category") &&
+    url.searchParams.get("category") !== "all";
+  const scanLimit =
+    scoped || filtered
+      ? MAX_SCAN_LIMIT
+      : Math.min(MAX_SCAN_LIMIT, Math.max(limit * page * 3, limit + 1));
   const query: Record<string, unknown> = {
     repo_id: repoDoc.repo_id,
     $or: [
@@ -324,6 +332,38 @@ async function handle(
       { github_event_type: { $in: INTERESTING_EVENT_TYPES } },
     ],
   };
+  // Apply the PR scope in MongoDB before scanning, deduplication and pagination.
+  // Ingestion retains other SDLC events for deployments using the full view.
+  if (scoped) {
+    query.$or = [
+      { artifact_kind: "pull_request" },
+      {
+        github_event_type: {
+          $in: [
+            "pull_request",
+            "pull_request_review",
+            "pull_request_review_comment",
+          ],
+        },
+      },
+      {
+        github_event_type: "issue_comment",
+        "payload.issue.pull_request": { $exists: true },
+      },
+      {
+        github_event_type: "check_run",
+        "payload.check_run.pull_requests.0": { $exists: true },
+      },
+      {
+        github_event_type: "check_suite",
+        "payload.check_suite.pull_requests.0": { $exists: true },
+      },
+      {
+        github_event_type: "workflow_run",
+        "payload.workflow_run.pull_requests.0": { $exists: true },
+      },
+    ];
+  }
   if (windowHours) {
     query.occurred_at = {
       $gte: new Date(Date.now() - windowHours * 60 * 60 * 1000),
@@ -338,7 +378,21 @@ async function handle(
     )
     .limit(scanLimit)
     .toArray();
-  const deduped = dedupeEvents(rows);
+  const category = url.searchParams.get("category");
+  const categories: FeedCategory[] = [
+    "attention",
+    "check",
+    "deploy",
+    "issue",
+    "pull_request",
+    "review",
+    "sync",
+  ];
+  const deduped = dedupeEvents(rows).filter(
+    ({ event }) =>
+      !categories.includes(category as FeedCategory) ||
+      eventCategory(event) === category,
+  );
   const start = (page - 1) * limit;
   const pageItems = deduped.slice(start, start + limit);
 
@@ -353,6 +407,7 @@ async function handle(
       has_previous: page > 1,
       has_next: deduped.length > start + limit,
       total_visible: deduped.length,
+      scan_limit_reached: rows.length === scanLimit,
     },
   });
 }
