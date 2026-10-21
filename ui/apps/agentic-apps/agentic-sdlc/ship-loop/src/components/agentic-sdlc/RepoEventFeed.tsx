@@ -77,11 +77,13 @@ interface RepoEventFeedPagination {
   has_previous: boolean;
   has_next: boolean;
   total_visible: number;
+  scan_limit_reached?: boolean;
 }
 
 interface RepoEventFeedProps {
   owner: string;
   repo: string;
+  scope?: "repository" | "pull_requests";
 }
 
 interface RepoRefreshDetail {
@@ -110,7 +112,12 @@ const TONE_CLASS: Record<FeedTone, string> = {
   success: "border-emerald-400/35 bg-emerald-400/10 text-emerald-200",
 };
 
-export function RepoEventFeed({ owner, repo }: RepoEventFeedProps) {
+export function RepoEventFeed({
+  owner,
+  repo,
+  scope = "repository",
+}: RepoEventFeedProps) {
+  const prOnly = scope === "pull_requests";
   const [items, setItems] = useState<RepoEventFeedItem[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
     "loading",
@@ -195,7 +202,7 @@ export function RepoEventFeed({ owner, repo }: RepoEventFeedProps) {
       }
       try {
         const res = await fetch(
-          `/apps/agentic-sdlc/api/agentic-sdlc/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/event-feed?limit=${pageSize}&page=${page}`,
+          `/apps/agentic-sdlc/api/agentic-sdlc/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/event-feed?limit=${pageSize}&page=${page}&scope=${scope}&category=${filter}`,
           { headers: { Accept: "application/json" }, cache: "no-store" },
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -218,7 +225,7 @@ export function RepoEventFeed({ owner, repo }: RepoEventFeedProps) {
     return () => {
       cancelled = true;
     };
-  }, [owner, page, pageSize, repo, refreshKey]);
+  }, [owner, page, pageSize, repo, refreshKey, scope, filter]);
 
   const visibleItems = useMemo(
     () => items.filter((item) => filter === "all" || item.category === filter),
@@ -227,19 +234,30 @@ export function RepoEventFeed({ owner, repo }: RepoEventFeedProps) {
 
   return (
     <CollapsiblePanel
-      title="Repo event feed"
-      subtitle="Curated lifecycle, PR, deploy, review, and human-attention events. Raw webhook JSON stays server-side."
+      title={prOnly ? "PR activity" : "Repo event feed"}
+      subtitle={
+        prOnly
+          ? "PR updates, submitted reviews, code comments and linked CI events."
+          : "Curated lifecycle, PR, deploy, review, and human-attention events. Raw webhook JSON stays server-side."
+      }
       className="bg-card/30"
       contentClassName="space-y-3"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1.5">
-          {FILTERS.map((option) => (
+          {FILTERS.filter(
+            (option) =>
+              !prOnly ||
+              ["all", "pull_request", "review", "check", "attention"].includes(
+                option.id,
+              ),
+          ).map((option) => (
             <button
               key={option.id}
               type="button"
               onClick={() => {
                 setFilter(option.id);
+                setPage(1);
                 setExpandedId(null);
               }}
               className={cn(
@@ -249,7 +267,9 @@ export function RepoEventFeed({ owner, repo }: RepoEventFeedProps) {
                   : "border-border/40 bg-background/35 text-muted-foreground hover:bg-background/60 hover:text-foreground",
               )}
             >
-              {option.label}
+              {prOnly && option.id === "attention"
+                ? "Comments / attention"
+                : option.label}
             </button>
           ))}
         </div>
@@ -297,7 +317,7 @@ export function RepoEventFeed({ owner, repo }: RepoEventFeedProps) {
       ) : (
         <ol
           className="divide-y divide-border/25 overflow-visible rounded-lg border border-border/30 bg-background/25"
-          aria-label="Repo event feed"
+          aria-label={prOnly ? "PR activity" : "Repo event feed"}
         >
           {visibleItems.map((item, index) => (
             <RepoEventRow
@@ -322,7 +342,10 @@ export function RepoEventFeed({ owner, repo }: RepoEventFeedProps) {
       <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
         <span>
           Page {pagination?.page ?? page}
-          {pagination ? ` · ${pagination.total_visible} unique events` : ""}
+          {pagination
+            ? ` · ${pagination.total_visible} unique events in the scanned window`
+            : ""}
+          {pagination?.scan_limit_reached ? " · Older history may exist" : ""}
         </span>
         <div className="flex gap-1.5">
           <button

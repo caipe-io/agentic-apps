@@ -49,6 +49,21 @@ existing contract fixtures; the published app image now builds this runtime.
 
 ## PR view
 
+Set the runtime environment variable `AGENTIC_SDLC_VIEW=pull_requests` for a
+focused PR workspace. The landing page opens the first authorized repository
+with a repository selector, current-head review/CI summaries, searchable PRs,
+inline feedback and a PR-only activity feed. It hides the issue/Epic, deployment,
+simulation and panel-configuration views. Direct Epic links return to the
+repository workspace. Leave this variable unset to retain the full Ship Loop.
+This is a presentation choice, not an authorization boundary or ingestion filter.
+All existing webhook ingestion, persisted history, credentials and MCP routes
+remain available under their existing access checks.
+
+The focused activity query filters PR events and PR-linked comments/checks
+before pagination. The feed reports its bounded scan window. Review bodies
+remain plain text, with source links and truncation notices. Earlier-head reviews
+and outdated comments stay available through an explicit history toggle.
+
 Open a repository and use the PR section to inspect draft/open/closed/merged
 state, head SHA, current-head check runs and commit statuses, reviews, inline
 comments and CAIPE task markers. Review and CI signals do not establish merge

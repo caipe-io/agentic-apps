@@ -27,6 +27,9 @@ export type PrDashboardItem = {
     current_head: boolean;
     url: string;
     task_id: string | null;
+    body: string;
+    body_truncated: boolean;
+    submitted_at: string | null;
   }>;
   comments: Array<{
     id: number;
@@ -179,6 +182,8 @@ export async function getPrDashboard(
             if (ciStatus === "passing") ciStatus = "incomplete";
           }
           if (reviews.length === 100) missing.push("reviews exceed page limit");
+          if (comments.length === 30)
+            missing.push("inline comments may exceed page limit");
           return {
             number: pr.number,
             title: pr.title,
@@ -225,6 +230,15 @@ export async function getPrDashboard(
                   current_head: r.commit_id === pr.head.sha,
                   url: r.html_url,
                   task_id: marker?.[1] || null,
+                  body: (r.body || "")
+                    .replace(
+                      /<!-- caipe-pr-review:task=[a-zA-Z0-9_-]+;head=[a-f0-9]{40} -->/g,
+                      "",
+                    )
+                    .trim()
+                    .slice(0, 6000),
+                  body_truncated: (r.body || "").length > 6000,
+                  submitted_at: r.submitted_at || null,
                 };
               }),
             comments: comments.map((c) => ({
