@@ -2,7 +2,7 @@ id: agentic_sdlc
 name: Agentic SDLC App MCP
 description: Repository delivery snapshot and runtime contract tools.
 transport: http
-endpoint: http://agentic-app-agentic-sdlc:3030/mcp
+endpoint: http://agentic-app-agentic-sdlc:3030/apps/agentic-sdlc/mcp
 enabled: true
 authentication:
   mode: forwarded_oidc

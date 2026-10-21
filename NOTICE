@@ -13,3 +13,10 @@ Runtime dependencies
 --------------------
 The application runtimes use the Model Context Protocol SDK and Zod. Their respective licenses
 and notices are included in the npm dependency metadata and must be retained in distributed images.
+
+Agentic SDLC Ship Loop
+---------------------
+The Ship Loop UI, projection and route code derives from the Apache-2.0-licensed
+CAIPE mirror implementation. SOURCE.json records the original repository and
+exact commit. Original notices and source comments are retained; app-specific
+identity, credential and runtime boundaries are implemented in this repository.

@@ -1,0 +1,257 @@
+import { Octokit } from "@octokit/rest";
+import { getGitHubAccessToken } from "./agentic-sdlc-auth";
+
+export type PrDashboardItem = {
+  number: number;
+  title: string;
+  url: string;
+  author: string;
+  state: string;
+  draft: boolean;
+  head_sha: string;
+  updated_at: string;
+  ci: {
+    status: string;
+    checks: Array<{
+      name: string;
+      status: string;
+      conclusion: string | null;
+      url: string | null;
+    }>;
+  };
+  review_status: string;
+  reviews: Array<{
+    author: string;
+    state: string;
+    head_sha: string;
+    current_head: boolean;
+    url: string;
+    task_id: string | null;
+  }>;
+  comments: Array<{
+    id: number;
+    author: string;
+    body: string;
+    path: string;
+    line: number | null;
+    outdated: boolean;
+    url: string;
+  }>;
+  missing_signals: string[];
+};
+export async function getPrDashboard(
+  req: Request,
+  owner: string,
+  repo: string,
+  state: "open" | "closed" | "all" = "open",
+) {
+  const token = await getGitHubAccessToken(req);
+  const client = new Octokit({
+    auth: token,
+    baseUrl: process.env.AGENTIC_SDLC_GITHUB_API_URL,
+    request: { timeout: 10000 },
+  });
+  const { data: pulls } = await client.pulls.list({
+    owner,
+    repo,
+    state,
+    sort: "updated",
+    direction: "desc",
+    per_page: 20,
+  });
+  const items: PrDashboardItem[] = [];
+  for (let offset = 0; offset < pulls.length; offset += 3) {
+    items.push(
+      ...(await Promise.all(
+        pulls.slice(offset, offset + 3).map(async (pr) => {
+          const [reviewResult, checkResult, statusResult, commentResult] =
+            await Promise.allSettled([
+              client.pulls.listReviews({
+                owner,
+                repo,
+                pull_number: pr.number,
+                per_page: 100,
+              }),
+              client.checks.listForRef({
+                owner,
+                repo,
+                ref: pr.head.sha,
+                per_page: 100,
+                filter: "latest",
+              }),
+              client.repos.getCombinedStatusForRef({
+                owner,
+                repo,
+                ref: pr.head.sha,
+                per_page: 100,
+              }),
+              client.pulls.listReviewComments({
+                owner,
+                repo,
+                pull_number: pr.number,
+                sort: "created",
+                direction: "desc",
+                per_page: 30,
+              }),
+            ]);
+          const missing: string[] = [];
+          if (reviewResult.status === "rejected") missing.push("reviews");
+          if (checkResult.status === "rejected") missing.push("checks");
+          if (statusResult.status === "rejected")
+            missing.push("commit statuses");
+          if (commentResult.status === "rejected")
+            missing.push("inline comments");
+          const reviews =
+            reviewResult.status === "fulfilled" ? reviewResult.value.data : [];
+          const checks =
+            checkResult.status === "fulfilled"
+              ? checkResult.value.data.check_runs
+              : [];
+          const statuses =
+            statusResult.status === "fulfilled"
+              ? statusResult.value.data.statuses
+              : [];
+          const comments =
+            commentResult.status === "fulfilled"
+              ? commentResult.value.data
+              : [];
+          const latestByReviewer = new Map<string, string>();
+          for (const r of reviews)
+            if (
+              r.user?.login &&
+              r.state !== "PENDING" &&
+              r.state !== "DISMISSED" &&
+              r.state !== "COMMENTED"
+            )
+              latestByReviewer.set(r.user.login, r.state);
+          const decisions = [...latestByReviewer.values()];
+          const reviewStatus =
+            reviewResult.status === "rejected"
+              ? "unknown"
+              : decisions.includes("CHANGES_REQUESTED")
+                ? "changes requested"
+                : decisions.includes("APPROVED")
+                  ? "approved review present"
+                  : reviews.some(
+                        (r) =>
+                          r.commit_id === pr.head.sha &&
+                          r.state === "COMMENTED",
+                      )
+                    ? "commented on current head"
+                    : "awaiting review";
+          let ciStatus =
+            checkResult.status === "rejected"
+              ? "unknown"
+              : checks.length === 0
+                ? "no checks"
+                : checks.some((c) =>
+                      [
+                        "failure",
+                        "cancelled",
+                        "timed_out",
+                        "action_required",
+                        "startup_failure",
+                        "stale",
+                      ].includes(c.conclusion || ""),
+                    )
+                  ? "failing"
+                  : checks.some((c) => c.status !== "completed")
+                    ? "pending"
+                    : "passing";
+          if (
+            statuses.some((s) => s.state === "failure" || s.state === "error")
+          )
+            ciStatus = "failing";
+          else if (
+            statuses.some((s) => s.state === "pending") &&
+            ciStatus !== "failing"
+          )
+            ciStatus = "pending";
+          else if (ciStatus === "no checks" && statuses.length)
+            ciStatus = "passing";
+          if (missing.includes("commit statuses") && ciStatus === "passing")
+            ciStatus = "incomplete";
+          if (
+            checkResult.status === "fulfilled" &&
+            checkResult.value.data.total_count > 100
+          ) {
+            missing.push("additional checks exceed page limit");
+            if (ciStatus === "passing") ciStatus = "incomplete";
+          }
+          if (reviews.length === 100) missing.push("reviews exceed page limit");
+          return {
+            number: pr.number,
+            title: pr.title,
+            url: pr.html_url,
+            author: pr.user?.login || "unknown",
+            state: pr.merged_at ? "merged" : pr.state,
+            draft: Boolean(pr.draft),
+            head_sha: pr.head.sha,
+            updated_at: pr.updated_at,
+            ci: {
+              status: ciStatus,
+              checks: checks
+                .map<{
+                  name: string;
+                  status: string;
+                  conclusion: string | null;
+                  url: string | null;
+                }>((c) => ({
+                  name: c.name,
+                  status: c.status,
+                  conclusion: c.conclusion,
+                  url: c.html_url,
+                }))
+                .concat(
+                  statuses.map((s) => ({
+                    name: s.context,
+                    status: s.state === "pending" ? "in_progress" : "completed",
+                    conclusion: s.state === "pending" ? null : s.state,
+                    url: s.target_url,
+                  })),
+                ),
+            },
+            review_status: reviewStatus,
+            reviews: reviews
+              .filter((r) => r.state !== "PENDING")
+              .map((r) => {
+                const marker = (r.body || "").match(
+                  /<!-- caipe-pr-review:task=([a-zA-Z0-9_-]+);head=([a-f0-9]{40}) -->/,
+                );
+                return {
+                  author: r.user?.login || "unknown",
+                  state: r.state,
+                  head_sha: r.commit_id || "",
+                  current_head: r.commit_id === pr.head.sha,
+                  url: r.html_url,
+                  task_id: marker?.[1] || null,
+                };
+              }),
+            comments: comments.map((c) => ({
+              id: c.id,
+              author: c.user?.login || "unknown",
+              body: c.body.slice(0, 3000),
+              path: c.path,
+              line: c.line ?? null,
+              outdated: c.line === null,
+              url: c.html_url,
+            })),
+            missing_signals: missing,
+          } satisfies PrDashboardItem;
+        }),
+      )),
+    );
+  }
+  return {
+    repository: `${owner}/${repo}`,
+    generated_at: new Date().toISOString(),
+    items,
+    limits: {
+      pull_requests: 20,
+      reviews_per_pr: 100,
+      checks_per_head: 100,
+      inline_comments_per_pr: 30,
+    },
+    note: "Review decisions and checks are source signals, not permission to merge. Inline comments may include resolved threads. Newest 20 matching pull requests are shown.",
+  };
+}

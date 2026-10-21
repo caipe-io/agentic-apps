@@ -12,7 +12,9 @@ export const AGENTIC_SDLC_MANIFEST = {
     kind: "proxied-next-zone",
     mountPath: "/apps/agentic-sdlc",
     chrome: "iframe",
+    preserveMountPath: true,
   },
+  auth: { mode: "forward-user-access-token" },
   ui: {
     contractVersion: "1.0",
     surface: "hosted",
@@ -49,6 +51,12 @@ export const AGENTIC_SDLC_MANIFEST = {
         requiredScopes: ["agents:invoke"],
       },
       {
+        action: "proxy:PUT",
+        description: "Save the current user's Agentic SDLC panel preferences",
+        defaultEffect: "allow",
+        requiredScopes: ["sdlc:read"],
+      },
+      {
         action: "webhook.github.repo-events",
         description: "Forward GitHub webhook events to Agentic SDLC",
         defaultEffect: "allow",
@@ -83,16 +91,16 @@ export const AGENTIC_SDLC_MANIFEST = {
     {
       provider: "github",
       channel: "repo-events",
-      upstreamPath: "/webhooks/github",
+      upstreamPath: "/apps/agentic-sdlc/api/agentic-sdlc/webhooks/github",
       allowedMethods: ["POST"],
       verificationOwner: "app",
       preservedHeaders: ["x-github-event", "x-github-delivery", "x-hub-signature-256"],
-      maxBodyBytes: 131072,
+      maxBodyBytes: 1048576,
       policyAction: "webhook.github.repo-events",
     },
   ],
   health: {
-    endpoint: "/health/ready",
+    endpoint: "/apps/agentic-sdlc/health/ready",
     timeoutMs: 2000,
     blockLaunchWhen: ["degraded", "unreachable"],
   },

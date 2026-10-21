@@ -12,6 +12,12 @@ on:
         required: true
         type: string
 
+      app:
+        description: Application ID to publish, or all
+        default: all
+        required: true
+        type: string
+
 permissions:
   contents: read
   packages: write
@@ -38,7 +44,9 @@ jobs:
           node-version: "22"
       - name: Validate image manifest
         id: matrix
-        run: echo "matrix=$(node scripts/check-app-image-manifest.mjs --matrix)" >> "$GITHUB_OUTPUT"
+        env:
+          APP_ID: ${{ inputs.app || 'all' }}
+        run: echo "matrix=$(node scripts/check-app-image-manifest.mjs --matrix --app "$APP_ID")" >> "$GITHUB_OUTPUT"
 
   publish:
     name: Publish ${{ matrix.id }} image
@@ -75,7 +83,7 @@ jobs:
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: .
-          file: build/Dockerfile.agentic-app
+          file: ${{ matrix.dockerfile }}
           build-args: |
             APP_ID=${{ matrix.id }}
             APP_PORT=${{ matrix.port }}

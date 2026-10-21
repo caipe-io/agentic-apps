@@ -78,7 +78,7 @@ jobs:
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: .
-          file: build/Dockerfile.agentic-app
+          file: ${{ matrix.dockerfile }}
           build-args: |
             APP_ID=${{ matrix.id }}
             APP_PORT=${{ matrix.port }}
@@ -88,3 +88,21 @@ jobs:
           cache-to: type=gha,mode=min,scope=${{ matrix.id }}
           provenance: false
           sbom: false
+
+  sdlc-build:
+    name: Build Ship Loop and PR dashboard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22"
+      - name: Install app dependencies
+        run: npm ci --ignore-scripts
+        working-directory: ui/apps/agentic-apps/agentic-sdlc/ship-loop
+      - name: Compile production runtime and type check
+        run: npm run build
+        working-directory: ui/apps/agentic-apps/agentic-sdlc/ship-loop
+      - name: Audit app dependencies
+        run: npm audit --audit-level=high
+        working-directory: ui/apps/agentic-apps/agentic-sdlc/ship-loop
