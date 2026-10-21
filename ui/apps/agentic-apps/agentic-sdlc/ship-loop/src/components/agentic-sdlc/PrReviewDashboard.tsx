@@ -38,6 +38,10 @@ export function PrReviewDashboard({
   const [review, setReview] = useState("");
   const [scope, setScope] = useState("");
   const [agent, setAgent] = useState("");
+  const [authorHandle, setAuthorHandle] = useState("");
+  const [reviewerHandle, setReviewerHandle] = useState("");
+  const [reviewerRole, setReviewerRole] = useState("either");
+  const handlesId = useId();
   const [data, setData] = useState<Snapshot | null>(null);
   const [error, setError] = useState("");
   const [tick, setTick] = useState(0);
@@ -49,6 +53,9 @@ export function PrReviewDashboard({
     setScope("");
     setAgent("");
     setQuery("");
+    setAuthorHandle("");
+    setReviewerHandle("");
+    setReviewerRole("either");
   }, [owner, repo]);
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -99,6 +106,18 @@ export function PrReviewDashboard({
   const labels = [...new Set(items.flatMap((pr) => pr.labels ?? []))].sort(
     (a, b) => a.localeCompare(b),
   );
+  const normalizedHandle = (value: string) =>
+    value.trim().replace(/^@/, "").toLowerCase();
+  const author = normalizedHandle(authorHandle);
+  const reviewer = normalizedHandle(reviewerHandle);
+  const authors = [...new Set(items.map((pr) => pr.author))].sort((a, b) =>
+    a.localeCompare(b),
+  );
+  const reviewers = [
+    ...new Set(
+      items.flatMap((pr) => [...pr.requested_reviewers, ...pr.reviewed_by]),
+    ),
+  ].sort((a, b) => a.localeCompare(b));
   const visible = items.filter((pr) => {
     const viewer = data?.viewer_login?.toLowerCase();
     const inScope =
@@ -120,11 +139,27 @@ export function PrReviewDashboard({
       (!checks || pr.ci.status === checks) &&
       (!review || pr.review_status === review) &&
       (!agent || pr.agent_review.status === agent) &&
-      inScope
+      inScope &&
+      (!author || pr.author.toLowerCase() === author) &&
+      (!reviewer ||
+        (reviewerRole !== "submitted" &&
+          pr.requested_reviewers.some(
+            (name) => name.toLowerCase() === reviewer,
+          )) ||
+        (reviewerRole !== "requested" &&
+          pr.reviewed_by.some((name) => name.toLowerCase() === reviewer)))
     );
   });
   const filtered = Boolean(
-    query || label || checks || review || scope || agent || state !== "open",
+    query ||
+      label ||
+      checks ||
+      review ||
+      scope ||
+      agent ||
+      authorHandle ||
+      reviewerHandle ||
+      state !== "open",
   );
 
   return (
@@ -202,12 +237,69 @@ export function PrReviewDashboard({
         <details className="relative">
           <summary className="cursor-pointer rounded-md border border-border bg-background px-3 py-2 text-sm">
             Filters
-            {[state !== "open", Boolean(label), Boolean(checks)].filter(Boolean)
-              .length
-              ? ` (${[state !== "open", Boolean(label), Boolean(checks)].filter(Boolean).length})`
+            {[
+              state !== "open",
+              Boolean(label),
+              Boolean(checks),
+              Boolean(author),
+              Boolean(reviewer),
+            ].filter(Boolean).length
+              ? ` (${[state !== "open", Boolean(label), Boolean(checks), Boolean(author), Boolean(reviewer)].filter(Boolean).length})`
               : ""}
           </summary>
           <div className="absolute right-0 z-20 mt-2 grid w-64 gap-3 rounded-lg border border-border bg-background p-3 shadow-lg [&_select]:w-full [&_select]:max-w-none">
+            <label className="grid gap-1 text-xs text-muted-foreground">
+              Author
+              <input
+                aria-label="Author handle"
+                list={`${handlesId}-authors`}
+                placeholder="@handle · all authors"
+                value={authorHandle}
+                onChange={(event) => setAuthorHandle(event.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                className="min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+              />
+              <datalist id={`${handlesId}-authors`}>
+                {authors.map((name) => (
+                  <option key={name} value={`@${name}`} />
+                ))}
+              </datalist>
+            </label>
+            <label className="grid gap-1 text-xs text-muted-foreground">
+              Reviewer
+              <input
+                aria-label="Reviewer handle"
+                list={`${handlesId}-reviewers`}
+                placeholder="@handle · all reviewers"
+                value={reviewerHandle}
+                onChange={(event) => setReviewerHandle(event.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                className="min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+              />
+              <datalist id={`${handlesId}-reviewers`}>
+                {reviewers.map((name) => (
+                  <option key={name} value={`@${name}`} />
+                ))}
+              </datalist>
+            </label>
+            {reviewer && (
+              <select
+                aria-label="Reviewer involvement"
+                value={reviewerRole}
+                onChange={(event) => setReviewerRole(event.target.value)}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+              >
+                <option value="either">Requested or reviewed</option>
+                <option value="requested">Review requested from</option>
+                <option value="submitted">Has submitted a review</option>
+              </select>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Exact handles; suggestions come from this snapshot. Team requests
+              are not expanded.
+            </p>
             <select
               aria-label="PR state"
               value={state}
@@ -267,6 +359,9 @@ export function PrReviewDashboard({
               setScope("");
               setAgent("");
               setState("open");
+              setAuthorHandle("");
+              setReviewerHandle("");
+              setReviewerRole("either");
             }}
             className="text-xs text-muted-foreground hover:text-primary"
           >

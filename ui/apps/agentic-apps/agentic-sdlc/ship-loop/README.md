@@ -109,8 +109,17 @@ empty state retain that scope; label choices come from this same snapshot.
   branch protection evaluation or permission to merge.
 - **Agent review:** no findings, findings raised, incomplete, reviewed without
   a verdict, stale after new commits, absent, or unavailable/unverified.
-- **Filters:** PR state, label and check status, plus free-text search over PR
-  number, title, author and labels. Clear filters restores the default open view.
+- **Author / reviewer handles:** select a suggested handle or type an exact
+  GitHub login, with optional `@` and case-insensitive matching. Author selects
+  PRs authored by that login. Reviewer selects direct review requests, submitted
+  non-agent reviews (including history), or either. Author and reviewer combine
+  with AND and with the other filters. Suggestions come from the loaded snapshot;
+  typing an absent handle yields no matches within that snapshot. Team requests
+  are not expanded. These controls add no GitHub API requests.
+- **Filters:** author/reviewer handles, PR state, label and check status, plus
+  free-text search over PR number, title, author and labels. Clear filters restores
+  the default open view and clears handles and reviewer role. Handles also reset
+  when switching repositories.
 
 CI, review and inline-comment counts share one disclosure line per PR. Selecting
 a count expands its existing evidence in place. History stays available without
