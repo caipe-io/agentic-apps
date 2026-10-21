@@ -6,6 +6,21 @@ export type PrDashboardItem = {
   title: string;
   url: string;
   author: string;
+  labels: string[];
+  requested_reviewers: string[];
+  reviewed_by: string[];
+  agent_review: {
+    status:
+      | "no_findings"
+      | "findings"
+      | "incomplete"
+      | "reviewed"
+      | "stale"
+      | "not_reviewed"
+      | "unverified"
+      | "unknown";
+    url: string | null;
+  };
   state: string;
   draft: boolean;
   head_sha: string;
@@ -54,6 +69,23 @@ export async function getPrDashboard(
     baseUrl: process.env.AGENTIC_SDLC_GITHUB_API_URL,
     request: { timeout: 10000 },
   });
+  // Identity comes from the caller's connected GitHub token, never browser input.
+  const viewer = await client.users.getAuthenticated().then(
+    ({ data }) => data.login,
+    () => null,
+  );
+  const trustedReviewers = new Set(
+    (process.env.AGENTIC_SDLC_REVIEWER_LOGINS || "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  const trustedTasks = new Set(
+    (process.env.AGENTIC_SDLC_REVIEW_TASK_IDS || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
   const { data: pulls } = await client.pulls.list({
     owner,
     repo,
@@ -118,15 +150,34 @@ export async function getPrDashboard(
             commentResult.status === "fulfilled"
               ? commentResult.value.data
               : [];
+          const taskMarker = (r: (typeof reviews)[number]) => {
+            const match = (r.body || "").match(
+              /<!-- caipe-pr-review:task=([a-zA-Z0-9_-]+);head=([a-f0-9]{40}) -->/,
+            );
+            return match && match[2] === r.commit_id ? match : null;
+          };
+          const isTrustedAgent = (r: (typeof reviews)[number]) => {
+            const marker = taskMarker(r);
+            return Boolean(
+              marker &&
+                trustedReviewers.has((r.user?.login || "").toLowerCase()) &&
+                trustedTasks.has(marker[1]),
+            );
+          };
+          // Keep human decisions distinct from COMMENT-only agent reports and
+          // from approvals on an older head. A dismissed decision revokes it.
           const latestByReviewer = new Map<string, string>();
           for (const r of reviews)
             if (
               r.user?.login &&
+              !taskMarker(r) &&
               r.state !== "PENDING" &&
-              r.state !== "DISMISSED" &&
               r.state !== "COMMENTED"
             )
-              latestByReviewer.set(r.user.login, r.state);
+              latestByReviewer.set(
+                r.user.login,
+                r.commit_id === pr.head.sha ? r.state : "STALE",
+              );
           const decisions = [...latestByReviewer.values()];
           const reviewStatus =
             reviewResult.status === "rejected"
@@ -137,11 +188,49 @@ export async function getPrDashboard(
                   ? "approved review present"
                   : reviews.some(
                         (r) =>
+                          !taskMarker(r) &&
                           r.commit_id === pr.head.sha &&
                           r.state === "COMMENTED",
                       )
                     ? "commented on current head"
                     : "awaiting review";
+          const submittedAgentReviews = reviews.filter(
+            (r) =>
+              taskMarker(r) && r.state !== "PENDING" && r.state !== "DISMISSED",
+          );
+          const trustedAgentReviews =
+            submittedAgentReviews.filter(isTrustedAgent);
+          const latestAgent = trustedAgentReviews
+            .filter((r) => r.commit_id === pr.head.sha)
+            .at(-1);
+          let agentStatus: PrDashboardItem["agent_review"]["status"] =
+            reviewResult.status === "rejected"
+              ? "unknown"
+              : latestAgent
+                ? "reviewed"
+                : trustedAgentReviews.length
+                  ? "stale"
+                  : submittedAgentReviews.length
+                    ? "unverified"
+                    : "not_reviewed";
+          if (latestAgent) {
+            const marker = taskMarker(latestAgent)!;
+            const verdicts = [
+              ...(latestAgent.body || "").matchAll(
+                /<!-- caipe-pr-verdict:v1;task=([a-zA-Z0-9_-]+);head=([a-f0-9]{40});result=(no_findings|findings|incomplete) -->/g,
+              ),
+            ];
+            // Never infer clearance from prose, review presence, or a green CI.
+            if (
+              verdicts.length === 1 &&
+              verdicts[0][1] === marker[1] &&
+              verdicts[0][2] === pr.head.sha
+            )
+              agentStatus = verdicts[0][3] as
+                | "no_findings"
+                | "findings"
+                | "incomplete";
+          }
           let ciStatus =
             checkResult.status === "rejected"
               ? "unknown"
@@ -189,6 +278,25 @@ export async function getPrDashboard(
             title: pr.title,
             url: pr.html_url,
             author: pr.user?.login || "unknown",
+            labels: pr.labels
+              .map((label) => label.name)
+              .filter((name): name is string => Boolean(name)),
+            requested_reviewers: (pr.requested_reviewers ?? []).map(
+              (user) => user.login,
+            ),
+            reviewed_by: [
+              ...new Set(
+                reviews
+                  .filter((r) => r.state !== "PENDING" && !taskMarker(r))
+                  .map((r) => r.user?.login)
+                  .filter((login): login is string => Boolean(login)),
+              ),
+            ],
+            agent_review: {
+              status: agentStatus,
+              url:
+                (latestAgent || trustedAgentReviews.at(-1))?.html_url || null,
+            },
             state: pr.merged_at ? "merged" : pr.state,
             draft: Boolean(pr.draft),
             head_sha: pr.head.sha,
@@ -220,9 +328,7 @@ export async function getPrDashboard(
             reviews: reviews
               .filter((r) => r.state !== "PENDING")
               .map((r) => {
-                const marker = (r.body || "").match(
-                  /<!-- caipe-pr-review:task=([a-zA-Z0-9_-]+);head=([a-f0-9]{40}) -->/,
-                );
+                const marker = taskMarker(r);
                 return {
                   author: r.user?.login || "unknown",
                   state: r.state,
@@ -232,7 +338,7 @@ export async function getPrDashboard(
                   task_id: marker?.[1] || null,
                   body: (r.body || "")
                     .replace(
-                      /<!-- caipe-pr-review:task=[a-zA-Z0-9_-]+;head=[a-f0-9]{40} -->/g,
+                      /<!-- caipe-pr-(?:review:task=[a-zA-Z0-9_-]+;head=[a-f0-9]{40}|verdict:v1;task=[a-zA-Z0-9_-]+;head=[a-f0-9]{40};result=(?:no_findings|findings|incomplete)) -->/g,
                       "",
                     )
                     .trim()
@@ -259,6 +365,7 @@ export async function getPrDashboard(
   return {
     repository: `${owner}/${repo}`,
     generated_at: new Date().toISOString(),
+    viewer_login: viewer,
     items,
     limits: {
       pull_requests: 20,
@@ -266,6 +373,6 @@ export async function getPrDashboard(
       checks_per_head: 100,
       inline_comments_per_pr: 30,
     },
-    note: "Review decisions and checks are source signals, not permission to merge. Inline comments may include resolved threads. Newest 20 matching pull requests are shown.",
+    note: "Human review signals and agent-reported verdicts are advisory, not merge permission or compliance certification. Approvals shown are for the current head. Inline comments may include resolved threads. Newest 20 matching pull requests are shown.",
   };
 }

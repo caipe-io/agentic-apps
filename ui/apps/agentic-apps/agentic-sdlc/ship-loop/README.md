@@ -45,6 +45,8 @@ existing contract fixtures; the published app image now builds this runtime.
 | `GITHUB_WEBHOOK_SECRET` | Server-side signing key shared with the public receiver |
 | `AGENTIC_SDLC_GITHUB_WEBHOOK_URL` | Approved public webhook URL; no raw key reaches the browser |
 | `AGENTIC_SDLC_GITHUB_API_URL` | Optional GitHub Enterprise REST API base |
+| `AGENTIC_SDLC_REVIEWER_LOGINS` | Comma-separated GitHub logins allowed to report agent outcomes |
+| `AGENTIC_SDLC_REVIEW_TASK_IDS` | Comma-separated trusted autonomous review task IDs |
 | `SHIP_LOOP_ENABLED` | Explicit `false` disables domain routes |
 
 ## PR view
@@ -55,7 +57,7 @@ with a repository selector, current-head review/CI summaries, searchable PRs,
 inline feedback and a PR-only activity feed. It hides the issue/Epic, deployment,
 simulation and panel-configuration views. Direct Epic links return to the
 repository workspace. Leave this variable unset to retain the full Ship Loop.
-The original animated delivery-loop graphic remains as a compact 360px header illustration. The workspace keeps the PR list and does not add visual boards or extra GitHub queries.
+The original animated delivery-loop graphic remains as a compact 360px header illustration. The workspace keeps the PR list and does not add visual boards. One caller-identity GitHub request supports personal filters.
 
 This is a presentation choice, not an authorization boundary or ingestion filter.
 All existing webhook ingestion, persisted history, credentials and MCP routes
@@ -90,3 +92,53 @@ multi-application build/release matrix selects it from `apps.manifest.json`.
 Never disable JWT verification or use a shared fallback GitHub token to make a
 private repository appear connected. Keep webhook ingestion on a separate
 queue from autonomous execution so both consumers receive their events.
+
+## Developer review filters
+
+The compact toolbar combines these filters within the newest 20 PRs in the
+selected state. It is not a repository-wide GitHub search. A visible count and
+empty state retain that scope; label choices come from this same snapshot.
+
+- **My involvement:** My PRs, review requested directly from my connected GitHub
+  login, or human reviews submitted by me (including history). Team review
+  requests are not expanded. Personal filters are disabled if caller identity
+  cannot be retrieved. Agent-marked reviews do not count as human reviews.
+- **Human review:** current-head approval present, changes requested, awaiting
+  review, or comment present. Dismissed and earlier-head approvals never count
+  as approval of the current head. These are review signals, not a complete
+  branch protection evaluation or permission to merge.
+- **Agent review:** no findings, findings raised, incomplete, reviewed without
+  a verdict, stale after new commits, absent, or unavailable/unverified.
+- **Filters:** PR state, label and check status, plus free-text search over PR
+  number, title, author and labels. Clear filters restores the default open view.
+
+CI, review and inline-comment counts share one disclosure line per PR. Selecting
+a count expands its existing evidence in place. History stays available without
+an always-visible extra row. The original header animation remains compact.
+
+### Agent outcome protocol
+
+The reviewer continues to publish a GitHub **COMMENT** review. An outcome is
+advisory and separate from human GitHub approval, CI, and conformance claims.
+Never infer no findings from review presence, prose or a passing check.
+
+Configure both reviewer-login and task-ID allowlists. The review must be from
+one of those logins and contain the existing task marker with a head matching
+GitHub's review `commit_id`. A current-head verdict additionally requires exactly
+one marker of this form in the same review body:
+
+```text
+<!-- caipe-pr-review:task=TASK_ID;head=HEAD_SHA -->
+<!-- caipe-pr-verdict:v1;task=TASK_ID;head=HEAD_SHA;result=no_findings -->
+```
+
+Allowed results are `no_findings`, `findings`, and `incomplete`. Task and head
+must agree across both markers and the current PR head. `no_findings` means no
+actionable findings in the completed review scope, not compliance certification
+or merge clearance. Missing required evidence or incomplete inspection should
+produce `incomplete`. Concrete actionable findings should produce `findings`,
+including findings reported in the summary because inline publication failed.
+The latest submitted trusted report for the current head wins. New commits
+invalidate an earlier report; old prose-only reviews remain reviewed without a
+verdict. A missing allowlist never grants trusted attribution. Review author and
+markers are an attribution boundary, not cryptographic proof of model execution.
