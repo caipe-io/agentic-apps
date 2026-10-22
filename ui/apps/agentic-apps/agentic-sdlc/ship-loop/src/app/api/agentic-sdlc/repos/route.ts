@@ -2,29 +2,9 @@ import {
   authorizedRepoIds,
   getGitHubAccessToken,
 } from "@/lib/agentic-sdlc/agentic-sdlc-auth";
-/**
- * GET /api/agentic-sdlc/repos
- *
- * Lists active onboarded repos with per-repo counts. Auth model:
- *   - Always 404 when SHIP_LOOP_ENABLED=false (server gate).
- *   - In production, requires a NextAuth session (401 otherwise).
- *   - In dev, SHIP_LOOP_ALLOW_NO_AUTH=true bypasses the session check
- *     so the mock-webhook flow can be driven without OAuth.
- *
- * Pilot scope: returns *every* active repo. The full spec restricts
- * the list by GitHub repo visibility for the calling user; that
- * filter is intentionally deferred (see tasks T031-T033 / FR-029)
- * because (a) the mock flow needs deterministic output and (b)
- * GitHub OAuth wiring is its own commit. When the visibility filter
- * lands, replace the `find({offboarded_at: null})` below with the
- * user-scoped query.
- */
+// Registered repositories are always filtered through the caller's GitHub access.
 
 import { getAgenticSdlcReposCollection } from "@/lib/agentic-sdlc/mongo-collections";
-import {
-  GitHubClientError,
-  createGitHubClient,
-} from "@/lib/agentic-sdlc/github-client";
 import { withAgenticSdlcGate } from "@/lib/agentic-sdlc/guard";
 import { getRepoCounts } from "@/lib/agentic-sdlc/repo-stats";
 import { requireAgenticSdlcReader } from "@/lib/agentic-sdlc/agentic-sdlc-auth";
@@ -156,118 +136,151 @@ async function handlePost(req: Request): Promise<Response> {
 
   const owner = stringField(body.owner).trim();
   const repo = stringField(body.repo).trim();
-  const callbackUrl = stringField(body.callback_url).trim();
-  const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET || "";
-  const sandboxEnvironment =
-    stringField(body.sandbox_environment).trim() || "sandbox";
-
-  if (!owner || !repo) {
-    return Response.json({ error: "bad_repo" }, { status: 400 });
-  }
-  if (!webhookSecret || webhookSecret.length < 8) {
-    return Response.json({ error: "bad_webhook_secret" }, { status: 400 });
-  }
-  const parsedCallbackUrl = parseWebhookCallbackUrl(callbackUrl);
-  if (!parsedCallbackUrl) {
-    return Response.json({ error: "bad_callback_url" }, { status: 400 });
-  }
-
-  const authToken = await getGitHubAccessToken(req);
-  if (!authToken) {
+  const secret = process.env.GITHUB_WEBHOOK_SECRET || "";
+  const callback = parseWebhookCallbackUrl(
+    stringField(body.callback_url).trim(),
+  );
+  if (
+    !/^[a-zA-Z0-9][a-zA-Z0-9-]{0,38}$/.test(owner) ||
+    !/^[a-zA-Z0-9_.-]{1,100}$/.test(repo) ||
+    [".", ".."].includes(repo)
+  )
+    return Response.json(
+      { message: "Select a repository in owner/repo form." },
+      { status: 400 },
+    );
+  if (!callback || secret.length < 8)
     return Response.json(
       {
-        error: "missing_github_token",
-        message: "Connect GitHub in CAIPE to configure the repository webhook.",
+        message:
+          "Repository webhook setup is not configured. Contact your Grid administrator.",
       },
       { status: 503 },
     );
-  }
-
   try {
-    const client = createGitHubClient({ authToken });
-    const meta = await client.getRepoMetadata(owner, repo);
-    if (!meta.permissions?.admin) {
+    const { Octokit } = await import("@octokit/rest");
+    const client = new Octokit({
+      auth: await getGitHubAccessToken(req),
+      baseUrl: process.env.AGENTIC_SDLC_GITHUB_API_URL,
+      request: { timeout: 15000 },
+    });
+    const { data: meta } = await client.repos.get({ owner, repo });
+    if (!meta.permissions?.admin)
       return Response.json(
         {
-          error: "github_admin_required",
           message:
-            "Your connected GitHub account needs repository admin permission to configure webhooks.",
+            "Your connected GitHub account needs repository administrator permission to configure the webhook.",
         },
         { status: 403 },
       );
-    }
-
-    const existingHooks = await client.listRepoWebhooks(owner, repo);
-    const hook =
-      existingHooks.find(
-        (candidate) => candidate.config.url === parsedCallbackUrl,
-      ) ??
-      (await client.createRepoWebhook(owner, repo, {
-        callbackUrl: parsedCallbackUrl,
-        secret: webhookSecret,
-        events: GITHUB_SHIP_LOOP_EVENTS,
-      }));
-
+    const [canonicalOwner, canonicalRepo] = meta.full_name.split("/");
+    const target = { owner: canonicalOwner, repo: canonicalRepo };
+    const hooks = await client.paginate(client.repos.listWebhooks, {
+      ...target,
+      per_page: 100,
+    });
+    const existing = hooks.find((h) => h.config.url === callback);
+    const events = existing?.events.includes("*")
+      ? ["*"]
+      : [
+          ...new Set([
+            ...(existing?.events || []),
+            ...GITHUB_SHIP_LOOP_EVENTS,
+            "workflow_run",
+            "sub_issues",
+          ]),
+        ];
+    const config = {
+      url: callback,
+      content_type: "json",
+      insecure_ssl: "0",
+      secret,
+    };
+    const { data: hook } = existing
+      ? await client.repos.updateWebhook({
+          ...target,
+          hook_id: existing.id,
+          active: true,
+          events,
+          config,
+        })
+      : await client.repos.createWebhook({
+          ...target,
+          name: "web",
+          active: true,
+          events,
+          config,
+        });
     const now = new Date();
     const repos = await getAgenticSdlcReposCollection();
-    const doc: Omit<OnboardedRepo, "_id" | "onboarded_at" | "created_at"> = {
-      repo_id: String(meta.id),
-      owner,
-      name: repo,
-      full_name: meta.full_name,
-      default_branch: meta.default_branch,
-      sandbox_environment: sandboxEnvironment,
-      webhook_id: hook.id,
-      webhook_secret_hash: hashWebhookSecret(webhookSecret),
-      webhook_status: "unknown",
-      webhook_last_event_at: null,
-      label_to_stage_overrides: {},
-      onboarded_by_user_id: reader.user.email,
-      offboarded_at: null,
-      updated_at: now,
-    };
-
+    // Reconnecting must not erase history, label mappings, opt-in or ownership.
     await repos.updateOne(
-      { repo_id: doc.repo_id },
+      { repo_id: String(meta.id) },
       {
-        $set: doc,
+        $set: {
+          owner: canonicalOwner,
+          name: canonicalRepo,
+          full_name: meta.full_name,
+          default_branch: meta.default_branch,
+          webhook_id: hook.id,
+          webhook_secret_hash: hashWebhookSecret(secret),
+          offboarded_at: null,
+          updated_at: now,
+          connection_check_started_at: now,
+        },
         $setOnInsert: {
+          repo_id: String(meta.id),
+          sandbox_environment:
+            stringField(body.sandbox_environment).trim().slice(0, 100) ||
+            "sandbox",
+          webhook_status: "unknown",
+          webhook_last_event_at: null,
+          label_to_stage_overrides: {},
+          onboarded_by_user_id: reader.user.id,
           onboarded_at: now,
           created_at: now,
         },
       },
       { upsert: true },
     );
-
+    let verification = "waiting_for_delivery";
+    try {
+      // GitHub delivers its latest push through the existing public receiver;
+      // this does not create a commit or fire the PR-only reviewer.
+      await client.repos.testPushWebhook({ ...target, hook_id: hook.id });
+      verification = "delivery_check_requested";
+    } catch {
+      /* Empty repositories or missing test permission can wait for their first real event. */
+    }
     return Response.json(
       {
         item: {
-          repo_id: doc.repo_id,
-          owner: doc.owner,
-          name: doc.name,
-          full_name: doc.full_name,
-          default_branch: doc.default_branch,
-          sandbox_environment: doc.sandbox_environment,
-          webhook_id: doc.webhook_id,
-          webhook_url: parsedCallbackUrl,
-          github_webhook_settings_url: `https://github.com/${doc.full_name}/settings/hooks/${doc.webhook_id}`,
-          webhook_events: GITHUB_SHIP_LOOP_EVENTS,
+          repo_id: String(meta.id),
+          full_name: meta.full_name,
+          webhook_id: hook.id,
+          webhook_url: callback,
+          webhook_events: events,
+          github_webhook_settings_url: `https://github.com/${meta.full_name}/settings/hooks/${hook.id}`,
+          verification,
         },
       },
       { status: 201 },
     );
-  } catch (err) {
-    if (err instanceof GitHubClientError) {
-      return Response.json(
-        {
-          error: `github_${err.code}`,
-          message: err.message,
-          documentation_url: err.documentationUrl,
-        },
-        { status: err.status ?? 502 },
-      );
-    }
-    throw err;
+  } catch (error) {
+    const status = (error as { status?: number }).status;
+    return Response.json(
+      {
+        message:
+          status === 401
+            ? "Reconnect GitHub in Grid Credentials and authorize organization SSO if required."
+            : status === 403
+              ? "GitHub denied webhook setup. Check repository admin access, token permissions and organization SSO."
+              : status === 404
+                ? "Repository not found or not accessible through your connected GitHub account."
+                : "Repository setup could not finish. Retry; an existing matching webhook is reused.",
+      },
+      { status: status && [401, 403, 404].includes(status) ? status : 502 },
+    );
   }
 }
 

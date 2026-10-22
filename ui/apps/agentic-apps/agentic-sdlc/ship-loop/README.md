@@ -34,20 +34,24 @@ existing contract fixtures; the published app image now builds this runtime.
 
 ## Configuration
 
-| Variable | Purpose |
-| --- | --- |
-| `AGENTIC_SDLC_OIDC_ISSUER` | Expected OIDC issuer |
-| `AGENTIC_SDLC_OIDC_AUDIENCES` | Comma-separated accepted audiences |
-| `AGENTIC_SDLC_OIDC_JWKS_URL` | Optional private JWKS URL; issuer verification remains unchanged |
-| `AGENTIC_SDLC_CAIPE_API_ORIGIN` | Trusted private CAIPE BFF origin for credential exchange |
-| `AGENTIC_SDLC_MONGODB_URI` | App-only database credential |
-| `AGENTIC_SDLC_MONGODB_DATABASE` | Database name; default `agentic_sdlc` |
-| `GITHUB_WEBHOOK_SECRET` | Server-side signing key shared with the public receiver |
-| `AGENTIC_SDLC_GITHUB_WEBHOOK_URL` | Approved public webhook URL; no raw key reaches the browser |
-| `AGENTIC_SDLC_GITHUB_API_URL` | Optional GitHub Enterprise REST API base |
-| `AGENTIC_SDLC_REVIEWER_LOGINS` | Comma-separated GitHub logins allowed to report agent outcomes |
-| `AGENTIC_SDLC_REVIEW_TASK_IDS` | Comma-separated trusted autonomous review task IDs |
-| `SHIP_LOOP_ENABLED` | Explicit `false` disables domain routes |
+| Variable                            | Purpose                                                                                                                      |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `AGENTIC_SDLC_OIDC_ISSUER`          | Expected OIDC issuer                                                                                                         |
+| `AGENTIC_SDLC_OIDC_AUDIENCES`       | Comma-separated accepted audiences                                                                                           |
+| `AGENTIC_SDLC_OIDC_JWKS_URL`        | Optional private JWKS URL; issuer verification remains unchanged                                                             |
+| `AGENTIC_SDLC_CAIPE_API_ORIGIN`     | Trusted private CAIPE BFF origin for credential exchange and caller-authorized setup                                         |
+| `AGENTIC_SDLC_MONGODB_URI`          | App-only database credential                                                                                                 |
+| `AGENTIC_SDLC_MONGODB_DATABASE`     | Database name; default `agentic_sdlc`                                                                                        |
+| `GITHUB_WEBHOOK_SECRET`             | Server-side signing key shared with the public receiver                                                                      |
+| `AGENTIC_SDLC_GITHUB_WEBHOOK_URL`   | Approved public webhook URL; no raw key reaches the browser                                                                  |
+| `AGENTIC_SDLC_GITHUB_API_URL`       | Optional GitHub Enterprise REST API base                                                                                     |
+| `AGENTIC_SDLC_REVIEWER_LOGINS`      | Comma-separated GitHub logins allowed to report agent outcomes                                                               |
+| `AGENTIC_SDLC_REVIEW_TASK_IDS`      | Comma-separated trusted autonomous review task IDs                                                                           |
+| `AGENTIC_SDLC_AUTONOMOUS_ORIGIN`    | Private native Autonomous service origin for signed task hooks; management uses the caller-authorized BFF instead            |
+| `AGENTIC_SDLC_REVIEW_MODEL_ID`      | Operator-approved Dynamic Agents model ID for opted-in reviewers                                                             |
+| `AGENTIC_SDLC_GITHUB_MCP_ID`        | GitHub MCP server ID; default `mcp-github`                                                                                   |
+| `AGENTIC_SDLC_MANAGED_REVIEW_TASKS` | JSON object mapping lowercase `owner/repo` to an existing externally managed task ID; blocks duplicate provisioning/dispatch |
+| `SHIP_LOOP_ENABLED`                 | Explicit `false` disables domain routes                                                                                      |
 
 ## PR view
 
@@ -151,3 +155,85 @@ The latest submitted trusted report for the current head wins. New commits
 invalidate an earlier report; old prose-only reviews remain reviewed without a
 verdict. A missing allowlist never grants trusted attribution. Review author and
 markers are an attribution boundary, not cryptographic proof of model execution.
+
+## Connect a repository and optionally enable reviews
+
+The compact PR workspace retains explicit onboarding through **Add repository**,
+**Connection & agent**, and an in-app **Connection guide**. Registration is never
+inferred from a webhook or from the repositories a user can see.
+
+1. Connect GitHub in the host's Credentials page and authorize organization SSO
+   when required. The connected account needs repo admin access and permission
+   to read/manage repository webhooks. Do not paste a token or webhook secret
+   into this app.
+2. Find a repository using that account or enter exact `owner/repo`, explicitly
+   select it, and connect. The server verifies current admin permission, creates
+   or updates only the hook matching the configured public URL, and registers
+   the canonical GitHub repository ID. Other hooks, existing subscribed events,
+   app history, label mappings and review settings are preserved on reconnect.
+3. Setup loads current GitHub state and requests GitHub's test **push** delivery
+   through the public receiver. This creates no commit and does not fire a
+   PR-only reviewer. Signed receipt evidence is separate from mere hook creation.
+   Empty repositories or unavailable test delivery may wait for a normal event;
+   the UI reports this as unverified. The receiver must fan out the configured
+   event types, including `push`, to the app's independent queue.
+4. Review activation is a separate, default-off action. Select an owner team and
+   explicitly enable it. The current repo administrator must also have host
+   Autonomous entitlement, owner-team/agent/tool permissions, and the configured
+   model. The conformance skill must pass its security scan. All resource
+   management uses the original caller bearer through normal host authorization;
+   this app never impersonates ownership headers or uses an admin service token.
+5. Setup creates a private scanned conformance skill, a team-owned repository
+   reviewer with a narrow GitHub tool allowlist, and a user-owned native webhook
+   task. Future `pull_request.opened` and `pull_request.synchronize` events can
+   post a **COMMENT** review and up to ten actionable inline findings using the
+   enabling user's connected GitHub credentials. Contents/PR/check/status read
+   and PR review write permissions must be available. There is no retroactive
+   agent review during registration, refresh or synchronization.
+6. Turn future reviews off in **Connection & agent**. This stops app dispatch
+   first, then disables the owner's native task. An already-running review can
+   finish; historical feedback remains. The task owner can also stop/manage runs
+   through Autonomous. Other administrators cannot take over a binding silently.
+
+Review outcomes remain advisory and tied to the actual current head. Security
+and documented style evidence may be `Not verified`; a missing scan is not a
+pass. The agent cannot approve, request changes, change code/workflows, merge or
+deploy. Native runtime permissions remain authoritative at every run. Team
+members able to edit the agent can change its behavior through normal host
+permissions; operators should restrict that access appropriately.
+
+The public receiver must verify the original GitHub HMAC and preserve event,
+delivery ID and signed payload when forwarding to the app. Configure preexisting
+reviewers in `AGENTIC_SDLC_MANAGED_REVIEW_TASKS` **before enabling onboarding** to
+avoid a second review path for the same repo. Their existing queue/task/skill is
+preserved and managed in Autonomous rather than by this app. An example mapping
+is `{"example/repository":"existing-review-task-id"}`.
+
+### Durable review dispatch and recovery
+
+Only registered, signed `opened`/`synchronize` events for an enabled binding
+create a review outbox entry in the same persisted event document. The app signs
+its serialization with that task's separate high-entropy secret and preserves
+the original delivery ID. Native per-task HMAC validation, structured repo/action
+filters and durable delivery deduplication remain enabled. Manual repo sync
+creates no review outbox entry. Dispatch acceptance is not review completion.
+
+Recovery runs every 15 seconds with leases, bounded batches, exponential retry
+and an eight-attempt cap. Failures/uncertain final attempts remain inspectable in
+the stored event; the connection panel exposes the binding's latest delivery
+status, while actual findings and run results belong in Autonomous/GitHub. Review
+prompts also guard duplicate task/head reviews, stale heads and a connected
+user's unrelated pending review. A repo rename requires reconnect plus explicit
+disable/re-enable before reviews target the new canonical name.
+
+`sdlc_review_bindings` lives only in the app database. Task
+secrets are AES-256-GCM encrypted, bound to the immutable connection key, using an
+HKDF-derived key from the server-managed webhook secret. Raw task keys never
+reach the browser. Back up this database and its operator-managed master key
+together. **Before rotating the webhook master key**, disable bindings and
+rewrap their secrets or explicitly re-enable them with the new key; do not
+silently rotate it underneath active review bindings. Do not connect this app's
+review dispatcher to a public unauthenticated management API.
+
+GitHub's test-delivery behavior is documented in the
+[repository webhook REST API](https://docs.github.com/en/rest/repos/webhooks#test-the-push-repository-webhook).
