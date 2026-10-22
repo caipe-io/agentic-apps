@@ -18,6 +18,7 @@
 
 export type WebhookOutcome =
   | "accepted"
+  | "ignored_unregistered_repo"
   | "rejected_signature"
   | "rejected_unknown_repo"
   | "rejected_malformed"

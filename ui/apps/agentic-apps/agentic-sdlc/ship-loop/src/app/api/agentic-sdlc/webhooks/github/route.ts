@@ -134,10 +134,17 @@ export async function POST(req: Request): Promise<Response> {
   // Resolve repo by GitHub repository id.
   const reposCol = await getAgenticSdlcReposCollection();
   const repo = await reposCol.findOne({ repo_id: String(repository.id) });
-  if (!repo || repo.offboarded_at || repo.full_name !== repository.full_name) {
+  if (!repo || repo.offboarded_at) {
+    // The SNS topic fans out all signed GitHub events to this app's dedicated
+    // SQS queue. Ignore repositories that users have not explicitly selected;
+    // 404 would retry every such delivery and fill the DLQ in production.
+    recordWebhook("ignored_unregistered_repo");
+    return new Response(null, { status: 204 });
+  }
+  if (repo.full_name !== repository.full_name) {
     recordWebhook("rejected_unknown_repo");
-    // 404 to keep cross-account scanning quiet; GitHub treats this as a
-    // dead delivery and surfaces it in the hook-deliveries page.
+    // An enrolled repository renamed without reconnecting needs operator
+    // attention; do not silently apply events to its old identity.
     return new Response(null, { status: 404 });
   }
 
