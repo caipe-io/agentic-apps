@@ -87,10 +87,7 @@ export const DEFAULT_AGENT_LABEL_TO_STAGE: Record<string, AgenticSdlcStage> = {
 // ---------------------------------------------------------------------------
 
 export type WebhookHealthStatus =
-  | "healthy"
-  | "degraded"
-  | "missing"
-  | "unknown";
+  "healthy" | "degraded" | "missing" | "unknown";
 
 // ---------------------------------------------------------------------------
 // OnboardedRepo
@@ -109,6 +106,8 @@ export interface OnboardedRepo {
   webhook_status: WebhookHealthStatus;
   webhook_last_event_at: Date | null;
   last_reconciled_at?: Date | null;
+  webhook_last_received_at?: Date;
+  connection_check_started_at?: Date;
   label_to_stage_overrides: Record<string, AgenticSdlcStage>;
   onboarded_by_user_id: string;
   onboarded_at: Date;
@@ -153,6 +152,14 @@ export interface AgenticSdlcEvent {
   projection_status: ProjectionStatus;
   projection_attempts: number;
   projection_lease_until?: Date;
+  review_dispatch?: {
+    task_id: string;
+    state: "pending" | "accepted" | "skipped" | "failed";
+    attempts: number;
+    next_attempt_at: Date;
+    lease_until?: Date;
+    last_status?: string;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -362,10 +369,7 @@ export interface ArtifactCiSummary {
 // ---------------------------------------------------------------------------
 
 export type ChangelogEntryKind =
-  | "epic_merged"
-  | "epic_closed"
-  | "pull_request_merged"
-  | "deploy_succeeded";
+  "epic_merged" | "epic_closed" | "pull_request_merged" | "deploy_succeeded";
 
 export interface ChangelogEntry {
   id: string;
@@ -389,9 +393,7 @@ export interface ChangelogEntry {
 // ---------------------------------------------------------------------------
 
 export type SnapshotArtifactKind =
-  | "github_actions_artifact"
-  | "deploy_snapshot"
-  | "agentic_artifact";
+  "github_actions_artifact" | "deploy_snapshot" | "agentic_artifact";
 
 export interface SnapshotArtifactRecord {
   id: string;
@@ -417,11 +419,7 @@ export interface SnapshotArtifactRecord {
 // ---------------------------------------------------------------------------
 
 export type DeploymentEnvironmentHealth =
-  | "healthy"
-  | "degraded"
-  | "failing"
-  | "idle"
-  | "unknown";
+  "healthy" | "degraded" | "failing" | "idle" | "unknown";
 
 export interface DeploymentRecord {
   id: string;
@@ -532,12 +530,7 @@ export interface IntentDriftSummary {
 }
 
 export type HarnessRuleKind =
-  | "lint"
-  | "structural_test"
-  | "adr"
-  | "skill"
-  | "policy"
-  | "security_scan";
+  "lint" | "structural_test" | "adr" | "skill" | "policy" | "security_scan";
 
 export interface HarnessRule {
   id: string;

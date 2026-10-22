@@ -1,3 +1,4 @@
+import { reviewBindings } from "./review-bindings";
 import { Octokit } from "@octokit/rest";
 import { getGitHubAccessToken } from "./agentic-sdlc-auth";
 
@@ -94,6 +95,11 @@ export async function getPrDashboard(
     direction: "desc",
     per_page: 20,
   });
+  const binding = pulls.length
+    ? await (
+        await reviewBindings()
+      ).findOne({ repo_id: String(pulls[0].base.repo.id) })
+    : null;
   const items: PrDashboardItem[] = [];
   for (let offset = 0; offset < pulls.length; offset += 3) {
     items.push(
@@ -158,10 +164,17 @@ export async function getPrDashboard(
           };
           const isTrustedAgent = (r: (typeof reviews)[number]) => {
             const marker = taskMarker(r);
+            if (
+              marker &&
+              binding?.task_id === marker[1] &&
+              binding.github_login.toLowerCase() ===
+                (r.user?.login || "").toLowerCase()
+            )
+              return true;
             return Boolean(
               marker &&
-                trustedReviewers.has((r.user?.login || "").toLowerCase()) &&
-                trustedTasks.has(marker[1]),
+              trustedReviewers.has((r.user?.login || "").toLowerCase()) &&
+              trustedTasks.has(marker[1]),
             );
           };
           // Keep non-agent GitHub decisions distinct from COMMENT-only agent reports and
@@ -227,9 +240,7 @@ export async function getPrDashboard(
               verdicts[0][2] === pr.head.sha
             )
               agentStatus = verdicts[0][3] as
-                | "no_findings"
-                | "findings"
-                | "incomplete";
+                "no_findings" | "findings" | "incomplete";
           }
           let ciStatus =
             checkResult.status === "rejected"

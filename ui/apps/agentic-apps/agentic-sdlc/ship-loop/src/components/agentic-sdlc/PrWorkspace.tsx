@@ -1,10 +1,11 @@
 "use client";
 
 import { ArrowLeft, ExternalLink, GitPullRequest, Loader2 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "./AppLink";
 import { LiveStatusIndicator } from "./LiveStatusIndicator";
 import { PrReviewDashboard } from "./PrReviewDashboard";
+import { RepoConnectionControls } from "./RepoConnectionControls";
 import { RepoEventFeed } from "./RepoEventFeed";
 import { AgenticSdlcAnimation } from "./visualizations/AgenticSdlcAnimation";
 import { useAgenticSdlcPortfolioLiveRefresh } from "@/hooks/use-agentic-sdlc-portfolio-live-refresh";
@@ -22,6 +23,7 @@ export function PrWorkspaceHome() {
   const [selected, setSelected] = useState("");
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
+  const preferred = useRef("");
   useAgenticSdlcPortfolioLiveRefresh({ enabled: true });
 
   useEffect(() => {
@@ -48,9 +50,11 @@ export function PrWorkspaceHome() {
         const items: Repository[] = body.items ?? [];
         setRepos(items);
         setSelected((current) =>
-          items.some((r) => r.full_name === current)
-            ? current
-            : (items[0]?.full_name ?? ""),
+          items.some((r) => r.full_name === preferred.current)
+            ? preferred.current
+            : items.some((r) => r.full_name === current)
+              ? current
+              : (items[0]?.full_name ?? ""),
         );
       } catch (cause) {
         if (!stop.signal.aborted) {
@@ -67,9 +71,11 @@ export function PrWorkspaceHome() {
     }
     void load();
     window.addEventListener("agentic-sdlc:portfolio-synced", load);
+    window.addEventListener("ship-loop:repo-onboarded", load);
     return () => {
       active?.abort();
       window.removeEventListener("agentic-sdlc:portfolio-synced", load);
+      window.removeEventListener("ship-loop:repo-onboarded", load);
     };
   }, [retry]);
 
@@ -79,6 +85,13 @@ export function PrWorkspaceHome() {
       <CompactPrHeader
         title="Pull request reviews"
         subtitle="Follow agent feedback, current-head CI checks and inline code comments in one workspace."
+      />
+      <RepoConnectionControls
+        repository={selected || undefined}
+        onConnected={(name) => {
+          preferred.current = name;
+          setRetry((value) => value + 1);
+        }}
       />
       {error ? (
         <div
@@ -107,8 +120,9 @@ export function PrWorkspaceHome() {
           <h2 className="mb-2 font-medium text-foreground">
             No connected repositories in your scope
           </h2>
-          Connect GitHub and ask your app administrator to register a repository
-          for PR review.
+          Use Add repository to select a repo and configure its connection.
+          Agent reviews are optional and remain off until you enable them
+          separately.
         </section>
       ) : (
         <>
@@ -118,7 +132,10 @@ export function PrWorkspaceHome() {
               <select
                 aria-label="Repository"
                 value={selected}
-                onChange={(event) => setSelected(event.target.value)}
+                onChange={(event) => {
+                  preferred.current = event.target.value;
+                  setSelected(event.target.value);
+                }}
                 className="max-w-full rounded-md border border-border bg-background px-3 py-2"
               >
                 {repos.map((r) => (
@@ -181,6 +198,7 @@ export function PrRepoWorkspace({
           </a>
         }
       />
+      <RepoConnectionControls repository={`${owner}/${repo}`} />
       <PrWorkspacePanels owner={owner} repo={repo} />
     </main>
   );

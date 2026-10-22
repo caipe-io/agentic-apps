@@ -1,3 +1,7 @@
+import {
+  prepareReviewDispatch,
+  recoverReviewDispatches,
+} from "@/lib/agentic-sdlc/review-dispatch";
 /**
  * GitHub webhook receiver for the Agentic SDLC.
  *
@@ -6,7 +10,8 @@
  *      JSON.parse → JSON.stringify).
  *   2. Verify HMAC (per FR-025) using the per-repo secret looked up by
  *      `repository.id`.
- *   3. Persist the event with `projection_status="deferred"`.
+ *   3. Persist the event with `projection_status="deferred"` and, only for
+ *      an opted-in repository, a durable review dispatch record.
  *   4. Enqueue on the in-process async worker.
  *   5. Return 202.
  *
@@ -117,8 +122,7 @@ export async function POST(req: Request): Promise<Response> {
   if (!earlyVerification.valid) return new Response(null, { status: 401 });
   if (eventType === "ping") return Response.json({ ok: true, pong: true });
   const repository = parsed.repository as
-    | { id?: number; full_name?: string }
-    | undefined;
+    { id?: number; full_name?: string } | undefined;
   if (!repository?.id) {
     recordWebhook("rejected_malformed");
     return NextResponse.json(
@@ -164,6 +168,13 @@ export async function POST(req: Request): Promise<Response> {
     return new Response(null, { status: 401 });
   }
 
+  await reposCol.updateOne(
+    { repo_id: repo.repo_id },
+    {
+      $set: { webhook_last_received_at: new Date(), webhook_status: "healthy" },
+    },
+  );
+
   // Persist the event in deferred state, enqueue, return 202.
   const action =
     typeof parsed.action === "string" ? (parsed.action as string) : null;
@@ -195,6 +206,14 @@ export async function POST(req: Request): Promise<Response> {
     projection_status: "deferred",
     projection_attempts: 0,
   };
+  const dispatch = await prepareReviewDispatch(
+    repo.repo_id,
+    repo.full_name,
+    eventType,
+    action,
+    parsed,
+  );
+  if (dispatch) evDoc.review_dispatch = dispatch;
   await events.createIndex(
     { github_delivery_id: 1 },
     {
@@ -216,6 +235,9 @@ export async function POST(req: Request): Promise<Response> {
 
   enqueueAgenticSdlcEvent(insertResult.insertedId);
   recordWebhook("accepted");
+  void recoverReviewDispatches().catch(() =>
+    console.error("SDLC review dispatch is awaiting recovery"),
+  );
   return NextResponse.json({ accepted: true }, { status: 202 });
 }
 
@@ -233,8 +255,7 @@ function summariseEvent(
   payload: Record<string, unknown>,
 ): EventSummary {
   const sender = payload.sender as
-    | { login?: string; type?: string }
-    | undefined;
+    { login?: string; type?: string } | undefined;
   const actorLogin = sender?.login ?? null;
   const isBot = sender?.type === "Bot";
   const agentBotLogins = new Set(
@@ -396,22 +417,18 @@ function readSubIssuePayload(payload: Record<string, unknown>): {
   if (action === "parent_issue_added") {
     return {
       parentIssue: payload.parent_issue as
-        | { node_id?: string; updated_at?: string }
-        | undefined,
+        { node_id?: string; updated_at?: string } | undefined,
       subIssue: payload.sub_issue as
-        | { node_id?: string; updated_at?: string }
-        | undefined,
+        { node_id?: string; updated_at?: string } | undefined,
     };
   }
 
   return {
     parentIssue:
       (payload.parent_issue as
-        | { node_id?: string; updated_at?: string }
-        | undefined) ??
+        { node_id?: string; updated_at?: string } | undefined) ??
       (payload.issue as { node_id?: string; updated_at?: string } | undefined),
     subIssue: payload.sub_issue as
-      | { node_id?: string; updated_at?: string }
-      | undefined,
+      { node_id?: string; updated_at?: string } | undefined,
   };
 }
