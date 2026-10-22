@@ -74,7 +74,7 @@ export async function configureRepositoryReviews(
   let binding = await bindings.findOne({ repo_id: repoId });
   if (binding && binding.owner_sub !== reader.user.id)
     throw new SetupError(
-      "A different user owns this repository's review connection. Ask that owner to manage it in Grid.",
+      "A different user owns this repository's review connection. Ask that owner to manage it in CAIPE.",
       403,
     );
   if (!enabled) {
@@ -140,7 +140,7 @@ export async function configureRepositoryReviews(
     throw new SetupError("The configured review model is unavailable.", 503);
   if (binding?.team_slug && binding.team_slug !== teamSlug)
     throw new SetupError(
-      "Use this connection's original owner team, or manage the agent in Grid.",
+      "Use this connection's original owner team, or manage the agent in CAIPE.",
       409,
     );
   const { data: githubUser } = await client.users.getAuthenticated();
@@ -261,7 +261,7 @@ export async function configureRepositoryReviews(
     }
     if (skill.scan_status !== "passed")
       throw new SetupError(
-        "The conformance skill's security scan has not passed. Reviews remain off; ask your Grid administrator to inspect the skill scan.",
+        "The conformance skill's security scan has not passed. Reviews remain off; ask your CAIPE administrator to inspect the skill scan.",
         409,
       );
     if (!binding.agent_id) {

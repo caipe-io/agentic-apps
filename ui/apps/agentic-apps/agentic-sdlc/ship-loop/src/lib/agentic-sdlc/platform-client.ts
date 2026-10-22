@@ -20,17 +20,17 @@ export async function platformRequest(
   body?: unknown,
 ): Promise<any> {
   if (!(await requireAgenticSdlcReader(req)))
-    throw new SetupError("Sign in to Grid first.", 401);
+    throw new SetupError("Sign in to CAIPE first.", 401);
   const origin = process.env.AGENTIC_SDLC_CAIPE_API_ORIGIN;
   if (!origin || !path.startsWith("/api/"))
-    throw new SetupError("Grid integration is not configured.", 503);
+    throw new SetupError("CAIPE integration is not configured.", 503);
   const url = new URL(path, origin);
   if (
     !["http:", "https:"].includes(url.protocol) ||
     url.username ||
     url.password
   )
-    throw new SetupError("Invalid Grid service configuration.", 503);
+    throw new SetupError("Invalid CAIPE service configuration.", 503);
   const payload = body === undefined ? undefined : JSON.stringify(body);
   return new Promise((resolve, reject) => {
     const request = (url.protocol === "https:" ? httpsRequest : httpRequest)(
@@ -63,10 +63,10 @@ export async function platformRequest(
             reject(
               new SetupError(
                 status === 401
-                  ? "Sign in and connect GitHub in Grid Credentials."
+                  ? "Sign in and connect GitHub in CAIPE Credentials."
                   : status === 403
-                    ? "Your account or team is not permitted to manage this agent or use Autonomous. Ask your Grid administrator to enable access."
-                    : "Grid could not complete review setup. Check the selected team, model and agent permissions, then retry.",
+                    ? "Your account or team is not permitted to manage this agent or use Autonomous. Ask your CAIPE administrator to enable access."
+                    : "CAIPE could not complete review setup. Check the selected team, model and agent permissions, then retry.",
                 status >= 400 && status <= 599 ? status : 502,
               ),
             );
@@ -79,11 +79,11 @@ export async function platformRequest(
                 : null,
             );
           } catch {
-            reject(new SetupError("Grid returned an invalid response.", 502));
+            reject(new SetupError("CAIPE returned an invalid response.", 502));
           }
         });
         response.on("error", () =>
-          reject(new SetupError("Grid is temporarily unavailable.", 502)),
+          reject(new SetupError("CAIPE is temporarily unavailable.", 502)),
         );
       },
     );
@@ -94,7 +94,7 @@ export async function platformRequest(
     request.on("close", () => clearTimeout(timeout));
     request.on("error", () =>
       reject(
-        new SetupError("Grid is temporarily unavailable. Retry setup.", 502),
+        new SetupError("CAIPE is temporarily unavailable. Retry setup.", 502),
       ),
     );
     if (payload !== undefined) request.write(payload);
@@ -107,7 +107,7 @@ export function setupErrorResponse(error: unknown): Response {
       message:
         error instanceof SetupError
           ? error.message
-          : "Setup could not finish. Retry or contact your Grid administrator.",
+          : "Setup could not finish. Retry or contact your CAIPE administrator.",
     },
     { status: error instanceof SetupError ? error.status : 500 },
   );
@@ -132,7 +132,7 @@ export function managedReviewTask(fullName: string): string | null {
       : null;
   } catch {
     throw new SetupError(
-      "Managed review configuration is invalid. Contact your Grid administrator.",
+      "Managed review configuration is invalid. Contact your CAIPE administrator.",
       503,
     );
   }
