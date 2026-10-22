@@ -86,13 +86,45 @@ export function PrWorkspaceHome() {
         title="Pull request reviews"
         subtitle="Follow agent feedback, current-head CI checks and inline code comments in one workspace."
       />
-      <RepoConnectionControls
-        repository={selected || undefined}
-        onConnected={(name) => {
-          preferred.current = name;
-          setRetry((value) => value + 1);
-        }}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border/50 py-4">
+        {!!repos?.length && (
+          <label className="flex flex-wrap items-center gap-3 text-sm font-medium">
+            Repository
+            <select
+              aria-label="Repository"
+              value={selected}
+              onChange={(event) => {
+                preferred.current = event.target.value;
+                setSelected(event.target.value);
+              }}
+              className="max-w-full rounded-md border border-border bg-background px-3 py-2"
+            >
+              {repos.map((r) => (
+                <option key={r.repo_id} value={r.full_name}>
+                  {r.full_name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <RepoConnectionControls
+            repository={selected || undefined}
+            onConnected={(name) => {
+              preferred.current = name;
+              setRetry((value) => value + 1);
+            }}
+          />
+          {repository && (
+            <Link
+              className="text-sm text-primary hover:underline"
+              href={`/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.name)}`}
+            >
+              Open repository workspace
+            </Link>
+          )}
+        </div>
+      </div>
       {error ? (
         <div
           role="alert"
@@ -126,34 +158,6 @@ export function PrWorkspaceHome() {
         </section>
       ) : (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border/50 py-4">
-            <label className="flex flex-wrap items-center gap-3 text-sm font-medium">
-              Repository
-              <select
-                aria-label="Repository"
-                value={selected}
-                onChange={(event) => {
-                  preferred.current = event.target.value;
-                  setSelected(event.target.value);
-                }}
-                className="max-w-full rounded-md border border-border bg-background px-3 py-2"
-              >
-                {repos.map((r) => (
-                  <option key={r.repo_id} value={r.full_name}>
-                    {r.full_name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {repository && (
-              <Link
-                className="text-sm text-primary hover:underline"
-                href={`/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.name)}`}
-              >
-                Open repository workspace
-              </Link>
-            )}
-          </div>
           {repository && (
             <PrWorkspacePanels
               key={repository.full_name}
