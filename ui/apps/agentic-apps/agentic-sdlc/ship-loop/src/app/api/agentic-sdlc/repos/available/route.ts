@@ -63,7 +63,7 @@ async function handle(req: Request) {
     return Response.json(
       {
         message:
-          "Connect GitHub in Grid Credentials, authorize organization SSO if needed, then retry repository selection.",
+          "Connect GitHub in CAIPE Credentials, authorize organization SSO if needed, then retry repository selection.",
       },
       { status: 403 },
     );

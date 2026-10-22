@@ -74,7 +74,7 @@ export async function configureRepositoryReviews(
   let binding = await bindings.findOne({ repo_id: repoId });
   if (binding && binding.owner_sub !== reader.user.id)
     throw new SetupError(
-      "A different user owns this repository's review connection. Ask that owner to manage it in Grid.",
+      "A different user owns this repository's review connection. Ask that owner to manage it in CAIPE.",
       403,
     );
   if (!enabled) {
@@ -140,7 +140,7 @@ export async function configureRepositoryReviews(
     throw new SetupError("The configured review model is unavailable.", 503);
   if (binding?.team_slug && binding.team_slug !== teamSlug)
     throw new SetupError(
-      "Use this connection's original owner team, or manage the agent in Grid.",
+      "Use this connection's original owner team, or manage the agent in CAIPE.",
       409,
     );
   const { data: githubUser } = await client.users.getAuthenticated();
@@ -261,7 +261,7 @@ export async function configureRepositoryReviews(
     }
     if (skill.scan_status !== "passed")
       throw new SetupError(
-        "The conformance skill's security scan has not passed. Reviews remain off; ask your Grid administrator to inspect the skill scan.",
+        "The conformance skill's security scan has not passed. Reviews remain off; ask your CAIPE administrator to inspect the skill scan.",
         409,
       );
     if (!binding.agent_id) {
@@ -326,6 +326,7 @@ export async function configureRepositoryReviews(
         { system_prompt: reviewSystem(meta.full_name) },
       );
     }
+    const bindingMarker = `[sdlc-binding:${binding.binding_key}]`;
     let task: any;
     if (binding.task_id)
       task = await platformRequest(
@@ -340,13 +341,13 @@ export async function configureRepositoryReviews(
       task = rows.find(
         (t: any) =>
           t.owner_sub === reader.user.id &&
-          t.metadata?.sdlc_binding_key === binding!.binding_key,
+          t.dynamic_agent_id === binding!.agent_id &&
+          t.description?.includes(bindingMarker),
       );
       if (!task)
         task = await platformRequest(req, "/api/autonomous/tasks", "POST", {
           name: `SDLC PR review ${meta.full_name}`,
-          description:
-            "Opted-in COMMENT reviews and inline findings on new PR heads.",
+          description: `Opted-in COMMENT reviews and inline findings on new PR heads. ${bindingMarker}`,
           dynamic_agent_id: binding.agent_id,
           prompt: reviewPrompt(meta.full_name, "pending-task-id"),
           enabled: false,
@@ -391,7 +392,7 @@ export async function configureRepositoryReviews(
     if (
       task.owner_sub !== reader.user.id ||
       task.dynamic_agent_id !== binding.agent_id ||
-      task.metadata?.sdlc_binding_key !== binding.binding_key
+      !task.description?.includes(bindingMarker)
     )
       throw new SetupError(
         "Task ownership or scope could not be verified.",
@@ -430,6 +431,12 @@ export async function configureRepositoryReviews(
       "PUT",
       {
         ...task,
+        metadata: {
+          source: "agentic-sdlc",
+          sdlc_binding_key: binding.binding_key,
+          repo_id: repoId,
+          repository: meta.full_name,
+        },
         dynamic_agent_id: binding.agent_id,
         enabled: true,
         prompt: reviewPrompt(meta.full_name, task.id),
@@ -442,9 +449,24 @@ export async function configureRepositoryReviews(
     );
     if (
       !saved.enabled ||
+      !saved.description?.includes(bindingMarker) ||
       saved.owner_sub !== reader.user.id ||
       saved.dynamic_agent_id !== binding.agent_id ||
-      !saved.trigger?.has_secret
+      !saved.trigger?.has_secret ||
+      saved.trigger.provider !== "github" ||
+      saved.trigger.dedup_header?.toLowerCase() !== "x-github-delivery" ||
+      !Array.isArray(saved.trigger.filter?.conditions) ||
+      saved.trigger.filter.conditions.length !==
+        trigger.filter.conditions.length ||
+      !trigger.filter.conditions.every(
+        (expected: { source: string; field: string; values: string[] }) =>
+          saved.trigger.filter.conditions.some(
+            (actual: any) =>
+              actual.source === expected.source &&
+              actual.field === expected.field &&
+              JSON.stringify(actual.values) === JSON.stringify(expected.values),
+          ),
+      )
     )
       throw new SetupError(
         "Review task activation could not be verified.",

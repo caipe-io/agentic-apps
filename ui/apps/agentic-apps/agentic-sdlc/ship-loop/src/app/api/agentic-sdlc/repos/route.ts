@@ -153,7 +153,7 @@ async function handlePost(req: Request): Promise<Response> {
     return Response.json(
       {
         message:
-          "Repository webhook setup is not configured. Contact your Grid administrator.",
+          "Repository webhook setup is not configured. Contact your CAIPE administrator.",
       },
       { status: 503 },
     );
@@ -272,7 +272,7 @@ async function handlePost(req: Request): Promise<Response> {
       {
         message:
           status === 401
-            ? "Reconnect GitHub in Grid Credentials and authorize organization SSO if required."
+            ? "Reconnect GitHub in CAIPE Credentials and authorize organization SSO if required."
             : status === 403
               ? "GitHub denied webhook setup. Check repository admin access, token permissions and organization SSO."
               : status === 404

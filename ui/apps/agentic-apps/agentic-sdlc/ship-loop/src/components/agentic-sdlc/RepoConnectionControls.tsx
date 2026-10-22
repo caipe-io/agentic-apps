@@ -46,7 +46,7 @@ async function json(path: string, init?: RequestInit) {
   if (!response.ok)
     throw new Error(
       body.message ||
-        "The connection could not be updated. Retry or contact your Grid administrator.",
+        "The connection could not be updated. Retry or contact your CAIPE administrator.",
     );
   return body;
 }
@@ -426,7 +426,7 @@ function ConnectionDialog({
                       </summary>
                       <p className="mt-2 break-all">{connection.webhook_url}</p>
                       <p className="mt-1">
-                        Signing is managed by Grid. You do not need to copy a
+                        Signing is managed by CAIPE. You do not need to copy a
                         secret.
                       </p>
                     </details>
@@ -493,7 +493,7 @@ function ConnectionDialog({
                   ) : !connection.reviews.can_manage ? (
                     <p className="text-sm text-muted-foreground">
                       Another user owns this review connection. Ask that owner
-                      to manage it in Grid.
+                      to manage it in CAIPE.
                     </p>
                   ) : connection.reviews.state === "enabled" ? (
                     <button
@@ -513,7 +513,7 @@ function ConnectionDialog({
                       {!connection.reviews_available ? (
                         <p className="text-sm text-muted-foreground">
                           Review activation is not configured here. Ask your
-                          Grid administrator; the dashboard connection still
+                          CAIPE administrator; the dashboard connection still
                           works.
                         </p>
                       ) : !options ? (
@@ -582,7 +582,7 @@ function ConnectionDialog({
                       ) : (
                         <p className="text-sm text-muted-foreground">
                           {options.message ||
-                            "The review model is unavailable. Contact your Grid administrator."}
+                            "The review model is unavailable. Contact your CAIPE administrator."}
                         </p>
                       )}
                     </>
@@ -640,7 +640,7 @@ function ConnectionGuide() {
     <div className="space-y-4 text-sm">
       <ol className="list-decimal space-y-3 pl-5">
         <li>
-          <strong>Connect GitHub in Grid.</strong> Open{" "}
+          <strong>Connect GitHub in CAIPE.</strong> Open{" "}
           <a
             className="text-primary underline"
             href="/credentials"
@@ -659,7 +659,7 @@ function ConnectionGuide() {
           permission to manage repository webhooks.
         </li>
         <li>
-          <strong>Let setup run.</strong> Grid registers the selected repo,
+          <strong>Let setup run.</strong> CAIPE registers the selected repo,
           configures its signed public webhook, and requests a delivery check.
           Wait for “Signed webhook delivery verified.” An empty repository may
           need its first push or PR event. No agent reviews are enabled by this
@@ -668,7 +668,7 @@ function ConnectionGuide() {
         <li>
           <strong>Opt into reviews separately.</strong> Open{" "}
           <em>Connection & agent</em>, choose <em>Set up agent reviews</em> and
-          an owner team, then explicitly enable. Your Grid account needs
+          an owner team, then explicitly enable. Your CAIPE account needs
           Autonomous access and permission to create the team's agent. The
           conformance skill must pass its scan.
         </li>
