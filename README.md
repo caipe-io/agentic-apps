@@ -97,13 +97,35 @@ browser. Access remains subject to CAIPE identity and policy.
   full model breakdown is available in the details table. Missing activity dates use zero
   bars. Unknown budgets are labeled explicitly without a utilization meter.
 
+### Personal usage and budgets
+
+- The default **My usage** view matches key ownership to the verified app JWT's email.
+  It selects a key only when exactly one owned key matches. Multiple owned keys require
+  an explicit choice. Admins follow the same identity matching as other signed-in users.
+- **Find users** searches the authorized catalog by username, email, or key name.
+  Results are visible immediately; Enter and the Search button submit the current query.
+  Browsing all keys never selects the first or highest-spend user automatically.
+- The page identifies the signed-in email and states whose key is being viewed.
+  Missing identity or an unmatched email leaves usage unselected with instructions to
+  search manually. URL parameters and unsigned identity headers cannot define My usage.
+- Budgets come from the selected key's `/key/info`, its owner's `/user/info`, and its
+  team's `/team/info` where present. The dashboard distinguishes key, user, and team
+  limits, spend, remaining balance, and reset periods. A missing key limit does not imply
+  that the owner has no budget. Lookup failures remain unavailable, not unlimited.
+- The main budget card shows a configured key limit first, then a team limit for team
+  keys or a user limit for personal keys. Other scope records remain visible below it.
+  User and team budgets cover more than the selected key; their spend is never mixed
+  with key-only usage totals. Enforcement remains the gateway's responsibility.
+- Key details are cached server-side for 30 seconds and concurrent pricing/usage reads
+  share the lookup. Refresh data requests fresh budget details.
+
 ### Shareable usage views
 
 - Open `/apps/litellm?user=example-user&period=month` to search a username, alias,
   or email and select an exact match or a unique search result. Ambiguous searches show
   the matching directory for selection; missing users do not fall back to another key.
-  If several keys have the same exact alias or owner, the current sort determines which
-  one opens; a copied key-specific link identifies one key unambiguously.
+  Several keys with the same alias or owner require an explicit key selection; a copied
+  key-specific link identifies one key unambiguously.
 - Optional `key=vk_…` selects an opaque virtual-key ID across the complete catalog,
   including keys outside the directory's current page. Missing key IDs require a new
   selection. These IDs are selectors, not credentials.
@@ -136,7 +158,7 @@ browser. Access remains subject to CAIPE identity and policy.
   explicitly configured zero rates remain zero. Non-token model modes are not estimated.
   Rows represent deployments, so a load-balanced alias can have multiple price rows.
 - Selecting a virtual key loads `/key/info` using its hash, plus `/team/info` or
-  `/user/info` for inherited restrictions. Only model lists, status, expiry, and RPM/TPM
+  `/user/info` for inherited restrictions (both are read when present). Only model lists, status, expiry, and RPM/TPM
   limits reach the browser. Raw credentials, key hashes, provider configuration,
   user keys, and arbitrary metadata are excluded.
 - The catalog labels explicit key model/group/wildcard matches and unresolved inheritance.
@@ -147,7 +169,8 @@ browser. Access remains subject to CAIPE identity and policy.
   Refresh data reloads both prices and provisioning for the current selection.
 
 References: [LiteLLM model pricing](https://docs.litellm.ai/docs/proxy/model_cost_map),
-[model access](https://docs.litellm.ai/docs/proxy/model_access).
+[model access](https://docs.litellm.ai/docs/proxy/model_access),
+[budget scopes](https://docs.litellm.ai/docs/proxy/users).
 
 ## FinOps AWS account selection
 

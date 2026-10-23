@@ -98,6 +98,7 @@ export function prepareLiteLlmVirtualKeys(payload) {
     const id = `vk_${createHash("sha256").update(upstreamKey).digest("hex").slice(0, 16)}`;
     const label = firstText(key.key_alias, key.alias, key.key_name) || `Virtual key ${id.slice(-6)}`;
     const owner = firstText(
+      key.user_email,
       key.user?.user_email,
       key.user?.user_id,
       key.user_id,
@@ -110,6 +111,7 @@ export function prepareLiteLlmVirtualKeys(payload) {
 
     return [{
       upstreamKey,
+      ownerId: firstText(key.user_id, key.user?.user_id),
       public: {
         id,
         label,

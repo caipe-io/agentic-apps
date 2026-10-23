@@ -38,6 +38,9 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
     .numeric { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .spend-cell { min-width: 180px; } .spend-track { height: 6px; background: var(--track); margin-top: 6px; border-radius: 6px; overflow: hidden; } .spend-track i { display: block; height: 100%; background: var(--series); }
     .key-choice { white-space: nowrap; } .key-choice[aria-pressed="true"] { border-color: var(--series); color: var(--series); }
+    .scope-switch { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; } .scope-switch button[aria-pressed="true"] { border-color: var(--series); color: var(--series); }
+    .viewing-context { padding: 10px 14px; border-left: 3px solid var(--series); background: var(--surface); margin-bottom: 14px; overflow-wrap: anywhere; }
+    .budget-scope { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; } .budget-scope strong { display: block; color: var(--text); }
     .directory { margin-top: 14px; } .directory > summary { color: var(--text); } .directory[open] > summary { margin-bottom: 14px; }
     .pagination { margin-top: 14px; } .pagination .actions { align-items: center; } .pagination label { display: flex; align-items: center; gap: 8px; }
     .selection { margin-bottom: 16px; } .selection h2 { font-size: 1.3rem; overflow-wrap: anywhere; } .selection .controls { margin: 0; }
@@ -74,21 +77,25 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
   </div>
   <section class="panel catalog" aria-labelledby="usersTitle" aria-busy="true" id="catalog">
     <div class="panel-heading"><h2 id="usersTitle">Users &amp; virtual keys</h2><span id="catalogCount" class="muted small" role="status" aria-live="polite">Loading keys…</span></div>
+    <p id="identityStatus" class="muted small" role="status">Matching your signed-in email to your keys…</p>
+    <div class="scope-switch" role="group" aria-label="Whose usage to view"><button id="myUsage" aria-pressed="true">My usage</button><button id="findUsers" aria-pressed="false">Find users</button></div>
     <div class="controls">
       <label class="search-field">Search users or keys<input id="userSearch" type="search" placeholder="Username, email, or key name" autocomplete="off" /></label>
+      <button id="searchUsers">Search</button>
       <label>Sort by<select id="keySort"><option value="spend">Highest spend</option><option value="spend-asc">Lowest spend</option><option value="name">Username A–Z</option></select></label>
     </div>
-    <details id="keyDirectory" class="directory"><summary>Browse key spend ranking</summary>
-    <p class="muted small catalog-note">One row per virtual key. Key spend covers its current budget cycle or lifetime and is independent of the usage period below.</p>
-    <div class="table-wrap"><table aria-label="Virtual-key spend ranking"><thead><tr><th scope="col">User / key</th><th scope="col" class="numeric">Key spend</th><th scope="col" class="numeric">Budget remaining</th><th scope="col">Usage</th></tr></thead><tbody id="keyRows"><tr><td colspan="4" class="empty">Loading virtual keys…</td></tr></tbody></table></div>
+    <div id="keyDirectory" class="directory">
+    <p class="muted small catalog-note">Choose a key to view its usage. Each row is one key, not a team total. Key spend follows its own budget cycle; user and team budgets appear after selection.</p>
+    <div class="table-wrap"><table aria-label="Matching virtual keys"><thead><tr><th scope="col">Owner / virtual key</th><th scope="col" class="numeric">Key spend</th><th scope="col" class="numeric">Key budget remaining</th><th scope="col">Usage</th></tr></thead><tbody id="keyRows"><tr><td colspan="4" class="empty">Loading virtual keys…</td></tr></tbody></table></div>
     <nav class="pagination" aria-label="Virtual-key pages"><span id="pageInfo" class="muted small"></span><div class="actions"><label>Rows<select id="pageSize"><option>10</option><option>25</option><option>50</option></select></label><button id="previousPage" disabled>Previous</button><button id="nextPage" disabled>Next</button></div></nav>
-    </details>
+    </div>
     <p id="catalogStatus" class="notice small" role="status" aria-live="polite"></p>
     <p id="shareStatus" class="notice small" role="status" aria-live="polite"></p>
     <label id="shareLinkField" hidden>Shareable dashboard link<input id="shareLinkInput" type="url" readonly /></label>
   </section>
   <div id="usageTabPanel" role="tabpanel" aria-labelledby="usageTab">
   <section aria-labelledby="selectedTitle" id="usageSection">
+    <p id="viewingContext" class="viewing-context small" hidden></p>
     <div class="selection"><div><h2 id="selectedTitle">Select a user or virtual key</h2><p id="selectedOwner" class="muted small"></p></div><label>Usage period<select id="period"><option value="current">Today</option><option value="month" selected>Current month</option><option value="3m">Last 3 months</option><option value="6m">Last 6 months</option><option value="12m">Last 12 months</option></select></label></div>
     <p id="reportStatus" class="notice" role="status" aria-live="polite">Usage will load after the key list is ready.</p>
     <div id="reportContent" hidden>
@@ -96,7 +103,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
       <section class="kpis" aria-label="Usage in selected period"><article class="panel kpi"><span class="muted small">Period spend</span><strong id="spend">—</strong><small>USD in selected period</small></article><article class="panel kpi"><span class="muted small">Total tokens</span><strong id="tokens">—</strong><small id="tokenSplit">Input and output</small></article><article class="panel kpi"><span class="muted small">Requests</span><strong id="requests">—</strong><small>Reported API requests</small></article></section>
       <div class="layout">
         <section class="panel" aria-labelledby="trendTitle"><div class="panel-heading"><h2 id="trendTitle">Usage trend</h2><label>Chart measure<select id="trendMetric"><option value="spend">Spend · USD</option><option value="totalTokens">Tokens</option><option value="requests">Requests</option></select></label></div><div id="trendEmpty" class="empty" hidden></div><svg id="trendChart" class="chart" role="img" aria-label="Usage by date"></svg><details><summary>View trend data</summary><div class="table-wrap"><table aria-label="Usage by date"><thead><tr><th scope="col">Date (UTC)</th><th scope="col" class="numeric">Spend</th><th scope="col" class="numeric">Tokens</th><th scope="col" class="numeric">Requests</th></tr></thead><tbody id="trendRows"></tbody></table></div></details></section>
-        <section class="panel" aria-labelledby="budgetTitle"><h2 id="budgetTitle">Virtual-key budget</h2><p class="muted small" id="budgetSubtitle">Budget cycle / lifetime</p><div id="budgetRemaining" class="budget-value">—</div><p id="remainingLabel" class="muted small">Remaining</p><div id="budgetTrack" class="budget-track"><i id="budgetBar"></i></div><p id="budgetSummary" class="small"></p><div id="budgetMeta" class="budget-meta"></div></section>
+        <section class="panel" aria-labelledby="budgetTitle"><h2 id="budgetTitle">Configured budgets</h2><p class="muted small" id="budgetSubtitle">Budget cycle / lifetime</p><div id="budgetRemaining" class="budget-value">—</div><p id="remainingLabel" class="muted small">Remaining</p><div id="budgetTrack" class="budget-track"><i id="budgetBar"></i></div><p id="budgetSummary" class="small"></p><div id="budgetMeta" class="budget-meta"></div><div id="budgetScopes" class="budget-meta"></div><p class="muted small">Budget records have separate spend and reset periods. Team and personal-key policies can differ; the gateway enforces the applicable limits.</p></section>
       </div>
       <section class="panel" aria-labelledby="modelsTitle"><div class="panel-heading"><h2 id="modelsTitle">Most-used models</h2><label>Rank models by<select id="modelMetric"><option value="totalTokens">Tokens</option><option value="requests">Requests</option><option value="spend">Spend · USD</option></select></label></div><p id="modelSummary" class="muted small"></p><div id="modelBars" class="model-bars" role="list" aria-label="Top models"></div><details class="model-details"><summary>View model details</summary><div class="table-wrap"><table class="detail-table" aria-label="Model usage details"><thead><tr><th scope="col">Model</th><th scope="col" class="numeric">Spend</th><th scope="col" class="numeric">Input tokens</th><th scope="col" class="numeric">Output tokens</th><th scope="col" class="numeric">Requests</th><th scope="col" class="numeric">Spend share</th></tr></thead><tbody id="modelRows"></tbody></table></div></details></section>
       <p id="warnings" class="warning small" role="status" hidden></p><p id="freshness" class="freshness"></p>
@@ -155,9 +162,9 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   const initialPeriod = initialQuery.get("period");
   let explicitPeriod = ["current", "month", "3m", "6m", "12m"].includes(initialPeriod);
   let selectionRequest = requestedKey || requestedUser ? { key: requestedKey, user: requestedUser } : null;
-  let allowDefaultSelection = !selectionRequest;
+  state.scope = selectionRequest ? "all" : "mine";
+  state.viewer = null;
   byId("userSearch").value = requestedUser;
-  byId("keyDirectory").open = Boolean(requestedUser || requestedKey);
   if (explicitPeriod) byId("period").value = initialPeriod;
   if (["spend", "spend-asc", "name"].includes(initialQuery.get("sort"))) byId("keySort").value = initialQuery.get("sort");
   let catalogController;
@@ -207,20 +214,47 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
 
   byId("userSearch").addEventListener("input", () => {
     clearTimeout(searchTimer);
-    byId("keyDirectory").open = true;
     catalogController?.abort();
     clearSelection();
+    state.scope = "all";
+    renderScope();
     selectionRequest = byId("userSearch").value.trim() ? { user: byId("userSearch").value.trim() } : null;
-    allowDefaultSelection = !selectionRequest;
     searchTimer = setTimeout(() => { state.page = 1; loadVirtualKeys(); }, 250);
   });
-  for (const id of ["keySort", "pageSize"]) byId(id).addEventListener("change", () => { clearTimeout(searchTimer); clearSharedLink(); byId("keyDirectory").open = true; state.page = 1; loadVirtualKeys(); });
+  byId("searchUsers").addEventListener("click", searchUsers);
+  byId("userSearch").addEventListener("keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); searchUsers(); } });
+  for (const [id, scope] of [["myUsage", "mine"], ["findUsers", "all"]]) byId(id).addEventListener("click", () => {
+    clearTimeout(searchTimer);
+    clearSelection();
+    state.scope = scope;
+    byId("userSearch").value = "";
+    selectionRequest = null;
+    state.page = 1;
+    renderScope();
+    loadVirtualKeys();
+    if (scope === "all") byId("userSearch").focus();
+  });
+  function searchUsers() {
+    clearTimeout(searchTimer);
+    clearSelection();
+    state.scope = "all";
+    selectionRequest = byId("userSearch").value.trim() ? { user: byId("userSearch").value.trim() } : null;
+    state.page = 1;
+    renderScope();
+    loadVirtualKeys();
+  }
+  function renderScope() {
+    byId("myUsage").setAttribute("aria-pressed", String(state.scope === "mine"));
+    byId("findUsers").setAttribute("aria-pressed", String(state.scope === "all"));
+  }
+  renderScope();
+  for (const id of ["keySort", "pageSize"]) byId(id).addEventListener("change", () => { clearTimeout(searchTimer); clearSharedLink(); state.page = 1; loadVirtualKeys(); });
   byId("previousPage").addEventListener("click", () => { state.page -= 1; loadVirtualKeys(); });
   byId("nextPage").addEventListener("click", () => { state.page += 1; loadVirtualKeys(); });
   byId("keyRows").addEventListener("click", (event) => {
     const button = event.target.closest("button[data-key-id]");
     const key = button && state.keys.find((candidate) => candidate.id === button.dataset.keyId);
-    if (key) { byId("keyDirectory").open = false; selectKey(key); }
+    if (key) selectKey(key);
   });
   byId("period").addEventListener("change", () => { explicitPeriod = true; clearSharedLink(); runReport(); });
   byId("copyViewLink").addEventListener("click", async () => {
@@ -318,6 +352,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     state.selectedKey = null;
     state.report = null;
     state.modelCatalog = null;
+    byId("viewingContext").hidden = true;
     byId("reportContent").hidden = true;
     byId("availableModels").hidden = true;
     byId("modelsPendingStatus").hidden = false;
@@ -337,7 +372,8 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     byId("previousPage").disabled = true;
     byId("nextPage").disabled = true;
     notice("catalogStatus", "Loading keys…");
-    const query = new URLSearchParams({ page: String(state.page), size: byId("pageSize").value, sort: byId("keySort").value, search: byId("userSearch").value.trim() });
+    text("catalogCount", "Searching…");
+    const query = new URLSearchParams({ scope: state.scope, page: String(state.page), size: byId("pageSize").value, sort: byId("keySort").value, search: byId("userSearch").value.trim() });
     const requestedSelection = selectionRequest;
     if (requestedSelection?.key) query.set("key", requestedSelection.key);
     if (requestedSelection?.user) query.set("user", requestedSelection.user);
@@ -346,6 +382,9 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
       const payload = await requestJson(route("/api/virtual-keys") + "?" + query, controller.signal);
       if (controller.signal.aborted) return false;
       state.keys = payload.keys;
+      state.viewer = payload.viewer;
+      const viewer = state.viewer;
+      text("identityStatus", viewer?.email ? "Signed in as " + viewer.email + " · " + viewer.linkedKeys + " linked key(s)." : "Your sign-in email is unavailable to this app. Select Find users and search manually; another user's usage will not open automatically.");
       state.pagination = payload.pagination;
       state.page = payload.pagination.page;
       state.maxSpend = payload.maxSpend;
@@ -354,13 +393,10 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
       notice("catalogStatus", "Key spend updated " + new Date(payload.updatedAt).toLocaleString() + ".");
       if (!state.selectedKey) {
         selectionRequest = null;
-        if (requestedSelection && payload.selectedKey) {
-          byId("keyDirectory").open = false;
+        if (payload.selectedKey) {
           selectKey(payload.selectedKey);
-        } else if (allowDefaultSelection && state.keys.length && !byId("userSearch").value.trim()) selectKey(state.keys[0]);
-        else {
-          byId("keyDirectory").open = true;
-          notice("reportStatus", requestedSelection?.key ? "The linked key was not found. Choose a key from the search results." : payload.pagination.totalCount ? "Choose a matching key to view its usage." : "No virtual key matches this search.");
+        } else {
+          notice("reportStatus", requestedSelection?.key ? "The linked key was not found. Choose a key from the search results." : payload.pagination.totalCount ? "Choose one of the matching keys to view its usage." : state.scope === "mine" ? "No keys are linked to your signed-in email. Select Find users to search by username, email, or key name." : "No virtual key matches this search.");
           loadModels();
         }
       }
@@ -384,20 +420,23 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
 
   function renderKeys() {
     const pagination = state.pagination;
-    text("catalogCount", exact(pagination.totalCount) + " matching / " + exact(pagination.totalKeys) + " keys");
+    text("catalogCount", exact(pagination.totalCount) + " matching / " + exact(pagination.totalKeys) + (state.scope === "mine" ? " of your keys" : " keys"));
     text("pageInfo", pagination.totalCount ? "Showing " + ((pagination.page - 1) * pagination.size + 1) + "–" + Math.min(pagination.page * pagination.size, pagination.totalCount) + " · Page " + pagination.page + " of " + pagination.totalPages : "No matching keys");
     byId("previousPage").disabled = pagination.page <= 1;
     byId("nextPage").disabled = pagination.page >= pagination.totalPages;
     byId("keyRows").innerHTML = state.keys.length ? state.keys.map((key) => {
       const selected = key.id === state.selectedKey?.id;
       const width = state.maxSpend > 0 ? Math.max(0, key.spend) / state.maxSpend * 100 : 0;
-      return '<tr><td><strong>' + escapeHtml(key.label) + '</strong><span class="owner">' + escapeHtml(key.owner) + '</span></td><td class="numeric spend-cell">' + escapeHtml(formatUsd(key.spend)) + '<div class="spend-track" aria-hidden="true"><i style="width:' + width + '%"></i></div></td><td class="numeric">' + (key.remainingBudget === null ? '<span class="muted">Not configured</span>' : escapeHtml(formatUsd(key.remainingBudget))) + '</td><td><button class="key-choice" data-key-id="' + escapeHtml(key.id) + '" aria-label="View usage for ' + escapeHtml(key.label) + '" aria-pressed="' + selected + '">' + (selected ? "Selected" : "View usage") + '</button></td></tr>';
+      return '<tr><td><strong>' + escapeHtml(key.owner) + '</strong><span class="owner">Key: ' + escapeHtml(key.label) + '</span></td><td class="numeric spend-cell">' + escapeHtml(formatUsd(key.spend)) + '<div class="spend-track" aria-hidden="true"><i style="width:' + width + '%"></i></div></td><td class="numeric">' + (key.remainingBudget === null ? '<span class="muted">No key-specific limit</span>' : escapeHtml(formatUsd(key.remainingBudget))) + '</td><td><button class="key-choice" data-key-id="' + escapeHtml(key.id) + '" aria-label="View usage for ' + escapeHtml(key.label) + '" aria-pressed="' + selected + '">' + (selected ? "Selected" : "View usage") + '</button></td></tr>';
     }).join("") : '<tr><td colspan="4" class="empty">No keys match your search. Try a username without the email suffix.</td></tr>';
   }
 
   function selectKey(key) {
     clearSharedLink();
     state.selectedKey = key;
+    byId("viewingContext").hidden = false;
+    const own = state.viewer?.keyIds?.includes(key.id);
+    text("viewingContext", (own ? "Your usage" : "Viewing " + key.owner + " — this is not identified as your usage") + " · Virtual key: " + key.label + ". Usage charts cover this key only.");
     text("selectedTitle", "Usage for " + key.label);
     text("selectedOwner", key.owner);
     renderKeys();
@@ -573,7 +612,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     text("tokenSplit", compact(report.totals.promptTokens) + " input · " + compact(report.totals.completionTokens) + " output");
     renderTrend();
     renderModels();
-    renderBudget(report.virtualKey);
+    renderBudget(report);
     byId("warnings").hidden = !report.warnings.length;
     text("warnings", report.warnings.join(" "));
     text("freshness", "Source: LiteLLM API · Usage loaded: " + new Date(report.generatedAt).toLocaleString() + " · Key budgets updated: " + new Date(report.keysUpdatedAt).toLocaleString());
@@ -635,20 +674,36 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     byId("modelRows").innerHTML = models.map((row) => '<tr><th scope="row">' + escapeHtml(row.name) + '</th><td class="numeric">' + escapeHtml(formatUsd(row.spend)) + '</td><td class="numeric">' + escapeHtml(exact(row.promptTokens)) + '</td><td class="numeric">' + escapeHtml(exact(row.completionTokens)) + '</td><td class="numeric">' + escapeHtml(exact(row.requests)) + '</td><td class="numeric">' + (report.totals.spend > 0 ? escapeHtml((row.spend / report.totals.spend * 100).toFixed(1) + "%") : "—") + '</td></tr>').join("") || '<tr><td colspan="6" class="empty">No model activity returned.</td></tr>';
   }
 
-  function renderBudget(key) {
-    const configured = key.maxBudget !== null && key.maxBudget >= 0;
-    byId("budgetTrack").hidden = !configured || key.maxBudget === 0;
-    text("budgetRemaining", configured ? formatUsd(key.remainingBudget) : "Not configured");
-    text("remainingLabel", configured ? (key.maxBudget === 0 ? "No allowance configured (zero budget)." : "Remaining in this key’s budget") : "A budget limit is needed to calculate remaining credit.");
-    text("budgetSummary", configured ? formatUsd(key.spend) + " spent of " + formatUsd(key.maxBudget) + (key.budgetUtilizationPercent === null ? "" : " · " + key.budgetUtilizationPercent.toFixed(1) + "% used") : "Recorded key spend: " + formatUsd(key.spend));
-    byId("budgetBar").style.width = Math.min(100, Math.max(0, key.budgetUtilizationPercent ?? 0)) + "%";
-    byId("budgetTrack").classList.toggle("over", key.spend >= key.maxBudget);
-    text("budgetSubtitle", key.budgetDuration ? "Budget period: " + key.budgetDuration : "Lifetime spend / no reset period supplied");
-    const reset = key.budgetResetAt ? new Date(key.budgetResetAt) : null;
-    const resetLabel = reset && Number.isFinite(reset.getTime()) ? reset.toLocaleString() : key.budgetResetAt;
-    byId("budgetMeta").replaceChildren();
-    const lines = [resetLabel ? "Next reset: " + resetLabel : "Next reset: not supplied", key.teamId ? "Team: " + key.teamId : "", configured && key.spend > key.maxBudget ? "Over budget by " + formatUsd(key.spend - key.maxBudget) : ""];
-    for (const value of lines.filter(Boolean)) { const node = document.createElement("p"); node.textContent = value; byId("budgetMeta").append(node); }
+  function renderBudget(report) {
+    const scopes = report.budgets ?? [{ ...report.virtualKey, scope: "key", status: "catalog" }];
+    const labels = { key: "Virtual-key budget", user: "User budget", team: "Team budget" };
+    const configured = (budget) => Number.isFinite(budget.maxBudget) && budget.maxBudget >= 0 && budget.status !== "unavailable";
+    // Budgets have different grains; never subtract one scope's spend from another scope's limit.
+    const order = report.virtualKey.teamId ? ["key", "team", "user"] : ["key", "user", "team"];
+    const budget = order.map((scope) => scopes.find((entry) => entry.scope === scope && configured(entry))).find(Boolean) ?? scopes[0];
+    const hasLimit = configured(budget), hasSpend = Number.isFinite(budget.spend);
+    const resetLabel = (value) => value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString() : value || "Not supplied";
+    const extent = { key: "This virtual key", user: "Owner's user account across its keys", team: "Shared team account across its keys" };
+    text("budgetTitle", labels[budget.scope]);
+    text("budgetSubtitle", extent[budget.scope] + " · " + (budget.budgetDuration ? "Budget period: " + budget.budgetDuration : "No reset period supplied"));
+    text("budgetRemaining", budget.status === "unavailable" ? "Unavailable" : hasLimit ? Number.isFinite(budget.remainingBudget) ? formatUsd(budget.remainingBudget) : "Spend unavailable" : "No limit supplied");
+    text("remainingLabel", hasLimit ? "Remaining in this " + budget.scope + " budget" : "Other budget scopes may still apply.");
+    text("budgetSummary", hasLimit ? "Max budget: " + formatUsd(budget.maxBudget) + " · Spent: " + (hasSpend ? formatUsd(budget.spend) : "Unavailable") : "Recorded spend: " + (hasSpend ? formatUsd(budget.spend) : "Unavailable"));
+    byId("budgetTrack").hidden = !hasLimit || budget.maxBudget === 0 || !hasSpend;
+    byId("budgetBar").style.width = Math.min(100, Math.max(0, budget.budgetUtilizationPercent ?? 0)) + "%";
+    byId("budgetTrack").classList.toggle("over", hasLimit && hasSpend && budget.spend >= budget.maxBudget);
+    text("budgetMeta", "Next reset: " + resetLabel(budget.budgetResetAt) + (budget.status === "catalog" ? " · Catalog snapshot" : ""));
+    byId("budgetScopes").replaceChildren();
+    for (const entry of scopes.filter((value) => value !== budget)) {
+      const node = document.createElement("div");
+      node.className = "budget-scope";
+      const title = document.createElement("strong");
+      title.textContent = labels[entry.scope];
+      const description = document.createElement("p");
+      description.textContent = entry.status === "unavailable" ? "Lookup unavailable; no limit has been inferred." : configured(entry) ? "Max budget: " + formatUsd(entry.maxBudget) + " · Spent: " + (Number.isFinite(entry.spend) ? formatUsd(entry.spend) : "Unavailable") + " · Remaining: " + (Number.isFinite(entry.remainingBudget) ? formatUsd(entry.remainingBudget) : "Unavailable") + " · Reset: " + resetLabel(entry.budgetResetAt) : "No " + entry.scope + "-specific limit supplied.";
+      node.append(title, description);
+      byId("budgetScopes").append(node);
+    }
   }
 
   function publishContext(report) {

@@ -11,7 +11,7 @@ import {
 } from "../../_lib/runtime-base-path.mjs";
 import { renderStaticDashboardExample } from "../../_lib/static-dashboard-examples.mjs";
 import { registerLiteLlmMcpTools } from "./mcp.mjs";
-import { loadLiteLlmModelCatalog, sanitizeLiteLlmModelInfo } from "./model-info.mjs";
+import { loadLiteLlmKeyDetails, loadLiteLlmModelCatalog, sanitizeLiteLlmModelInfo } from "./model-info.mjs";
 import { renderLiteLlmDashboard } from "./dashboard.mjs";
 import {
   buildLiteLlmVirtualKeyListQuery,
@@ -38,6 +38,7 @@ const verifier = createRequiredAgenticAppJwtVerifier({
 
 let keyCatalog;
 let keyCatalogRequest;
+const keyDetailsCache = new Map();
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
@@ -116,7 +117,11 @@ const server = createServer(async (request, response) => {
   if (url.pathname === "/api/virtual-keys" && request.method === "GET") {
     try {
       const catalog = await getLiteLlmVirtualKeys({ refresh: url.searchParams.get("refresh") === "true" });
-      const result = selectLiteLlmVirtualKeys(catalog.keys, {
+      const email = request.caipeIdentity?.email?.trim().toLowerCase() || null;
+      const myKeys = email ? catalog.keys.filter((key) => key.public.owner.toLowerCase() === email || key.ownerId?.toLowerCase() === email) : [];
+      const scope = url.searchParams.get("scope") === "mine" ? "mine" : "all";
+      const scopedKeys = scope === "mine" ? myKeys : catalog.keys;
+      const result = selectLiteLlmVirtualKeys(scopedKeys, {
         search: url.searchParams.get("search") ?? "",
         sort: url.searchParams.get("sort") ?? "spend",
         page: url.searchParams.get("page") ?? 1,
@@ -126,13 +131,15 @@ const server = createServer(async (request, response) => {
       const requestedUser = url.searchParams.get("user")?.trim().toLowerCase();
       let selectedKey;
       if (requestedKey) {
-        selectedKey = catalog.keys.find((key) => key.public.id === requestedKey)?.public ?? null;
+        selectedKey = scopedKeys.find((key) => key.public.id === requestedKey)?.public ?? null;
       } else if (requestedUser) {
         const username = requestedUser.split("@")[0];
-        const exactMatches = catalog.keys.filter(({ public: key }) => key.label.toLowerCase() === requestedUser || key.owner.toLowerCase() === requestedUser || (requestedUser.includes("@") && key.label.toLowerCase() === username));
-        selectedKey = exactMatches.length ? selectLiteLlmVirtualKeys(exactMatches, { sort: result.sort, size: 1 }).keys[0] : result.pagination.totalCount === 1 ? result.keys[0] : null;
+        const exactMatches = scopedKeys.filter(({ public: key }) => key.label.toLowerCase() === requestedUser || key.owner.toLowerCase() === requestedUser || (requestedUser.includes("@") && key.label.toLowerCase() === username));
+        selectedKey = exactMatches.length === 1 ? exactMatches[0].public : result.pagination.totalCount === 1 ? result.keys[0] : null;
+      } else if (scope === "mine") {
+        selectedKey = myKeys.length === 1 ? myKeys[0].public : null;
       }
-      sendJson(response, 200, { success: true, ...result, ...(selectedKey !== undefined ? { selectedKey } : {}), updatedAt: catalog.updatedAt });
+      sendJson(response, 200, { success: true, ...result, scope, viewer: { email, name: request.caipeIdentity?.name ?? null, linkedKeys: myKeys.length, keyIds: myKeys.map((key) => key.public.id) }, ...(selectedKey !== undefined ? { selectedKey } : {}), updatedAt: catalog.updatedAt });
     } catch (error) {
       sendJson(response, 502, {
         success: false,
@@ -148,7 +155,7 @@ const server = createServer(async (request, response) => {
       const catalog = keyId ? await getLiteLlmVirtualKeys() : null;
       const key = keyId ? catalog.keys.find((candidate) => candidate.public.id === keyId) : null;
       if (keyId && !key) { sendJson(response, 404, { success: false, error: "Virtual key not found" }); return; }
-      const data = await loadLiteLlmModelCatalog(fetchLiteLlmJson, key);
+      const data = await loadLiteLlmModelCatalog(fetchLiteLlmJson, key, { keyDetails: key ? getKeyDetails(key) : undefined });
       sendJson(response, 200, { success: true, data });
     } catch {
       sendJson(response, 502, { success: false, error: "Could not load the configured LiteLLM model catalog" });
@@ -242,7 +249,19 @@ async function getLiteLlmVirtualKeyUsage({ keyId, period, refresh }) {
       api_key: key.upstreamKey,
     }));
   }
-  return { ...buildLiteLlmUsageDashboard({ key, range, responses }), keysUpdatedAt: catalog.updatedAt };
+  const details = await getKeyDetails(key, { refresh });
+  const report = buildLiteLlmUsageDashboard({ key, range, responses });
+  return { ...report, budgets: details.budgets, warnings: [...report.warnings, ...details.warnings], keysUpdatedAt: catalog.updatedAt };
+}
+
+async function getKeyDetails(key, { refresh = false } = {}) {
+  const cached = keyDetailsCache.get(key.public.id);
+  if (cached?.pending || (!refresh && cached && Date.now() - cached.loadedAt < 30_000)) return cached.promise;
+  if (keyDetailsCache.size >= 500) keyDetailsCache.delete(keyDetailsCache.keys().next().value);
+  const entry = { loadedAt: Date.now(), pending: true };
+  entry.promise = loadLiteLlmKeyDetails(fetchLiteLlmJson, key).then((value) => { entry.pending = false; return value; }).catch((error) => { keyDetailsCache.delete(key.public.id); throw error; });
+  keyDetailsCache.set(key.public.id, entry);
+  return entry.promise;
 }
 
 async function fetchLiteLlmJson(pathname, query = {}) {
