@@ -10,7 +10,8 @@ import { renderLiteLlmDashboard } from "./dashboard.mjs";
 
 test("dashboard scripts compile with hostile configuration safely serialized", () => {
   const html = renderLiteLlmDashboard({ compact: true, basePath: "/apps/example", appPath: "/apps/example", agentId: '</script><script>throw new Error("injection")</script>' });
-  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+  // Collect generated inline scripts for syntax checks; this does not sanitize HTML.
+  const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\b[^>]*>/gi)];
   assert.equal(scripts.length, 2);
   for (const [, source] of scripts) new vm.Script(source);
   assert.match(html, /Search users or keys/);
