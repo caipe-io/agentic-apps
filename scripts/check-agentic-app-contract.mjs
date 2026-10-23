@@ -62,6 +62,14 @@ for (const [appId, expectedName, expectedMountPath] of apps) {
   );
 
   const server = await readFile(join(appRoot, "server.mjs"), "utf8");
+  const contractSource = appId === "litellm"
+    ? server + (await import(pathToFileURL(join(appRoot, "dashboard.mjs")))).renderLiteLlmDashboard({
+        compact: true,
+        basePath: expectedMountPath,
+        appPath: expectedMountPath,
+        agentId: manifest.assistant.agentId,
+      })
+    : server;
   for (const requiredText of [
     '"/health/live", "/health/ready", "/healthz"',
     'url.pathname === "/api/context"',
@@ -70,7 +78,7 @@ for (const [appId, expectedName, expectedMountPath] of apps) {
     'version: "1.0"',
     "window.location.origin",
   ]) {
-    assert.ok(server.includes(requiredText), `${appId}: missing ${requiredText}`);
+    assert.ok(contractSource.includes(requiredText), `${appId}: missing ${requiredText}`);
   }
 
   if (appId === "jira-project-dashboard") {
