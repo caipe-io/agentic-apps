@@ -25,6 +25,64 @@ export function buildLiteLlmVirtualKeyListQuery(page = 1) {
   };
 }
 
+/** Load the complete catalog before searching, sorting, or paging it locally. */
+export async function loadLiteLlmVirtualKeys(fetchPage) {
+  const keys = new Map();
+  for (let page = 1; page <= 1000; page += 1) {
+    const payload = await fetchPage(page);
+    if (!Array.isArray(payload?.keys) && !Array.isArray(payload?.data)) {
+      throw new Error("LiteLLM returned an invalid virtual-key list");
+    }
+    const raw = Array.isArray(payload.keys) ? payload.keys : payload.data;
+    const prepared = prepareLiteLlmVirtualKeys(payload);
+    if (prepared.length !== raw.length) throw new Error("LiteLLM returned an invalid virtual-key record");
+    let added = 0;
+    for (const key of prepared) {
+      if (!keys.has(key.public.id)) added += 1;
+      keys.set(key.public.id, key);
+    }
+    const totalPages = Number(payload.total_pages);
+    const totalCount = Number(payload.total_count);
+    const hasPageCount = payload.total_pages != null && Number.isSafeInteger(totalPages) && totalPages >= 0;
+    const hasTotalCount = payload.total_count != null && Number.isSafeInteger(totalCount) && totalCount >= 0;
+    if (page > 1 && !added && (raw.length || (hasPageCount && page <= totalPages) || (hasTotalCount && keys.size < totalCount))) {
+      throw new Error("LiteLLM virtual-key pagination did not advance");
+    }
+    if (hasPageCount && page >= totalPages) {
+      if (hasTotalCount && keys.size < totalCount) throw new Error("LiteLLM returned an incomplete virtual-key catalog");
+      return [...keys.values()];
+    }
+    if (!hasPageCount && hasTotalCount && keys.size >= totalCount) return [...keys.values()];
+    if (!hasPageCount && !hasTotalCount && raw.length < VIRTUAL_KEY_PAGE_SIZE) return [...keys.values()];
+    // A repeated or empty page must not turn into a successful, incomplete catalog.
+    if (!raw.length || !added) throw new Error("LiteLLM virtual-key pagination did not advance");
+  }
+  throw new Error("LiteLLM virtual-key pagination exceeded the page limit");
+}
+
+export function selectLiteLlmVirtualKeys(keys, { search = "", sort = "spend", page = 1, size = 10 } = {}) {
+  const query = String(search).trim().toLowerCase();
+  const aliasQuery = query.includes("@") ? query.split("@")[0] : query;
+  const matches = keys.filter(({ public: key }) => !query
+    || key.label.toLowerCase().includes(query)
+    || key.owner.toLowerCase().includes(query)
+    || (aliasQuery && key.label.toLowerCase() === aliasQuery));
+  const sortBy = ["spend", "spend-asc", "name"].includes(sort) ? sort : "spend";
+  matches.sort((a, b) => {
+    const difference = sortBy === "name" ? 0 : (a.public.spend - b.public.spend) * (sortBy === "spend" ? -1 : 1);
+    return difference || a.public.label.localeCompare(b.public.label) || a.public.id.localeCompare(b.public.id);
+  });
+  const pageSize = boundedInteger(size, 10, 1, 100);
+  const totalPages = Math.max(1, Math.ceil(matches.length / pageSize));
+  const currentPage = boundedInteger(page, 1, 1, totalPages);
+  return {
+    keys: matches.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((key) => key.public),
+    pagination: { page: currentPage, size: pageSize, totalPages, totalCount: matches.length, totalKeys: keys.length },
+    sort: sortBy,
+    maxSpend: matches.reduce((max, key) => Math.max(max, key.public.spend), 0),
+  };
+}
+
 export function prepareLiteLlmVirtualKeys(payload) {
   const sourceKeys = Array.isArray(payload?.keys)
     ? payload.keys
@@ -45,7 +103,9 @@ export function prepareLiteLlmVirtualKeys(payload) {
       key.user_id,
       key.created_by,
     );
-    const maxBudget = number(firstValue(key.max_budget, key.budget?.max_budget, key.budget_limit));
+    const rawBudget = firstValue(key.max_budget, key.budget?.max_budget, key.budget_limit);
+    const parsedBudget = rawBudget === undefined ? NaN : Number(rawBudget);
+    const maxBudget = Number.isFinite(parsedBudget) && parsedBudget >= 0 ? parsedBudget : null;
     const spend = number(firstValue(key.spend, key.current_spend, key.budget?.spend));
 
     return [{
@@ -57,7 +117,7 @@ export function prepareLiteLlmVirtualKeys(payload) {
         teamId: firstText(key.team_id, key.team?.team_id),
         maxBudget,
         spend,
-        remainingBudget: maxBudget > 0 ? Math.max(0, maxBudget - spend) : null,
+        remainingBudget: maxBudget !== null ? Math.max(0, maxBudget - spend) : null,
         budgetUtilizationPercent: maxBudget > 0 ? Math.min(999, spend / maxBudget * 100) : null,
         budgetDuration: firstText(key.budget_duration, key.budget?.duration),
         budgetResetAt: firstText(key.budget_reset_at, key.budget?.reset_at),
@@ -127,10 +187,9 @@ export function buildLiteLlmUsageDashboard({ key, range, responses }) {
     }
   }
 
-  const trend = aggregateTrend([...daily.values()], range.granularity);
-  const topModels = [...models.values()]
-    .sort((left, right) => (right.spend - left.spend) || (right.totalTokens - left.totalTokens))
-    .slice(0, 20);
+  const trend = aggregateTrend([...daily.values()], range);
+  const modelRows = [...models.values()]
+    .sort((left, right) => (right.spend - left.spend) || (right.totalTokens - left.totalTokens));
 
   return {
     source: "/user/daily/activity/aggregated",
@@ -145,12 +204,14 @@ export function buildLiteLlmUsageDashboard({ key, range, responses }) {
     virtualKey: key.public,
     totals,
     trend,
-    topModels,
+    models: modelRows,
+    topModels: modelRows.slice(0, 20),
     warnings: [...new Set(warnings)],
   };
 }
 
-function aggregateTrend(points, granularity) {
+function aggregateTrend(points, range) {
+  const { granularity } = range;
   const buckets = new Map();
   for (const point of points) {
     const bucket = granularity === "month" ? String(point.date).slice(0, 7) : point.date;
@@ -158,7 +219,18 @@ function aggregateTrend(points, granularity) {
     addMetrics(target, point);
     buckets.set(bucket, target);
   }
-  return [...buckets.values()].sort((left, right) => left.date.localeCompare(right.date));
+  if (!points.length) return [];
+  const result = [];
+  const cursor = new Date(`${range.startDate}T00:00:00Z`);
+  const end = new Date(`${range.endDate}T00:00:00Z`);
+  if (granularity === "month") cursor.setUTCDate(1);
+  while (cursor <= end) {
+    const date = granularity === "month" ? isoDate(cursor).slice(0, 7) : isoDate(cursor);
+    result.push(buckets.get(date) ?? { date, ...emptyMetrics() });
+    if (granularity === "month") cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+    else cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return result;
 }
 
 function monthSegments(start, end) {
@@ -223,4 +295,9 @@ function firstValue(...values) {
 function number(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function boundedInteger(value, fallback, minimum, maximum) {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? Math.min(maximum, Math.max(minimum, parsed)) : fallback;
 }
