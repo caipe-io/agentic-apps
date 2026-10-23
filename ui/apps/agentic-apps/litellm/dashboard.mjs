@@ -19,6 +19,9 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
     .muted, small { color: var(--muted); } .small, small { font-size: .82rem; }
     .heading, .panel-heading, .pagination, .selection { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .heading { margin-bottom: 22px; } .subtitle { color: var(--muted); margin-top: 5px; max-width: 760px; }
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+    .tabs button { flex: 1; min-width: 0; background: transparent; border: 0; border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0; padding: 12px 16px; color: var(--muted); }
+    .tabs button[aria-selected="true"] { color: var(--series); border-bottom-color: var(--series); background: var(--surface); font-weight: 600; }
     .actions, .controls { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; } .controls { margin: 16px 0 12px; }
     label { display: grid; gap: 5px; color: var(--muted); font-size: .82rem; }
     .search-field { flex: 1; min-width: min(260px, 100%); }
@@ -63,8 +66,12 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
 <main>
   <header class="heading">
     <div><h1>LLM usage &amp; budgets</h1><p class="subtitle">Find your virtual key, track your balance, and see which models drive usage.</p></div>
-    <div class="actions"><a href="#availableModels" class="button-link">Compare models</a><button id="copyViewLink" disabled>Copy link</button><button id="refresh" disabled>Refresh data</button><button id="openAssistant" class="primary">Ask LiteLLM</button></div>
+    <div class="actions"><button id="compareModels">Compare models</button><button id="copyViewLink" disabled>Copy link</button><button id="refresh" disabled>Refresh data</button><button id="openAssistant" class="primary">Ask LiteLLM</button></div>
   </header>
+  <div class="tabs" role="tablist" aria-label="Dashboard views" id="dashboardTabs">
+    <button role="tab" id="usageTab" aria-selected="true" aria-controls="usageTabPanel" tabindex="0">Usage &amp; budgets</button>
+    <button role="tab" id="calculatorTab" aria-selected="false" aria-controls="calculatorTabPanel" tabindex="-1">Model cost calculator</button>
+  </div>
   <section class="panel catalog" aria-labelledby="usersTitle" aria-busy="true" id="catalog">
     <div class="panel-heading"><h2 id="usersTitle">Users &amp; virtual keys</h2><span id="catalogCount" class="muted small" role="status" aria-live="polite">Loading keys…</span></div>
     <div class="controls">
@@ -80,6 +87,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
     <p id="shareStatus" class="notice small" role="status" aria-live="polite"></p>
     <label id="shareLinkField" hidden>Shareable dashboard link<input id="shareLinkInput" type="url" readonly /></label>
   </section>
+  <div id="usageTabPanel" role="tabpanel" aria-labelledby="usageTab">
   <section aria-labelledby="selectedTitle" id="usageSection">
     <div class="selection"><div><h2 id="selectedTitle">Select a user or virtual key</h2><p id="selectedOwner" class="muted small"></p></div><label>Usage period<select id="period"><option value="current">Today</option><option value="month" selected>Current month</option><option value="3m">Last 3 months</option><option value="6m">Last 6 months</option><option value="12m">Last 12 months</option></select></label></div>
     <p id="reportStatus" class="notice" role="status" aria-live="polite">Usage will load after the key list is ready.</p>
@@ -93,6 +101,10 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
       <section class="panel" aria-labelledby="modelsTitle"><div class="panel-heading"><h2 id="modelsTitle">Most-used models</h2><label>Rank models by<select id="modelMetric"><option value="totalTokens">Tokens</option><option value="requests">Requests</option><option value="spend">Spend · USD</option></select></label></div><p id="modelSummary" class="muted small"></p><div id="modelBars" class="model-bars" role="list" aria-label="Top models"></div><details class="model-details"><summary>View model details</summary><div class="table-wrap"><table class="detail-table" aria-label="Model usage details"><thead><tr><th scope="col">Model</th><th scope="col" class="numeric">Spend</th><th scope="col" class="numeric">Input tokens</th><th scope="col" class="numeric">Output tokens</th><th scope="col" class="numeric">Requests</th><th scope="col" class="numeric">Spend share</th></tr></thead><tbody id="modelRows"></tbody></table></div></details></section>
       <p id="warnings" class="warning small" role="status" hidden></p><p id="freshness" class="freshness"></p>
     </div>
+  </section>
+  </div>
+  <div id="calculatorTabPanel" role="tabpanel" aria-labelledby="calculatorTab" hidden>
+    <p id="modelsPendingStatus" class="notice" role="status">Model prices will load after the key list is ready.</p>
     <section class="panel available-models" id="availableModels" aria-labelledby="availableModelsTitle" hidden>
       <div class="panel-heading"><h2 id="availableModelsTitle">Available models &amp; price comparison</h2><span id="availableModelCount" class="muted small"></span></div>
       <p id="provisioningSummary" class="provisioning-meta small"></p>
@@ -120,7 +132,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
       <nav class="pagination" aria-label="Available-model pages"><span id="modelPageInfo" class="muted small"></span><div class="actions"><button id="previousModelPage" disabled>Previous models</button><button id="nextModelPage" disabled>Next models</button></div></nav>
       <p id="modelPricesFreshness" class="freshness"></p>
     </section>
-  </section>
+  </div>
   <footer><span>Usage dates are in UTC. Budgets follow each key’s configured reset period.</span><a href="${escapeHtml(basePath)}/example">View static example</a></footer>
 </main>
 ${renderMicrofrontendClient("litellm")}
@@ -136,7 +148,7 @@ function escapeHtml(value) {
 /** Browser entry point: serialized into the page so chart and request state stay together. */
 function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateModelRequestCost) {
   const byId = (id) => document.getElementById(id);
-  const state = { report: null, keys: [], selectedKey: null, modelCatalog: null, modelPage: 1, page: 1, pagination: null, maxSpend: 0, calculatorRows: [], calculatorNextId: 1 };
+  const state = { report: null, keys: [], selectedKey: null, modelCatalog: null, modelPage: 1, page: 1, pagination: null, maxSpend: 0, calculatorRows: [], calculatorNextId: 1, activeTab: "usage" };
   const initialQuery = new URLSearchParams(window.location.search);
   const requestedUser = initialQuery.get("user")?.trim() ?? "";
   const requestedKey = initialQuery.get("key");
@@ -163,6 +175,35 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   const route = (path) => (basePath || "") + path;
   const text = (id, value) => { byId(id).textContent = value; };
   const notice = (id, message, error = false) => { text(id, message); byId(id).classList.toggle("error", error); };
+  const tabs = [
+    { name: "usage", button: "usageTab", panel: "usageTabPanel" },
+    { name: "calculator", button: "calculatorTab", panel: "calculatorTabPanel" },
+  ];
+  for (const tab of tabs) byId(tab.button).addEventListener("click", () => activateTab(tab.name));
+  byId("dashboardTabs").addEventListener("keydown", (event) => {
+    const current = tabs.findIndex((tab) => tab.button === event.target.id);
+    if (current < 0) return;
+    const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : event.key === "ArrowRight" ? (current + 1) % tabs.length : event.key === "ArrowLeft" ? (current + tabs.length - 1) % tabs.length : null;
+    if (next === null) return;
+    event.preventDefault();
+    activateTab(tabs[next].name, true);
+  });
+  byId("compareModels").addEventListener("click", () => activateTab("calculator", true));
+  window.addEventListener("hashchange", () => { if (window.location.hash === "#availableModels") activateTab("calculator"); });
+  activateTab(initialQuery.get("tab") === "calculator" || window.location.hash === "#availableModels" ? "calculator" : "usage");
+
+  function activateTab(name, focus = false) {
+    state.activeTab = name;
+    for (const tab of tabs) {
+      const selected = tab.name === name;
+      byId(tab.button).setAttribute("aria-selected", String(selected));
+      byId(tab.button).tabIndex = selected ? 0 : -1;
+      byId(tab.panel).hidden = !selected;
+      if (selected && focus) byId(tab.button).focus();
+    }
+    clearSharedLink();
+    if (name === "usage" && state.report) renderTrend();
+  }
 
   byId("userSearch").addEventListener("input", () => {
     clearTimeout(searchTimer);
@@ -189,6 +230,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     if (state.selectedKey) url.searchParams.set("key", state.selectedKey.id);
     url.searchParams.set("period", byId("period").value);
     url.searchParams.set("sort", byId("keySort").value);
+    if (state.activeTab === "calculator") url.searchParams.set("tab", "calculator");
     const link = url.toString();
     byId("shareLinkInput").value = link;
     try {
@@ -278,6 +320,8 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     state.modelCatalog = null;
     byId("reportContent").hidden = true;
     byId("availableModels").hidden = true;
+    byId("modelsPendingStatus").hidden = false;
+    text("modelsPendingStatus", "Loading models for the current search…");
     byId("usageSection").setAttribute("aria-busy", "false");
     text("selectedTitle", "Select a user or virtual key");
     text("selectedOwner", "");
@@ -390,6 +434,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     state.modelCatalog = null;
     renderCalculator();
     state.modelPage = 1;
+    byId("modelsPendingStatus").hidden = true;
     byId("availableModels").hidden = false;
     byId("availableModels").setAttribute("aria-busy", "true");
     text("availableModelCount", "");
@@ -536,7 +581,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
 
   function renderTrend() {
     const report = state.report;
-    if (!report) return;
+    if (!report || state.activeTab !== "usage") return;
     const metric = byId("trendMetric").value;
     const rows = report.trend;
     const chart = byId("trendChart");

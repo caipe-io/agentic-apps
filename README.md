@@ -109,14 +109,19 @@ browser. Access remains subject to CAIPE identity and policy.
   selection. These IDs are selectors, not credentials.
 - `period` accepts `current`, `month`, `3m`, `6m`, or `12m`; a valid URL period takes
   precedence over the host's default range. `sort` accepts `spend`, `spend-asc`, or `name`.
+- `tab=calculator` opens the model cost calculator tab directly. The default is the
+  usage and budgets tab; existing `#availableModels` links open the calculator tab.
 - **Copy link** creates a public app URL with the selected key, readable alias, period,
-  and sorting. If clipboard access fails, the dashboard displays the link for manual copy.
+  sorting, and active tab. If clipboard access fails, the dashboard displays the link for manual copy.
   Recipients still need normal dashboard access; links never include API tokens.
 - The host forwards query parameters through the iframe and runtime proxy. The dashboard
   reads its own URL, so this also works when launched outside the host shell.
 
 ### Model prices and key provisioning
 
+- **Usage & budgets** contains usage charts, model activity, and budget details.
+  **Model cost calculator** contains the calculator, searchable model prices, and key
+  provisioning. Key selection is shared, and calculator lines survive tab switches.
 - Compare models links to a searchable, paginated catalog from the deployment's
   `/model/info`. Input and output rates are shown in USD per million text tokens.
   Users can adjust input/output token counts and sort by estimated cost or either rate.
