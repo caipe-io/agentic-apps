@@ -47,11 +47,15 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
     .model-bars { display: grid; gap: 15px; margin-top: 20px; } .model-bar { display: grid; grid-template-columns: minmax(120px,1fr) minmax(80px,2fr) auto; gap: 16px; align-items: center; font-size: .88rem; }
     .model-label { overflow-wrap: anywhere; } .model-track { height: 14px; background: var(--track); border-radius: 5px; overflow: hidden; } .model-track i { height: 100%; display: block; background: var(--series); } .model-value { font-variant-numeric: tabular-nums; text-align: right; }
     .model-details { margin-top: 20px; } .available-models { margin-top: 20px; } .available-table { min-width: 850px; } .provisioning-meta { margin: 14px 0; overflow-wrap: anywhere; } .token-input { width: 150px; } .selection p, .budget-meta { overflow-wrap: anywhere; } details { margin-top: 12px; } summary { cursor: pointer; color: var(--muted); } .detail-table { min-width: 680px; }
+    .calculator { margin: 24px 0; padding: 20px; border: 1px solid var(--line); border-radius: 10px; } .calculator h3 { margin: 0; font-size: 1.1rem; }
+    .calculator-table { min-width: 1050px; margin-top: 14px; } .calculator-table th:first-child { min-width: 190px; overflow-wrap: anywhere; } .calculator-table input { width: 125px; text-align: right; } .calculator-table .request-input { width: 100px; }
+    .calculator-table .actions { gap: 6px; flex-wrap: nowrap; } .calculator-table button { font-size: .8rem; } .calculator-table input[aria-invalid="true"] { border-color: var(--error); }
+    .calculator-totals { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; margin-top: 18px; } .calculator-totals strong { display: block; font-size: 1.35rem; font-variant-numeric: tabular-nums; } .calculator-totals > div:last-child strong { color: var(--series); }
     .empty { padding: 26px 12px; color: var(--muted); text-align: center; } .notice { color: var(--muted); margin: 10px 0; } .notice.error { color: var(--error); } .warning { color: var(--warning); margin-top: 10px; }
     .freshness { color: var(--muted); font-size: .8rem; margin: 16px 0 0; } footer { color: var(--muted); font-size: .8rem; margin-top: 22px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; } a { color: var(--series); }
     [hidden] { display: none !important; } body.compact main { padding-top: 18px; } body.compact .panel { padding: 16px; }
     @media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
-    @media (max-width: 580px) { main { width: calc(100% - 24px); } .heading .actions { width: 100%; } .controls > label { flex: 1; } .kpis { grid-template-columns: 1fr; } .selection > * { width: 100%; } .model-bar { grid-template-columns: 1fr auto; gap: 5px 12px; } .model-track { grid-column: 1 / -1; grid-row: 2; } .pagination { align-items: start; } }
+    @media (max-width: 580px) { main { width: calc(100% - 24px); } .heading .actions { width: 100%; } .controls > label { flex: 1; } .kpis, .calculator-totals { grid-template-columns: 1fr; } .calculator { padding: 12px; } .selection > * { width: 100%; } .model-bar { grid-template-columns: 1fr auto; gap: 5px 12px; } .model-track { grid-column: 1 / -1; grid-row: 2; } .pagination { align-items: start; } }
     @media (pointer: coarse) { button, select, input { min-height: 44px; } }
   </style>
 </head>
@@ -92,6 +96,13 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
       <p id="provisioningSummary" class="provisioning-meta small"></p>
       <details><summary>View key provisioning</summary><div id="provisioningDetails" class="budget-meta"></div></details>
       <p class="muted small">Key matches describe declared configuration. Team, owner, organization, access-group, and runtime policies can further restrict calls.</p>
+      <section class="calculator" aria-labelledby="calculatorTitle">
+        <div class="panel-heading"><h3 id="calculatorTitle">Token cost calculator</h3><div class="actions"><button id="addCalculatorModel">Add a model</button><button id="clearCalculator" disabled>Clear calculator</button></div></div>
+        <p class="muted small">Build a workload with multiple model lines. Tokens are per request; each line is multiplied by its request count. Add models from the searchable price table below, or duplicate a line to compare token counts.</p>
+        <div class="table-wrap"><table class="calculator-table" aria-label="Multi-model token cost calculator"><thead><tr><th scope="col">Model / key configuration</th><th scope="col" class="numeric">Input tokens / request</th><th scope="col" class="numeric">Output tokens / request</th><th scope="col" class="numeric">Requests</th><th scope="col" class="numeric">Input cost</th><th scope="col" class="numeric">Output cost</th><th scope="col" class="numeric">Line total</th><th scope="col">Actions</th></tr></thead><tbody id="calculatorRows"><tr><td colspan="8" class="empty">Add a model from the price table to start calculating.</td></tr></tbody></table></div>
+        <div class="calculator-totals" role="group" aria-label="Calculator totals in USD"><div><span class="muted small">Input cost · USD</span><strong id="calculatorInputTotal">$0.00</strong></div><div><span class="muted small">Output cost · USD</span><strong id="calculatorOutputTotal">$0.00</strong></div><div><span class="muted small">Workload total · USD</span><strong id="calculatorTotal">$0.00</strong></div></div>
+        <p id="calculatorStatus" class="notice small" role="status" aria-live="polite">Estimates use the current catalog rates. No requests are sent and no credits are spent.</p>
+      </section>
       <div class="controls">
         <label class="search-field">Search available models<input id="modelSearch" type="search" placeholder="Model name or provider" autocomplete="off" /></label>
         <label>Show<select id="modelScope"><option value="all">All configured models</option><option value="listed">Matching key list</option></select></label>
@@ -103,7 +114,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
       </div>
       <p class="muted small">One row per deployment; model aliases may route to several deployments. Prices: USD per 1M text tokens from this LiteLLM deployment. Estimates exclude cache discounts, long-context tiers, service tiers, and non-token charges. Missing rates are not treated as free.</p>
       <p id="availableModelsStatus" class="notice small" role="status" aria-live="polite"></p>
-      <div class="table-wrap"><table class="available-table" aria-label="Configured model prices and key provisioning"><thead><tr><th scope="col">Model / provider</th><th scope="col">Mode</th><th scope="col">Key configuration</th><th scope="col" class="numeric">Input / 1M</th><th scope="col" class="numeric">Output / 1M</th><th scope="col" class="numeric">Estimated request</th></tr></thead><tbody id="availableModelRows"></tbody></table></div>
+      <div class="table-wrap"><table class="available-table" aria-label="Configured model prices and key provisioning"><thead><tr><th scope="col">Model / provider</th><th scope="col">Mode</th><th scope="col">Key configuration</th><th scope="col" class="numeric">Input / 1M</th><th scope="col" class="numeric">Output / 1M</th><th scope="col" class="numeric">Estimated request</th><th scope="col">Calculator</th></tr></thead><tbody id="availableModelRows"></tbody></table></div>
       <nav class="pagination" aria-label="Available-model pages"><span id="modelPageInfo" class="muted small"></span><div class="actions"><button id="previousModelPage" disabled>Previous models</button><button id="nextModelPage" disabled>Next models</button></div></nav>
       <p id="modelPricesFreshness" class="freshness"></p>
     </section>
@@ -123,7 +134,7 @@ function escapeHtml(value) {
 /** Browser entry point: serialized into the page so chart and request state stay together. */
 function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateModelRequestCost) {
   const byId = (id) => document.getElementById(id);
-  const state = { report: null, keys: [], selectedKey: null, modelCatalog: null, modelPage: 1, page: 1, pagination: null, maxSpend: 0 };
+  const state = { report: null, keys: [], selectedKey: null, modelCatalog: null, modelPage: 1, page: 1, pagination: null, maxSpend: 0, calculatorRows: [], calculatorNextId: 1 };
   let catalogController;
   let reportController;
   let modelsController;
@@ -134,6 +145,8 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   const compact = (value) => new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(number(value));
   const exact = (value) => new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(number(value));
   const formatMetric = (value, metric) => metric === "spend" ? formatUsd(value) : compact(value);
+  const displayPrice = (value) => value === undefined || value === null ? "Not supplied" : value > 0 && value < 0.000001 ? "<$0.000001" : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 6 }).format(value);
+  const modelIdentity = (model) => JSON.stringify(model.id ? [model.id, model.name] : [model.name, model.provider, model.upstreamModel, model.inputCostPerMillion, model.outputCostPerMillion]);
   const route = (path) => (basePath || "") + path;
   const text = (id, value) => { byId(id).textContent = value; };
   const notice = (id, message, error = false) => { text(id, message); byId(id).classList.toggle("error", error); };
@@ -167,6 +180,41 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   for (const id of ["modelScope", "catalogModelSort"]) byId(id).addEventListener("change", () => { state.modelPage = 1; renderAvailableModels(); });
   byId("previousModelPage").addEventListener("click", () => { state.modelPage -= 1; renderAvailableModels(); });
   byId("nextModelPage").addEventListener("click", () => { state.modelPage += 1; renderAvailableModels(); });
+  byId("addCalculatorModel").addEventListener("click", () => { byId("modelSearch").scrollIntoView({ block: "center" }); byId("modelSearch").focus(); });
+  byId("clearCalculator").addEventListener("click", () => { state.calculatorRows = []; renderCalculator(); byId("addCalculatorModel").focus(); });
+  byId("availableModelRows").addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-add-model]");
+    const model = button && state.modelCatalog?.models[Number(button.dataset.addModel)];
+    if (!model) return;
+    const tokens = (id) => byId(id).value.trim() && Number.isSafeInteger(Number(byId(id).value)) && Number(byId(id).value) >= 0 && Number(byId(id).value) <= 1_000_000_000 ? byId(id).value : "1000";
+    const row = { id: state.calculatorNextId++, modelIdentity: modelIdentity(model), name: model.name ?? "Unnamed deployment", input: tokens("estimateInput"), output: tokens("estimateOutput"), requests: "1" };
+    state.calculatorRows.push(row);
+    renderCalculator();
+    byId("calculator-input-" + row.id).focus();
+  });
+  byId("calculatorRows").addEventListener("input", (event) => {
+    const input = event.target.closest("input[data-calculator-field]");
+    const row = input && state.calculatorRows.find((entry) => entry.id === Number(input.dataset.rowId));
+    if (!row) return;
+    row[input.dataset.calculatorField] = input.value;
+    renderCalculatorCosts();
+  });
+  byId("calculatorRows").addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-calculator-action]");
+    const index = button ? state.calculatorRows.findIndex((row) => row.id === Number(button.dataset.rowId)) : -1;
+    if (index < 0) return;
+    if (button.dataset.calculatorAction === "duplicate") {
+      const row = { ...state.calculatorRows[index], id: state.calculatorNextId++ };
+      state.calculatorRows.splice(index + 1, 0, row);
+      renderCalculator();
+      byId("calculator-input-" + row.id).focus();
+    } else {
+      state.calculatorRows.splice(index, 1);
+      renderCalculator();
+      const next = state.calculatorRows[Math.min(index, state.calculatorRows.length - 1)];
+      (next ? byId("calculator-input-" + next.id) : byId("addCalculatorModel")).focus();
+    }
+  });
   byId("openAssistant").addEventListener("click", () => {
     if (state.report) publishContext(state.report);
     window.parent?.postMessage({ type: "caipe.agenticApp.assistant.open.v1", version: "1.0", appId: "litellm" }, window.location.origin);
@@ -268,6 +316,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     const controller = new AbortController();
     modelsController = controller;
     state.modelCatalog = null;
+    renderCalculator();
     state.modelPage = 1;
     byId("availableModels").hidden = false;
     byId("availableModels").setAttribute("aria-busy", "true");
@@ -284,6 +333,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
       const payload = await requestJson(route("/api/models") + (state.selectedKey ? "?key=" + encodeURIComponent(state.selectedKey.id) : ""), controller.signal);
       if (controller.signal.aborted) return;
       state.modelCatalog = payload.data;
+      renderCalculator();
       renderProvisioning();
       renderAvailableModels();
     } catch (error) {
@@ -337,13 +387,51 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     const totalPages = Math.max(1, Math.ceil(matches.length / 10));
     state.modelPage = Math.max(1, Math.min(state.modelPage, totalPages));
     const rows = matches.slice((state.modelPage - 1) * 10, state.modelPage * 10);
-    const displayPrice = (value) => value === undefined || value === null ? "Not supplied" : value > 0 && value < 0.000001 ? "<$0.000001" : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 6 }).format(value);
     text("availableModelCount", exact(matches.length) + " matching / " + exact(catalog.totalModels) + " deployments");
     text("modelPageInfo", matches.length ? "Page " + state.modelPage + " of " + totalPages : "No matching models");
     byId("previousModelPage").disabled = state.modelPage <= 1;
     byId("nextModelPage").disabled = state.modelPage >= totalPages;
-    byId("availableModelRows").innerHTML = rows.map((model) => '<tr><th scope="row">' + escapeHtml(model.name ?? "Unnamed deployment") + '<span class="owner">' + escapeHtml(model.provider ?? "Provider not supplied") + (model.id ? ' · ' + escapeHtml(model.id) : '') + '</span>' + (model.pricingHasVariants ? '<span class="owner">Additional pricing variants configured</span>' : '') + '</th><td>' + escapeHtml(model.mode ?? "Not supplied") + '</td><td>' + escapeHtml(model.keyProvisioning) + '</td><td class="numeric">' + escapeHtml(displayPrice(model.inputCostPerMillion)) + '</td><td class="numeric">' + escapeHtml(displayPrice(model.outputCostPerMillion)) + '</td><td class="numeric">' + escapeHtml(estimate(model) === null ? "Unavailable" : displayPrice(estimate(model))) + '</td></tr>').join("") || '<tr><td colspan="6" class="empty">No configured models match these filters.</td></tr>';
+    byId("availableModelRows").innerHTML = rows.map((model) => '<tr><th scope="row">' + escapeHtml(model.name ?? "Unnamed deployment") + '<span class="owner">' + escapeHtml(model.provider ?? "Provider not supplied") + (model.id ? ' · ' + escapeHtml(model.id) : '') + '</span>' + (model.pricingHasVariants ? '<span class="owner">Additional pricing variants configured</span>' : '') + '</th><td>' + escapeHtml(model.mode ?? "Not supplied") + '</td><td>' + escapeHtml(model.keyProvisioning) + '</td><td class="numeric">' + escapeHtml(displayPrice(model.inputCostPerMillion)) + '</td><td class="numeric">' + escapeHtml(displayPrice(model.outputCostPerMillion)) + '</td><td class="numeric">' + escapeHtml(estimate(model) === null ? "Unavailable" : displayPrice(estimate(model))) + '</td><td><button data-add-model="' + catalog.models.indexOf(model) + '" aria-label="Add ' + escapeHtml(model.name ?? "unnamed deployment") + ' to calculator">Add to calculator</button></td></tr>').join("") || '<tr><td colspan="7" class="empty">No configured models match these filters.</td></tr>';
     notice("availableModelsStatus", catalog.provisioning.warnings.join(" "), Boolean(catalog.provisioning.warnings.length));
+  }
+
+  function renderCalculator() {
+    byId("clearCalculator").disabled = !state.calculatorRows.length;
+    byId("calculatorRows").innerHTML = state.calculatorRows.map((row, index) => {
+      const model = state.modelCatalog?.models.find((entry) => modelIdentity(entry) === row.modelIdentity);
+      const input = (field, label, minimum) => '<td class="numeric"><input id="calculator-' + field + '-' + row.id + '" class="' + (field === "requests" ? "request-input" : "token-input") + '" type="number" min="' + minimum + '" max="1000000000" step="1" inputmode="numeric" data-calculator-field="' + field + '" data-row-id="' + row.id + '" value="' + escapeHtml(row[field]) + '" aria-label="' + label + ' for line ' + (index + 1) + '" aria-describedby="calculator-row-status-' + row.id + '" /></td>';
+      return '<tr><th scope="row">' + escapeHtml(row.name) + '<span class="owner">' + escapeHtml(model ? [model.provider, model.id, model.keyProvisioning].filter(Boolean).join(" · ") : "Model unavailable in current catalog") + '</span><span class="owner" id="calculator-row-status-' + row.id + '"></span></th>' + input("input", "Input tokens per request", 0) + input("output", "Output tokens per request", 0) + input("requests", "Request count", 1) + '<td class="numeric" id="calculator-input-cost-' + row.id + '"></td><td class="numeric" id="calculator-output-cost-' + row.id + '"></td><td class="numeric" id="calculator-line-cost-' + row.id + '"></td><td><div class="actions"><button data-calculator-action="duplicate" data-row-id="' + row.id + '" aria-label="Duplicate calculator line ' + (index + 1) + '">Duplicate</button><button data-calculator-action="remove" data-row-id="' + row.id + '" aria-label="Remove calculator line ' + (index + 1) + '">Remove</button></div></td></tr>';
+    }).join("") || '<tr><td colspan="8" class="empty">Add a model from the price table to start calculating.</td></tr>';
+    renderCalculatorCosts();
+  }
+
+  function renderCalculatorCosts() {
+    let inputTotal = 0, outputTotal = 0, knownTotal = 0, incomplete = 0, incompleteInput = false, incompleteOutput = false;
+    for (const row of state.calculatorRows) {
+      const model = state.modelCatalog?.models.find((entry) => modelIdentity(entry) === row.modelIdentity);
+      const counts = Object.fromEntries(["input", "output", "requests"].map((field) => {
+        const value = Number(row[field]);
+        const valid = Boolean(row[field].trim()) && Number.isSafeInteger(value) && value >= (field === "requests" ? 1 : 0) && value <= 1_000_000_000;
+        byId("calculator-" + field + "-" + row.id).setAttribute("aria-invalid", String(!valid));
+        return [field, valid ? value : null];
+      }));
+      const multiply = (cost) => cost === null || counts.requests === null || !Number.isFinite(cost * counts.requests) ? null : cost * counts.requests;
+      const inputCost = model && counts.input !== null ? multiply(estimateModelRequestCost(model, counts.input, 0)) : null;
+      const outputCost = model && counts.output !== null ? multiply(estimateModelRequestCost(model, 0, counts.output)) : null;
+      const total = inputCost === null || outputCost === null || !Number.isFinite(inputCost + outputCost) ? null : inputCost + outputCost;
+      const show = (value) => value === null ? "Unavailable" : displayPrice(value);
+      text("calculator-input-cost-" + row.id, show(inputCost));
+      text("calculator-output-cost-" + row.id, show(outputCost));
+      text("calculator-line-cost-" + row.id, show(total));
+      text("calculator-row-status-" + row.id, Object.values(counts).includes(null) ? "Use whole token counts 0–1B and requests 1–1B." : !model ? "Reload prices or add this model again from the catalog." : total === null ? "Token pricing is missing or this mode is not supported." : "Input " + displayPrice(model.inputCostPerMillion) + " · Output " + displayPrice(model.outputCostPerMillion) + " per 1M tokens");
+      if (inputCost === null) incompleteInput = true; else inputTotal += inputCost;
+      if (outputCost === null) incompleteOutput = true; else outputTotal += outputCost;
+      if (total === null) incomplete += 1; else knownTotal += total;
+    }
+    text("calculatorInputTotal", incompleteInput ? "Unavailable" : displayPrice(inputTotal));
+    text("calculatorOutputTotal", incompleteOutput ? "Unavailable" : displayPrice(outputTotal));
+    text("calculatorTotal", incomplete ? "Incomplete" : displayPrice(knownTotal));
+    notice("calculatorStatus", incomplete ? incomplete + " line(s) need attention. Known complete-line subtotal: " + displayPrice(knownTotal) + ". The workload total is incomplete." : state.calculatorRows.length ? state.calculatorRows.length + " model line(s) · Input cost + output cost = workload total. Estimates exclude pricing tiers, cache discounts, and non-token charges." : "Add models from the price table. Estimates do not send requests or spend credits.", incomplete > 0);
   }
 
   async function requestJson(url, signal) {

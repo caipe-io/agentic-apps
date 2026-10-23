@@ -102,6 +102,12 @@ browser. Access remains subject to CAIPE identity and policy.
 - Compare models links to a searchable, paginated catalog from the deployment's
   `/model/info`. Input and output rates are shown in USD per million text tokens.
   Users can adjust input/output token counts and sort by estimated cost or either rate.
+- Add catalog models to the multi-line token cost calculator. Each line has independent
+  input/output tokens per request and a request count; duplicate and remove lines to
+  compare workloads. Input cost, output cost, and line totals roll up to a workload total.
+  Invalid counts or missing prices mark the total incomplete and show the known subtotal.
+  Lines remain in the current page session and use refreshed catalog prices; models that
+  disappear are marked unavailable. Calculating costs does not make model API calls.
 - Price estimates use the supplied token rates only. Cache discounts, long-context and
   service tiers, and non-token charges are excluded. Missing rates remain unknown;
   explicitly configured zero rates remain zero. Non-token model modes are not estimated.
