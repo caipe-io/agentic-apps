@@ -63,7 +63,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
 <main>
   <header class="heading">
     <div><h1>LLM usage &amp; budgets</h1><p class="subtitle">Find your virtual key, track your balance, and see which models drive usage.</p></div>
-    <div class="actions"><a href="#availableModels" class="button-link">Compare models</a><button id="refresh" disabled>Refresh data</button><button id="openAssistant" class="primary">Ask LiteLLM</button></div>
+    <div class="actions"><a href="#availableModels" class="button-link">Compare models</a><button id="copyViewLink" disabled>Copy link</button><button id="refresh" disabled>Refresh data</button><button id="openAssistant" class="primary">Ask LiteLLM</button></div>
   </header>
   <section class="panel catalog" aria-labelledby="usersTitle" aria-busy="true" id="catalog">
     <div class="panel-heading"><h2 id="usersTitle">Users &amp; virtual keys</h2><span id="catalogCount" class="muted small" role="status" aria-live="polite">Loading keys…</span></div>
@@ -77,6 +77,8 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
     <nav class="pagination" aria-label="Virtual-key pages"><span id="pageInfo" class="muted small"></span><div class="actions"><label>Rows<select id="pageSize"><option>10</option><option>25</option><option>50</option></select></label><button id="previousPage" disabled>Previous</button><button id="nextPage" disabled>Next</button></div></nav>
     </details>
     <p id="catalogStatus" class="notice small" role="status" aria-live="polite"></p>
+    <p id="shareStatus" class="notice small" role="status" aria-live="polite"></p>
+    <label id="shareLinkField" hidden>Shareable dashboard link<input id="shareLinkInput" type="url" readonly /></label>
   </section>
   <section aria-labelledby="selectedTitle" id="usageSection">
     <div class="selection"><div><h2 id="selectedTitle">Select a user or virtual key</h2><p id="selectedOwner" class="muted small"></p></div><label>Usage period<select id="period"><option value="current">Today</option><option value="month" selected>Current month</option><option value="3m">Last 3 months</option><option value="6m">Last 6 months</option><option value="12m">Last 12 months</option></select></label></div>
@@ -135,6 +137,17 @@ function escapeHtml(value) {
 function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateModelRequestCost) {
   const byId = (id) => document.getElementById(id);
   const state = { report: null, keys: [], selectedKey: null, modelCatalog: null, modelPage: 1, page: 1, pagination: null, maxSpend: 0, calculatorRows: [], calculatorNextId: 1 };
+  const initialQuery = new URLSearchParams(window.location.search);
+  const requestedUser = initialQuery.get("user")?.trim() ?? "";
+  const requestedKey = initialQuery.get("key");
+  const initialPeriod = initialQuery.get("period");
+  let explicitPeriod = ["current", "month", "3m", "6m", "12m"].includes(initialPeriod);
+  let selectionRequest = requestedKey || requestedUser ? { key: requestedKey, user: requestedUser } : null;
+  let allowDefaultSelection = !selectionRequest;
+  byId("userSearch").value = requestedUser;
+  byId("keyDirectory").open = Boolean(requestedUser || requestedKey);
+  if (explicitPeriod) byId("period").value = initialPeriod;
+  if (["spend", "spend-asc", "name"].includes(initialQuery.get("sort"))) byId("keySort").value = initialQuery.get("sort");
   let catalogController;
   let reportController;
   let modelsController;
@@ -155,9 +168,12 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     clearTimeout(searchTimer);
     byId("keyDirectory").open = true;
     catalogController?.abort();
+    clearSelection();
+    selectionRequest = byId("userSearch").value.trim() ? { user: byId("userSearch").value.trim() } : null;
+    allowDefaultSelection = !selectionRequest;
     searchTimer = setTimeout(() => { state.page = 1; loadVirtualKeys(); }, 250);
   });
-  for (const id of ["keySort", "pageSize"]) byId(id).addEventListener("change", () => { clearTimeout(searchTimer); byId("keyDirectory").open = true; state.page = 1; loadVirtualKeys(); });
+  for (const id of ["keySort", "pageSize"]) byId(id).addEventListener("change", () => { clearTimeout(searchTimer); clearSharedLink(); byId("keyDirectory").open = true; state.page = 1; loadVirtualKeys(); });
   byId("previousPage").addEventListener("click", () => { state.page -= 1; loadVirtualKeys(); });
   byId("nextPage").addEventListener("click", () => { state.page += 1; loadVirtualKeys(); });
   byId("keyRows").addEventListener("click", (event) => {
@@ -165,7 +181,26 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     const key = button && state.keys.find((candidate) => candidate.id === button.dataset.keyId);
     if (key) { byId("keyDirectory").open = false; selectKey(key); }
   });
-  byId("period").addEventListener("change", () => runReport());
+  byId("period").addEventListener("change", () => { explicitPeriod = true; clearSharedLink(); runReport(); });
+  byId("copyViewLink").addEventListener("click", async () => {
+    const url = new URL(appPath, window.location.origin);
+    const user = state.selectedKey?.label ?? byId("userSearch").value.trim();
+    if (user) url.searchParams.set("user", user);
+    if (state.selectedKey) url.searchParams.set("key", state.selectedKey.id);
+    url.searchParams.set("period", byId("period").value);
+    url.searchParams.set("sort", byId("keySort").value);
+    const link = url.toString();
+    byId("shareLinkInput").value = link;
+    try {
+      await navigator.clipboard.writeText(link);
+      notice("shareStatus", "Link copied. Recipients need access to this dashboard.");
+    } catch {
+      byId("shareLinkField").hidden = false;
+      byId("shareLinkInput").focus();
+      byId("shareLinkInput").select();
+      notice("shareStatus", "Copy the selected link. Recipients need access to this dashboard.");
+    }
+  });
   byId("trendMetric").addEventListener("change", renderTrend);
   byId("modelMetric").addEventListener("change", renderModels);
   byId("refresh").addEventListener("click", async () => {
@@ -221,12 +256,34 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   });
   window.addEventListener("caipe:microfrontend-initialize", (event) => {
     const period = { "30d": "month", "90d": "3m" }[event.detail?.preferences?.defaultRange];
-    if (period && byId("period").value !== period) {
+    if (!explicitPeriod && period && byId("period").value !== period) {
       byId("period").value = period;
+      clearSharedLink();
       if (state.selectedKey) runReport();
     }
   });
   if (typeof ResizeObserver !== "undefined") new ResizeObserver(() => { if (state.report) renderTrend(); }).observe(byId("trendChart"));
+
+  function clearSharedLink() {
+    notice("shareStatus", "");
+    byId("shareLinkField").hidden = true;
+    byId("shareLinkInput").value = "";
+  }
+
+  function clearSelection() {
+    reportController?.abort();
+    modelsController?.abort();
+    state.selectedKey = null;
+    state.report = null;
+    state.modelCatalog = null;
+    byId("reportContent").hidden = true;
+    byId("availableModels").hidden = true;
+    byId("usageSection").setAttribute("aria-busy", "false");
+    text("selectedTitle", "Select a user or virtual key");
+    text("selectedOwner", "");
+    notice("reportStatus", "Choose a matching key to view its usage.");
+    clearSharedLink();
+  }
 
   async function loadVirtualKeys(refresh = false) {
     catalogController?.abort();
@@ -237,6 +294,9 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     byId("nextPage").disabled = true;
     notice("catalogStatus", "Loading keys…");
     const query = new URLSearchParams({ page: String(state.page), size: byId("pageSize").value, sort: byId("keySort").value, search: byId("userSearch").value.trim() });
+    const requestedSelection = selectionRequest;
+    if (requestedSelection?.key) query.set("key", requestedSelection.key);
+    if (requestedSelection?.user) query.set("user", requestedSelection.user);
     if (refresh) query.set("refresh", "true");
     try {
       const payload = await requestJson(route("/api/virtual-keys") + "?" + query, controller.signal);
@@ -246,9 +306,20 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
       state.page = payload.pagination.page;
       state.maxSpend = payload.maxSpend;
       renderKeys();
+      byId("copyViewLink").disabled = false;
       notice("catalogStatus", "Key spend updated " + new Date(payload.updatedAt).toLocaleString() + ".");
-      if (!state.selectedKey && state.keys.length) selectKey(state.keys[0]);
-      else if (!state.selectedKey) { notice("reportStatus", "No virtual key selected. Search by username, email, or key name."); loadModels(); }
+      if (!state.selectedKey) {
+        selectionRequest = null;
+        if (requestedSelection && payload.selectedKey) {
+          byId("keyDirectory").open = false;
+          selectKey(payload.selectedKey);
+        } else if (allowDefaultSelection && state.keys.length && !byId("userSearch").value.trim()) selectKey(state.keys[0]);
+        else {
+          byId("keyDirectory").open = true;
+          notice("reportStatus", requestedSelection?.key ? "The linked key was not found. Choose a key from the search results." : payload.pagination.totalCount ? "Choose a matching key to view its usage." : "No virtual key matches this search.");
+          loadModels();
+        }
+      }
       return true;
     } catch (error) {
       if (controller.signal.aborted) return false;
@@ -281,6 +352,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   }
 
   function selectKey(key) {
+    clearSharedLink();
     state.selectedKey = key;
     text("selectedTitle", "Usage for " + key.label);
     text("selectedOwner", key.owner);

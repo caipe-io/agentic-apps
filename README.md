@@ -97,6 +97,24 @@ browser. Access remains subject to CAIPE identity and policy.
   full model breakdown is available in the details table. Missing activity dates use zero
   bars. Unknown budgets are labeled explicitly without a utilization meter.
 
+### Shareable usage views
+
+- Open `/apps/litellm?user=example-user&period=month` to search a username, alias,
+  or email and select an exact match or a unique search result. Ambiguous searches show
+  the matching directory for selection; missing users do not fall back to another key.
+  If several keys have the same exact alias or owner, the current sort determines which
+  one opens; a copied key-specific link identifies one key unambiguously.
+- Optional `key=vk_…` selects an opaque virtual-key ID across the complete catalog,
+  including keys outside the directory's current page. Missing key IDs require a new
+  selection. These IDs are selectors, not credentials.
+- `period` accepts `current`, `month`, `3m`, `6m`, or `12m`; a valid URL period takes
+  precedence over the host's default range. `sort` accepts `spend`, `spend-asc`, or `name`.
+- **Copy link** creates a public app URL with the selected key, readable alias, period,
+  and sorting. If clipboard access fails, the dashboard displays the link for manual copy.
+  Recipients still need normal dashboard access; links never include API tokens.
+- The host forwards query parameters through the iframe and runtime proxy. The dashboard
+  reads its own URL, so this also works when launched outside the host shell.
+
 ### Model prices and key provisioning
 
 - Compare models links to a searchable, paginated catalog from the deployment's

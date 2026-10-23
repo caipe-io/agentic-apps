@@ -122,7 +122,17 @@ const server = createServer(async (request, response) => {
         page: url.searchParams.get("page") ?? 1,
         size: url.searchParams.get("size") ?? 10,
       });
-      sendJson(response, 200, { success: true, ...result, updatedAt: catalog.updatedAt });
+      const requestedKey = url.searchParams.get("key");
+      const requestedUser = url.searchParams.get("user")?.trim().toLowerCase();
+      let selectedKey;
+      if (requestedKey) {
+        selectedKey = catalog.keys.find((key) => key.public.id === requestedKey)?.public ?? null;
+      } else if (requestedUser) {
+        const username = requestedUser.split("@")[0];
+        const exactMatches = catalog.keys.filter(({ public: key }) => key.label.toLowerCase() === requestedUser || key.owner.toLowerCase() === requestedUser || (requestedUser.includes("@") && key.label.toLowerCase() === username));
+        selectedKey = exactMatches.length ? selectLiteLlmVirtualKeys(exactMatches, { sort: result.sort, size: 1 }).keys[0] : result.pagination.totalCount === 1 ? result.keys[0] : null;
+      }
+      sendJson(response, 200, { success: true, ...result, ...(selectedKey !== undefined ? { selectedKey } : {}), updatedAt: catalog.updatedAt });
     } catch (error) {
       sendJson(response, 502, {
         success: false,
