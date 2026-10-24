@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { mcpJson } from "../../_lib/app-mcp-server.mjs";
 
-export function registerLiteLlmMcpTools(server, { getDailyActivity, getModelInfo, getCostAnomalies }) {
+export function registerLiteLlmMcpTools(server, { getDailyActivity, getModelInfo, getCostAnomalies, getAnomalyContributors }) {
   if (getCostAnomalies) server.registerTool(
     "litellm_get_cost_anomalies",
     {
@@ -17,6 +17,24 @@ export function registerLiteLlmMcpTools(server, { getDailyActivity, getModelInfo
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async (input) => mcpJson(await getCostAnomalies(input)),
+  );
+
+  if (getAnomalyContributors) server.registerTool(
+    "litellm_get_anomaly_contributors",
+    {
+      title: "Identify model spike contributors",
+      description: "Attribute one candidate model's added spend to its top ten virtual keys and credential owners. Reconciles model-filtered key activity against the exact anomaly snapshot, using the same four-week weekday baseline. Returns expected/actual spend, positive increases and offsets. Never returns key credentials; unknown ownership stays unknown. Usage attribution is not proof of a root cause.",
+      inputSchema: z.object({
+        model: z.string().min(1).max(500),
+        snapshotId: z.string().regex(/^[a-f0-9]{32}$/),
+        days: z.union([z.literal(1), z.literal(3), z.literal(4), z.literal(7), z.literal(14)]).default(7),
+        minImpactUsd: z.number().min(0).max(1_000_000).default(25),
+        minIncreasePercent: z.number().min(0).max(10_000).default(50),
+        endDate: z.string().date(),
+      }),
+      annotations: { readOnlyHint: true, openWorldHint: true },
+    },
+    async (input) => mcpJson(await getAnomalyContributors(input)),
   );
 
   server.registerTool(

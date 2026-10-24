@@ -9,7 +9,10 @@ instructions: |
   unavailable upstream data directly.
   For cost anomaly investigations, call litellm_get_cost_anomalies with the exact requested
   window, end date, and thresholds. Use the returned snapshot ID and distinguish confirmed
-  observations from hypotheses. Use daily activity and model inventory tools for supporting
+  observations from hypotheses. For each reviewed model, use litellm_get_anomaly_contributors
+  with the same snapshot and dates to identify the largest added-spend keys and credential
+  owners. Shared key ownership does not establish which person or workload caused a change.
+  Keep unavailable ownership unknown. Use daily activity and model inventory tools for supporting
   evidence. Do not attribute changes to a person, deployment, configuration, cache behavior,
   or provider pricing without supporting tool results. A rule-based candidate is a review
   signal, not proof of a root cause. Report incomplete evidence and tool failures explicitly.

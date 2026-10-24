@@ -53,9 +53,10 @@ async function createAgenticAppConversation({ agentId, appId, title, metadata = 
   return conversationId;
 }
 
-async function invokeAgenticApp({ agentId, appId, title, message, clientContext = {}, signal }) {
+async function invokeAgenticApp({ agentId, appId, title, message, clientContext = {}, signal, onProgress }) {
   const normalizedAgentId = requiredAgenticAppText(agentId, "agentId");
   const normalizedAppId = requiredAgenticAppText(appId, "appId");
+  onProgress?.("creating_conversation");
   const conversationId = await createAgenticAppConversation({
     agentId: normalizedAgentId,
     appId: normalizedAppId,
@@ -63,6 +64,7 @@ async function invokeAgenticApp({ agentId, appId, title, message, clientContext 
     metadata: { dashboardKind: clientContext.dashboardKind },
     signal,
   });
+  onProgress?.("invoking_agent");
   const response = await fetch("/api/v1/chat/invoke", {
     method: "POST",
     credentials: "same-origin",
@@ -76,6 +78,7 @@ async function invokeAgenticApp({ agentId, appId, title, message, clientContext 
     }),
   });
   const payload = await readAgenticAppJsonResponse(response, "Dashboard agent invocation failed");
+  onProgress?.("response_received");
   return { ...payload, conversation_id: payload.conversation_id || conversationId };
 }
 `;

@@ -80,6 +80,11 @@ opaque selectors and may show owners, budgets, spend, token counts, requests, mo
 daily or monthly trends. Raw key material, bearer tokens, and other credentials never reach the
 browser. Access remains subject to CAIPE identity and policy.
 
+The usage disclaimer names **LLM Gateway** by default. Deployments can set
+`LITELLM_GATEWAY_NAME` to their gateway’s display name (for example,
+`Example LLM Gateway`). Blank values use the default; names are HTML-escaped.
+Organization-specific branding belongs in deployment configuration.
+
 - The runtime loads every `/key/list` page (up to 100 keys per request) before searching,
   sorting, and paginating the browser results. Incomplete or stalled upstream pagination
   returns an error instead of a partial list.
@@ -112,10 +117,19 @@ browser. Access remains subject to CAIPE identity and policy.
   read authorization and configured gateway credential as the existing analytics API;
   upstream access and retention determine coverage. Incomplete responses fail visibly.
   All time requests the full date range from the Unix epoch and labels coverage from
-  the first retained activity date. Overview reads are coalesced and cached for 30 seconds.
-- **All users** contains the spend ranking with independent search, sorting, and
-  pagination. Selecting View usage opens **User usage** without changing the ranking's
-  filters or page. Personal key searches do not filter the all-users ranking.
+  the first retained activity date. Overview reads are coalesced and cached in process
+  for four hours, bounded to ten period/date snapshots. Only derived reports and private
+  per-key sums are retained. UTC date changes use a new snapshot. Refresh data bypasses
+  cached results while concurrent refreshes share one load; failures are not cached.
+  The page displays the snapshot update time and checks expiry when returning to a tab.
+- **All users** ranks virtual keys by recorded **current-calendar-month** spend in UTC,
+  with independent search, sorting, and pagination. Monthly spend comes from reconciled
+  daily key-attributed records; missing/unmatched attribution is unavailable, never
+  replaced with lifetime or budget-cycle counters. Budget balances keep their own reset
+  cycles and are labeled separately. The ranking shares the current-month Overview
+  snapshot, so searching and paging do not reload aggregate activity.
+  View usage opens **User usage** for the same current month without changing the
+  ranking's filters or page. Personal searches do not filter the ranking.
 - The user picker searches the authorized catalog by username, email, or key name.
   Matching users appear directly in a searchable dropdown, grouped by owner email
   with their virtual keys underneath. Select a key to open its usage; typing alone
@@ -163,6 +177,26 @@ browser. Access remains subject to CAIPE identity and policy.
   reads its own URL, so this also works when launched outside the host shell.
 
 ### Model cost anomalies
+
+- Each model spike automatically loads the top ten users/keys by **added spend**
+  against the same four-week weekday baseline. Model-filtered key spend must
+  reconcile with the exact model comparison before attribution is shown.
+- Contributor rows show expected spend, actual spend, added spend, and share of
+  all positive key increases. Decreases on other keys are shown as offsets;
+  unresolved/deleted key ownership stays unknown. Shared credentials identify
+  an owner, not necessarily the person or workload responsible.
+- **View key usage** preserves the anomaly's exact completed UTC dates in a
+  shareable `period=custom&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD` link.
+  Custom ranges are validated and bounded to 42 completed days.
+- Attribution reads run at concurrency two, coalesce with agent tool requests,
+  and cache only derived, sanitized results for 30 seconds (at most 40 entries).
+  The read-only `litellm_get_anomaly_contributors` MCP tool gives the agent the
+  same model-specific attribution without exposing raw key material.
+- Anomalies shows a spinner, elapsed time, and request stages while gateway data
+  loads and the agent runs. Stages reflect actual request boundaries; the invoke
+  endpoint does not stream individual tool progress or percentage completion.
+- Cancel stops the browser request. Agent work already started on the server may
+  continue. Changes to analysis settings cancel pending browser work.
 
 - **Analyze with agent** creates an authorized conversation and invokes the configured
   LiteLLM agent through the shared host invoke client. Opening the tab loads only
