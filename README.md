@@ -175,6 +175,8 @@ browser. Access remains subject to CAIPE identity and policy.
   response (native structured output or final JSON on older invoke runtimes) must
   match the candidate snapshot and dates, and cite MCP evidence for
   each assessed model. Agent-cited evidence is not an independently verified tool trace.
+- The agent prioritizes up to five models by cost impact and labels additional
+  candidates as a partial investigation. All calculated candidates remain visible.
 - Agent findings separate observations, possible causes, recommended checks, and
   limitations. Partial, unavailable, or malformed responses are shown explicitly;
   calculated spend comparisons remain visible and are not replaced by agent estimates.

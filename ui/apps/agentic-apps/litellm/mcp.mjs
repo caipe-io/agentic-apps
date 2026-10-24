@@ -35,7 +35,7 @@ export function registerLiteLlmMcpTools(server, { getDailyActivity, getModelInfo
       const days = (Date.parse(input.endDate + "T00:00:00Z") - Date.parse(input.startDate + "T00:00:00Z")) / 86_400_000 + 1;
       if (!Number.isInteger(days) || days < 1 || days > 42) throw new Error("Daily activity requires a date range of 1 to 42 days.");
       const response = await getDailyActivity(input);
-      if (!Array.isArray(response?.results) || response.metadata?.has_more || Number(response.metadata?.total_pages) > 1) throw new Error("Incomplete daily activity response.");
+      if (!Array.isArray(response?.results) || response.results.length > days || response.metadata?.has_more || Number(response.metadata?.total_pages) > 1) throw new Error("Incomplete daily activity response.");
       return mcpJson({
         source: "litellm-daily-activity", scope: input.model ? "model" : "gateway", model: input.model ?? null,
         startDate: input.startDate, endDate: input.endDate,

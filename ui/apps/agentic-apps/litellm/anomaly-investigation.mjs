@@ -1,5 +1,5 @@
 export function buildLiteLlmAnomalyInvestigationFormat() {
-  const textList = { type: "array", maxItems: 8, items: { type: "string", minLength: 1, maxLength: 1200 } };
+  const textList = { type: "array", maxItems: 3, items: { type: "string", minLength: 1, maxLength: 400 } };
   return {
     type: "json_schema",
     schema_id: "litellm.anomaly_investigation.v1",
@@ -12,9 +12,9 @@ export function buildLiteLlmAnomalyInvestigationFormat() {
         sourceSnapshotId: { type: "string", maxLength: 64 },
         analysisStartDate: { type: "string", format: "date" },
         analysisEndDate: { type: "string", format: "date" },
-        summary: { type: "string", minLength: 1, maxLength: 2400 },
+        summary: { type: "string", minLength: 1, maxLength: 600 },
         findings: {
-          type: "array", maxItems: 50,
+          type: "array", maxItems: 5,
           items: {
             type: "object", additionalProperties: false,
             required: ["model", "assessment", "observations", "hypotheses", "nextSteps", "evidence"],
@@ -25,13 +25,13 @@ export function buildLiteLlmAnomalyInvestigationFormat() {
               hypotheses: textList,
               nextSteps: textList,
               evidence: {
-                type: "array", minItems: 1, maxItems: 8,
+                type: "array", minItems: 1, maxItems: 2,
                 items: {
                   type: "object", additionalProperties: false,
                   required: ["tool", "description"],
                   properties: {
                     tool: { type: "string", enum: ["litellm_get_cost_anomalies", "litellm_get_daily_activity", "litellm_get_model_info"] },
-                    description: { type: "string", minLength: 1, maxLength: 1200 },
+                    description: { type: "string", minLength: 1, maxLength: 400 },
                   },
                 },
               },
