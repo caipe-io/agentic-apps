@@ -42,6 +42,25 @@
   no-GPU, or unknown-hardware records. Shared links preserve the active tab and filters.
 - Type pies show the six largest types plus Other types; all records remain in the table.
 
+## Anomalies
+
+- The third tab shows configurable snapshot review signals: high monthly on-demand
+  reference cost, stopped instances with older launch dates, and missing required tags.
+- Signals use the same loaded account/region population and filters as the other views.
+  Incomplete pricing, dates, tags, and AWS pages remain visible coverage gaps. Missing
+  tags are flagged only from a complete reported tag list; tag key matching is exact.
+- An explicit investigation sends at most five highest-ranked instances through the
+  dedicated AWS agent, with at most two account/region requests in flight. The agent
+  verifies STS and current EC2 inventory, then reads CloudWatch CPU Average/Maximum
+  for the last seven completed UTC days. Request phases, elapsed time, and cancel remain visible.
+- Results separate observations, unconfirmed hypotheses, and next checks. CPU sample
+  coverage and agent-cited commands are inspectable. Fewer than five reported days
+  are insufficient for a utilization conclusion; missing metrics are never zero.
+- These are review signals, not statistical billing anomalies. Launch age is not time
+  spent stopped. Low CPU alone does not prove idleness or that stopping is safe.
+  Actual billing spikes and savings require separate billing and workload evidence.
+- Changing inventory, filters, or thresholds clears the previous investigation.
+
 ## Data and cost definitions
 
 - Inventory grain: verified AWS account + region + instance ID.
@@ -75,6 +94,7 @@
 ## Source references
 
 - [EC2 DescribeInstances](https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-instances.html)
+- [CloudWatch GetMetricStatistics](https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_GetMetricStatistics.html)
 - [AWS Price List API](https://docs.aws.amazon.com/cli/latest/reference/pricing/)
 - [SSM instance OS information](https://docs.aws.amazon.com/systems-manager/latest/userguide/example_ssm_DescribeInstanceInformation_section.html)
 

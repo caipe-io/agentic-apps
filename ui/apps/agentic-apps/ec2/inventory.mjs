@@ -1,3 +1,4 @@
+import { buildEc2AnomalyRequest } from "./anomalies.mjs";
 import { parseAwsAccountList } from "../../_lib/aws-account-config.mjs";
 
 export function ec2Configuration(env = process.env) {
@@ -19,11 +20,12 @@ export function buildEc2Request(input, configuration) {
   if (!account || !configuration.regions.includes(input.region)) throw new Error("Choose a configured AWS account and region.");
   const cursor = input.cursor ?? "";
   if (typeof cursor !== "string" || !/^[A-Za-z0-9+/=._:-]{0,8192}$/.test(cursor)) throw new Error("Invalid AWS pagination token.");
-  if (input.kind !== undefined && !["inventory", "tags"].includes(input.kind)) throw new Error("Unsupported EC2 request kind.");
-  const kind = input.kind === "tags" ? "tags" : "inventory";
+  if (input.kind !== undefined && !["inventory", "tags", "anomalies"].includes(input.kind)) throw new Error("Unsupported EC2 request kind.");
+  const kind = input.kind || "inventory";
   const instanceId = kind === "tags" ? input.instanceId : null;
   if (kind === "tags" && !/^i-[a-f0-9]{8}(?:[a-f0-9]{9})?$/.test(instanceId || "")) throw new Error("Choose a valid instance.");
   const scope = { profile: account.profile, accountId: account.accountId || null, region: input.region };
+  if (kind === "anomalies") return { ...buildEc2AnomalyRequest(input, scope), agentId: configuration.agentId };
   const query = "{nextToken:NextToken,reservations:Reservations[].{accountId:OwnerId,instances:Instances[].{instanceId:InstanceId,instanceType:InstanceType,state:State.Name,platform:PlatformDetails,architecture:Architecture,tenancy:Placement.Tenancy,lifecycle:InstanceLifecycle,launchTime:LaunchTime,tags:Tags}}}";
   const command = kind === "tags"
     ? "ec2 describe-instances --instance-ids " + instanceId + " --query 'Reservations[].Instances[].{instanceId:InstanceId,tags:Tags}'"

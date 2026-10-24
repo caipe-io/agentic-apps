@@ -25,8 +25,8 @@ export const EC2_MANIFEST = {
     ],
   },
   assistant: { enabled: true, agentId: "agent-ec2", schemaVersions: ["1.0"], maxContextBytes: 8192, capability: "contextual-chat", suggestions: true, label: "Ask AWS", agentName: "EC2 Assistant" },
-  agents: [{ id: "ec2-agent", displayName: "EC2 Assistant", required: true, dynamicAgentId: "agent-ec2", capabilities: ["aws-ec2-inventory", "aws-pricing", "instance-tags"] }],
+  agents: [{ id: "ec2-agent", displayName: "EC2 Assistant", required: true, dynamicAgentId: "agent-ec2", capabilities: ["aws-ec2-inventory", "aws-pricing", "instance-tags", "ec2-review-signals"] }],
   data: { apiBasePath: "/api/ec2", eventChannels: ["ec2.inventory.updated"] },
   health: { endpoint: "/health/ready", timeoutMs: 1500, blockLaunchWhen: ["degraded", "unreachable"] },
-  catalog: { categories: ["aws", "infrastructure", "finops"], capabilities: ["aws-ec2-inventory", "instance-tags", "on-demand-cost-estimates", "assistant-context-bridge"] },
+  catalog: { categories: ["aws", "infrastructure", "finops"], capabilities: ["aws-ec2-inventory", "instance-tags", "on-demand-cost-estimates", "ec2-review-signals", "assistant-context-bridge"] },
 };
