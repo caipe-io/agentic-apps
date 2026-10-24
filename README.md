@@ -162,6 +162,32 @@ browser. Access remains subject to CAIPE identity and policy.
 - The host forwards query parameters through the iframe and runtime proxy. The dashboard
   reads its own URL, so this also works when launched outside the host shell.
 
+### Model cost anomalies
+
+- **Anomalies** compares a selected 1/3/4/7/14 completed UTC day window with the
+  preceding 28 completed days. The current UTC day is excluded.
+- Expected spend and usage sum the corresponding weekday means from those four weeks.
+  A spend-spike candidate must meet both thresholds: default $25 above baseline and
+  50% higher spend. Thresholds are editable. A zero-spend baseline is labeled **New
+  spend**, uses only the dollar threshold, and has no percentage increase.
+- Candidates show expected/actual spend, dollar impact, percentage change, the largest
+  daily increase, input/output/total tokens, requests, and cache read/write input tokens
+  when supplied. Daily expected/actual costs are inspectable below each finding.
+  Cache tokens may overlap input counts; these categories must not be summed.
+- These are transparent review rules, not a statistical confidence score, budget
+  forecast, or proof of a deployment/configuration cause. They analyze gateway records
+  only and do not reproduce provider billing anomaly estimates or issue notifications.
+- All baseline and analysis dates must have model breakdowns that reconcile to their
+  gateway spend totals. Missing dates or partial responses are not treated as zero.
+  Incomplete coverage shows **Insufficient history** instead of a clean/no-anomaly
+  conclusion. Models with missing spend or negative adjustments are excluded visibly;
+  unavailable token/cache fields stay unknown.
+- `/api/anomalies` uses the existing read authorization and aggregated activity source.
+  Bounded history loads are coalesced and cached for 30 seconds; changing thresholds
+  reuses the source snapshot. Only derived model metrics reach the browser.
+- `tab=anomalies&days=7&minImpact=25&minIncrease=50` opens a shareable analysis view.
+  The default landing tab remains **User usage**, followed by **Overview**.
+
 ### Model prices and key provisioning
 
 - **User usage** contains key usage charts, model activity, and budget details.

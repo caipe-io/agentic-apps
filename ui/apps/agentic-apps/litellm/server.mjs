@@ -13,6 +13,7 @@ import { renderStaticDashboardExample } from "../../_lib/static-dashboard-exampl
 import { registerLiteLlmMcpTools } from "./mcp.mjs";
 import { loadLiteLlmKeyDetails, loadLiteLlmModelCatalog, sanitizeLiteLlmModelInfo } from "./model-info.mjs";
 import { renderLiteLlmDashboard } from "./dashboard.mjs";
+import { buildLiteLlmAnomalyReport, resolveLiteLlmAnomalyRange } from "./anomalies.mjs";
 import {
   buildLiteLlmVirtualKeyListQuery,
   buildLiteLlmUsageDashboard,
@@ -40,6 +41,7 @@ let keyCatalog;
 let keyCatalogRequest;
 const keyDetailsCache = new Map();
 const overviewCache = new Map();
+const anomalyCache = new Map();
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
@@ -160,6 +162,22 @@ const server = createServer(async (request, response) => {
       sendJson(response, 200, { success: true, data });
     } catch {
       sendJson(response, 502, { success: false, error: "Could not load the configured LiteLLM model catalog" });
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/anomalies" && request.method === "GET") {
+    try {
+      const data = await getLiteLlmAnomalies({
+        days: url.searchParams.get("days"),
+        minImpactUsd: url.searchParams.get("minImpact"),
+        minIncreasePercent: url.searchParams.get("minIncrease"),
+        refresh: url.searchParams.get("refresh") === "true",
+      });
+      sendJson(response, 200, { success: true, data });
+    } catch (error) {
+      console.error("LiteLLM anomaly analysis failed:", error instanceof Error ? error.message : "Unknown error");
+      sendJson(response, 502, { success: false, error: "Could not analyze gateway usage. Check reporting access and activity completeness, then retry." });
     }
     return;
   }
@@ -285,6 +303,22 @@ async function getLiteLlmOverview({ period, refresh = false }) {
   })().then((value) => { entry.pending = false; return value; }).catch((error) => { overviewCache.delete(cacheKey); throw error; });
   overviewCache.set(cacheKey, entry);
   return entry.promise;
+}
+
+async function getLiteLlmAnomalies({ days, minImpactUsd, minIncreasePercent, refresh = false }) {
+  const range = resolveLiteLlmAnomalyRange(days);
+  const cacheKey = range.windowDays + ":" + range.endDate;
+  let entry = anomalyCache.get(cacheKey);
+  if (!entry?.pending && (refresh || !entry || Date.now() - entry.loadedAt >= 30_000)) {
+    if (anomalyCache.size >= 10) anomalyCache.delete(anomalyCache.keys().next().value);
+    entry = { loadedAt: Date.now(), pending: true };
+    entry.promise = getLiteLlmDailyActivity({ startDate: range.baselineStartDate, endDate: range.endDate })
+      .then((value) => { entry.pending = false; return value; })
+      .catch((error) => { anomalyCache.delete(cacheKey); throw error; });
+    anomalyCache.set(cacheKey, entry);
+  }
+  const response = await entry.promise;
+  return { ...buildLiteLlmAnomalyReport({ response, range, minImpactUsd, minIncreasePercent }), sourceUpdatedAt: new Date(entry.loadedAt).toISOString() };
 }
 
 async function getKeyDetails(key, { refresh = false } = {}) {

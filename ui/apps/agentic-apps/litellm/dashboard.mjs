@@ -63,6 +63,12 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
     .pie-legend li { display: grid; grid-template-columns: 10px minmax(0,1fr) auto; gap: 8px; font-size: .82rem; align-items: baseline; }
     .pie-legend .model-label { min-width: 0; } .pie-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
     .pie-legend strong { display: block; font-weight: 500; } .pie-legend small { white-space: nowrap; }
+    .anomaly-finding { margin-top: 18px; } .anomaly-finding h3 { margin: 0; font-size: 1.08rem; overflow-wrap: anywhere; }
+    .anomaly-tag { display: inline-block; color: var(--warning); border: 1px solid var(--line); border-radius: 20px; padding: 3px 10px; font-size: .8rem; }
+    .anomaly-comparison { display: grid; gap: 12px; margin: 18px 0; }
+    .anomaly-comparison > div { display: grid; grid-template-columns: 80px minmax(80px,1fr) auto; align-items: center; gap: 12px; font-size: .88rem; }
+    .anomaly-comparison .spend-track { margin: 0; height: 12px; } .anomaly-comparison .expected-bar { background: var(--output); }
+    .anomaly-impact { color: var(--warning); font-weight: 600; } .anomaly-drivers { min-width: 630px; } .anomaly-rules { margin: 18px 0; }
     .chart { width: 100%; height: 240px; display: block; margin-top: 12px; }
     .budget-value { font-size: 2.2rem; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 12px; }
     .budget-track { height: 12px; background: var(--track); border-radius: 8px; overflow: hidden; margin: 18px 0 8px; } .budget-track i { display: block; height: 100%; background: var(--series); } .budget-track.over i { background: var(--warning); }
@@ -79,8 +85,9 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
     [hidden] { display: none !important; } body.compact main { padding-top: 18px; } body.compact .panel { padding: 16px; }
     @media (max-width: 850px) { .layout { grid-template-columns: 1fr; } }
     @media (max-width: 1100px) { .pie-content { grid-template-columns: 1fr; } }
-    @media (max-width: 700px) { .pie-layout { grid-template-columns: 1fr; } .tabs button { padding: 10px 6px; font-size: .82rem; } }
+    @media (max-width: 700px) { .pie-layout { grid-template-columns: 1fr; } .tabs { flex-wrap: wrap; } .tabs button { flex: 1 1 30%; padding: 10px 6px; font-size: .82rem; } }
     @media (max-width: 580px) { main { width: calc(100% - 24px); } .heading .actions { width: 100%; } .controls > label { flex: 1; } .kpis, .calculator-totals { grid-template-columns: 1fr; } .calculator { padding: 12px; } .selection > * { width: 100%; } .model-bar { grid-template-columns: 1fr auto; gap: 5px 12px; } .model-track { grid-column: 1 / -1; grid-row: 2; } .pagination { align-items: start; } }
+    @media (max-width: 580px) { .anomaly-comparison > div { grid-template-columns: 60px minmax(0,1fr) auto; gap: 8px; } }
     @media (pointer: coarse) { button, select, input { min-height: 44px; } }
   </style>
 </head>
@@ -95,6 +102,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
     <button role="tab" id="usageTab" aria-selected="true" aria-controls="usageTabPanel" tabindex="0">User usage</button>
     <button role="tab" id="overviewTab" aria-selected="false" aria-controls="overviewTabPanel" tabindex="-1">Overview</button>
     <button role="tab" id="allUsersTab" aria-selected="false" aria-controls="allUsersTabPanel" tabindex="-1">All users</button>
+    <button role="tab" id="anomaliesTab" aria-selected="false" aria-controls="anomaliesTabPanel" tabindex="-1">Anomalies</button>
     <button role="tab" id="calculatorTab" aria-selected="false" aria-controls="calculatorTabPanel" tabindex="-1">Model cost calculator</button>
   </div>
   <section class="panel catalog" aria-labelledby="usersTitle" aria-busy="true" id="catalog">
@@ -128,6 +136,25 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
       <section class="panel model-details" aria-labelledby="allModelTotalsTitle"><h2 id="allModelTotalsTitle">All model totals</h2><div class="table-wrap"><table aria-label="Gateway model totals"><thead><tr><th scope="col">Model</th><th scope="col" class="numeric">Spend · USD</th><th scope="col" class="numeric">Input tokens</th><th scope="col" class="numeric">Output tokens</th><th scope="col" class="numeric">Total tokens</th><th scope="col" class="numeric">Requests</th></tr></thead><tbody id="overviewModelRows"></tbody></table></div></section>
       <p id="overviewWarnings" class="warning small" role="status" hidden></p><p id="overviewFreshness" class="freshness"></p><p class="muted small">All time covers the gateway’s retained activity records; deleted or expired history cannot be recovered. Small model shares are grouped as Other; full model totals are available above.</p>
     </div>
+  </div>
+  <div id="anomaliesTabPanel" role="tabpanel" aria-labelledby="anomaliesTab" hidden>
+    <section class="panel" aria-labelledby="anomaliesTitle">
+      <h2 id="anomaliesTitle">Model cost anomalies</h2><p class="muted small">Find unusual model spend against the preceding four weeks. Analysis excludes the current, incomplete UTC day.</p>
+      <form id="anomalyControls" class="controls">
+        <label>Analysis window<select id="anomalyDays"><option value="1">Last completed day</option><option value="3">Last 3 completed days</option><option value="4">Last 4 completed days</option><option value="7" selected>Last 7 completed days</option><option value="14">Last 14 completed days</option></select></label>
+        <label>Minimum cost impact · USD<input id="anomalyMinImpact" type="number" min="0" max="1000000" step="any" value="25" required inputmode="decimal" /></label>
+        <label>Minimum spend increase · %<input id="anomalyMinIncrease" type="number" min="0" max="10000" step="any" value="50" required inputmode="decimal" /></label>
+        <button type="submit" id="analyzeAnomalies">Analyze</button>
+      </form>
+      <p id="anomalyStatus" class="notice small" role="status" aria-live="polite">Open this tab to analyze model activity.</p><button id="retryAnomalies" hidden>Retry analysis</button>
+      <p id="anomalyRange" class="muted small"></p><p id="anomalyCoverage" class="muted small"></p>
+      <details class="anomaly-rules"><summary>How anomalies are identified</summary><p id="anomalyMethod" class="notice small">Expected usage matches weekdays against the previous 28 completed UTC days. Both spend thresholds must be met; new spend is labeled separately.</p><p class="muted small">These are review signals, not a forecast or proof of misconfiguration. Input, output, request, and cache changes are shown only when reported. Cache tokens can overlap input tokens and should not be added to them. Deployment changes and provider billing data are not part of this analysis.</p></details>
+    </section>
+    <div id="anomalyContent" hidden>
+      <section class="kpis" aria-label="Anomaly analysis summary"><article class="panel kpi"><span class="muted small">Candidates for review</span><strong id="anomalyCount">—</strong><small>Models meeting the selected thresholds</small></article><article class="panel kpi"><span class="muted small">Spend above baseline · USD</span><strong id="anomalyImpact">—</strong><small>Combined candidate cost impact</small></article><article class="panel kpi"><span class="muted small">Models analyzed</span><strong id="anomalyModelCount">—</strong><small id="anomalyExcluded"></small></article></section>
+      <p id="anomalyEmpty" class="panel empty" hidden></p><div id="anomalyFindings"></div>
+    </div>
+    <p id="anomalyWarnings" class="warning small" role="status" hidden></p><details id="anomalyDataIssues" hidden><summary>Data issues</summary><ul id="anomalyIssueList" class="small"></ul></details><p id="anomalyFreshness" class="freshness"></p>
   </div>
   <div id="allUsersTabPanel" role="tabpanel" aria-labelledby="allUsersTab" hidden>
     <section class="panel" id="keyDirectory" aria-labelledby="allUsersTitle" aria-busy="false">
@@ -219,6 +246,13 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   state.overview = null;
   state.overviewLoading = false;
   state.modelColors = new Map();
+  state.anomalies = null;
+  state.anomaliesLoading = false;
+  if (["1", "3", "4", "7", "14"].includes(initialQuery.get("days"))) byId("anomalyDays").value = initialQuery.get("days");
+  for (const [parameter, id, max] of [["minImpact", "anomalyMinImpact", 1_000_000], ["minIncrease", "anomalyMinIncrease", 10_000]]) {
+    const value = initialQuery.get(parameter);
+    if (value !== null && value.trim() && Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= max) byId(id).value = value;
+  }
   if (["month", "3m", "6m", "12m", "all"].includes(initialPeriod)) byId("overviewPeriod").value = initialPeriod;
   byId("allUsersSearch").value = initialAllUsers ? initialQuery.get("user")?.trim() ?? "" : "";
   if (initialAllUsers && ["spend", "spend-asc", "name"].includes(initialQuery.get("sort"))) byId("allUsersSort").value = initialQuery.get("sort");
@@ -232,6 +266,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   let directoryController;
   let directorySearchTimer;
   let overviewController;
+  let anomalyController;
   const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character]);
   const number = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
   const formatUsd = (value) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 3 }).format(number(value));
@@ -247,6 +282,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     { name: "usage", button: "usageTab", panel: "usageTabPanel" },
     { name: "overview", button: "overviewTab", panel: "overviewTabPanel" },
     { name: "users", button: "allUsersTab", panel: "allUsersTabPanel" },
+    { name: "anomalies", button: "anomaliesTab", panel: "anomaliesTabPanel" },
     { name: "calculator", button: "calculatorTab", panel: "calculatorTabPanel" },
   ];
   for (const tab of tabs) byId(tab.button).addEventListener("click", () => activateTab(tab.name));
@@ -259,7 +295,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     activateTab(tabs[next].name, true);
   });
   window.addEventListener("hashchange", () => { if (window.location.hash === "#availableModels") activateTab("calculator"); });
-  activateTab(initialAllUsers ? "users" : initialQuery.get("tab") === "calculator" || window.location.hash === "#availableModels" ? "calculator" : initialQuery.get("tab") === "overview" && !selectionRequest ? "overview" : "usage");
+  activateTab(initialAllUsers ? "users" : initialQuery.get("tab") === "anomalies" ? "anomalies" : initialQuery.get("tab") === "calculator" || window.location.hash === "#availableModels" ? "calculator" : initialQuery.get("tab") === "overview" && !selectionRequest ? "overview" : "usage");
 
   function activateTab(name, focus = false) {
     state.activeTab = name;
@@ -280,6 +316,10 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     }
     if (name === "usage" && state.report) renderTrend();
     if (name === "usage" && state.report) publishContext(state.report);
+    if (name === "anomalies") {
+      if (!state.anomalies && !state.anomaliesLoading) loadAnomalies();
+      else if (state.anomalies) publishAnomalyContext(state.anomalies);
+    }
   }
 
   byId("userSearch").addEventListener("input", () => {
@@ -425,10 +465,30 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   byId("overviewPeriod").addEventListener("change", () => { clearSharedLink(); loadOverview(); });
   byId("overviewTrendMetric").addEventListener("change", renderOverviewTrend);
   byId("retryOverview").addEventListener("click", () => loadOverview());
+  byId("anomalyControls").addEventListener("submit", (event) => { event.preventDefault(); clearSharedLink(); loadAnomalies(); });
+  byId("anomalyControls").addEventListener("input", () => {
+    anomalyController?.abort();
+    state.anomaliesLoading = false;
+    state.anomalies = null;
+    byId("anomaliesTabPanel").setAttribute("aria-busy", "false");
+    byId("anomalyContent").hidden = true;
+    byId("anomalyWarnings").hidden = true;
+    byId("anomalyDataIssues").hidden = true;
+    byId("retryAnomalies").hidden = true;
+    for (const id of ["anomalyRange", "anomalyCoverage", "anomalyFreshness"]) text(id, "");
+    notice("anomalyStatus", "Select Analyze to apply these settings.");
+    clearSharedLink();
+  });
+  byId("retryAnomalies").addEventListener("click", () => loadAnomalies());
   byId("period").addEventListener("change", () => { explicitPeriod = true; clearSharedLink(); runReport(); });
   byId("copyViewLink").addEventListener("click", async () => {
     const url = new URL(appPath, window.location.origin);
-    if (state.activeTab === "users") {
+    if (state.activeTab === "anomalies") {
+      url.searchParams.set("tab", "anomalies");
+      url.searchParams.set("days", byId("anomalyDays").value);
+      url.searchParams.set("minImpact", byId("anomalyMinImpact").value);
+      url.searchParams.set("minIncrease", byId("anomalyMinIncrease").value);
+    } else if (state.activeTab === "users") {
       url.searchParams.set("tab", "users");
       if (byId("allUsersSearch").value.trim()) url.searchParams.set("user", byId("allUsersSearch").value.trim());
       url.searchParams.set("sort", byId("allUsersSort").value);
@@ -462,6 +522,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     clearTimeout(searchTimer);
     try {
       if (state.activeTab === "overview") { await loadOverview(true); return; }
+      if (state.activeTab === "anomalies") { await loadAnomalies(true); return; }
       if (state.activeTab === "users") { await loadAllUsers(true); return; }
       const loaded = await loadVirtualKeys(true);
       if (loaded && state.selectedKey) await Promise.all([runReport(), loadModels()]);
@@ -589,6 +650,86 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     if (!pagination) return;
     text("catalogCount", exact(pagination.totalCount) + " matching / " + exact(pagination.totalKeys) + " keys");
     renderUserOptions();
+  }
+
+  async function loadAnomalies(refresh = false) {
+    if (!byId("anomalyControls").reportValidity()) return;
+    anomalyController?.abort();
+    const controller = new AbortController();
+    anomalyController = controller;
+    state.anomaliesLoading = true;
+    state.anomalies = null;
+    byId("anomaliesTabPanel").setAttribute("aria-busy", "true");
+    byId("anomalyContent").hidden = true;
+    byId("anomalyWarnings").hidden = true;
+    byId("anomalyDataIssues").hidden = true;
+    byId("retryAnomalies").hidden = true;
+    for (const id of ["anomalyRange", "anomalyCoverage", "anomalyFreshness"]) text(id, "");
+    notice("anomalyStatus", "Comparing completed days with the previous four weeks…");
+    const query = new URLSearchParams({ days: byId("anomalyDays").value, minImpact: byId("anomalyMinImpact").value, minIncrease: byId("anomalyMinIncrease").value });
+    if (refresh) query.set("refresh", "true");
+    try {
+      const payload = await requestJson(route("/api/anomalies") + "?" + query, controller.signal);
+      if (controller.signal.aborted) return;
+      const report = payload.data;
+      state.anomalies = report;
+      text("anomalyRange", "Analysis: " + report.range.startDate + " to " + report.range.endDate + " · Baseline: " + report.range.baselineStartDate + " to " + report.range.baselineEndDate + " · UTC");
+      text("anomalyCoverage", "Complete model activity: " + report.coverage.baselineDays + "/28 baseline days · " + report.coverage.analysisDays + "/" + report.range.windowDays + " analysis days.");
+      text("anomalyMethod", report.methodology);
+      const issues = [...report.warnings, ...report.excludedModels.map((row) => row.model + ": " + row.reason)];
+      if (report.coverage.missingDates.length) issues.push("Missing or incomplete dates: " + report.coverage.missingDates.join(", ") + ".");
+      byId("anomalyWarnings").hidden = !issues.length;
+      text("anomalyWarnings", issues.length ? "Some activity could not be evaluated. Review data issues below." : "");
+      byId("anomalyDataIssues").hidden = !issues.length;
+      byId("anomalyIssueList").innerHTML = issues.map((issue) => '<li>' + escapeHtml(issue) + '</li>').join("");
+      text("anomalyFreshness", "Source: LiteLLM aggregated gateway activity · Loaded " + new Date(report.sourceUpdatedAt).toLocaleString() + ".");
+      if (report.status !== "ready") {
+        notice("anomalyStatus", "Insufficient history or incomplete model activity. No anomaly conclusions were produced.");
+      } else {
+        text("anomalyCount", exact(report.findings.length));
+        text("anomalyImpact", formatUsd(report.findings.reduce((sum, row) => sum + row.costImpact, 0)));
+        text("anomalyModelCount", exact(report.analyzedModels - report.excludedModels.length));
+        text("anomalyExcluded", report.excludedModels.length ? exact(report.excludedModels.length) + " additional model(s) could not be evaluated" : "Complete spend comparisons");
+        byId("anomalyFindings").innerHTML = report.findings.map((finding, index) => renderAnomalyFinding(finding, index, report)).join("");
+        byId("anomalyEmpty").hidden = report.findings.length > 0;
+        text("anomalyEmpty", report.analyzedModels === report.excludedModels.length ? "No models could be evaluated. Review the data issues below." : "No models meet both selected spend thresholds. New spend is checked against the dollar-impact threshold. This does not rule out changes below those thresholds.");
+        byId("anomalyContent").hidden = false;
+        notice("anomalyStatus", "Thresholds: at least " + formatUsd(report.thresholds.minImpactUsd) + " above expected spend and " + report.thresholds.minIncreasePercent + "% increase. New spend is labeled separately.");
+      }
+      byId("copyViewLink").disabled = false;
+      if (state.activeTab === "anomalies") publishAnomalyContext(report);
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      notice("anomalyStatus", error.message, true);
+      byId("retryAnomalies").hidden = false;
+    } finally {
+      if (!controller.signal.aborted) {
+        state.anomaliesLoading = false;
+        byId("anomaliesTabPanel").setAttribute("aria-busy", "false");
+        byId("refresh").disabled = false;
+      }
+    }
+  }
+
+  function renderAnomalyFinding(finding, index, report) {
+    const formatCount = (value) => value === null ? "Not reported" : exact(value);
+    const percent = (value) => value === null ? "—" : (value > 0 ? "+" : "") + value.toFixed(1) + "%";
+    const metrics = [["inputTokens", "Input tokens"], ["outputTokens", "Output tokens"], ["totalTokens", "Total tokens"], ["requests", "Requests"], ["cacheReadTokens", "Cache read input tokens"], ["cacheWriteTokens", "Cache write input tokens"]];
+    const observed = [["outputTokens", "Output tokens"], ["inputTokens", "Input tokens"], ["requests", "Requests"], ["cacheWriteTokens", "Cache writes"], ["cacheReadTokens", "Cache reads"]].filter(([metric]) => finding.changes[metric].difference > 0).slice(0, 3).map(([metric, label]) => label + " " + (finding.changes[metric].percent === null ? "appeared with " + compact(finding.actual[metric]) : "increased " + percent(finding.changes[metric].percent)));
+    const peak = [...finding.daily].sort((a, b) => (b.actualSpend - b.expectedSpend) - (a.actualSpend - a.expectedSpend))[0];
+    const maximum = Math.max(finding.actual.spend, finding.expected.spend);
+    const comparison = [["Expected", finding.expected.spend, "expected-bar"], ["Actual", finding.actual.spend, ""]].map(([label, value, className]) => '<div><span>' + label + '</span><div class="spend-track" aria-hidden="true"><i class="' + className + '" style="width:' + (maximum > 0 ? value / maximum * 100 : 0) + '%"></i></div><strong class="numeric">' + escapeHtml(formatUsd(value)) + '</strong></div>').join("");
+    const changes = metrics.map(([metric, label]) => '<tr><th scope="row">' + label + '</th><td class="numeric">' + escapeHtml(formatCount(finding.expected[metric])) + '</td><td class="numeric">' + escapeHtml(formatCount(finding.actual[metric])) + '</td><td class="numeric">' + (finding.changes[metric].difference === null ? "Not reported" : escapeHtml((finding.changes[metric].difference > 0 ? "+" : "") + exact(finding.changes[metric].difference))) + '</td><td class="numeric">' + escapeHtml(percent(finding.changes[metric].percent)) + '</td></tr>').join("");
+    const daily = finding.daily.map((row) => '<tr><th scope="row">' + escapeHtml(row.date) + '</th><td class="numeric">' + escapeHtml(formatUsd(row.expectedSpend)) + '</td><td class="numeric">' + escapeHtml(formatUsd(row.actualSpend)) + '</td><td class="numeric">' + escapeHtml(formatUsd(row.actualSpend - row.expectedSpend)) + '</td></tr>').join("");
+    return '<article class="panel anomaly-finding" aria-labelledby="anomaly-model-' + index + '"><div class="panel-heading"><h3 id="anomaly-model-' + index + '">' + escapeHtml(finding.model) + '</h3><span class="anomaly-tag">' + (finding.kind === "new_spend" ? "New spend" : "Spend spike") + '</span></div><p class="small muted">' + report.range.startDate + ' to ' + report.range.endDate + ' · UTC</p><div class="anomaly-comparison">' + comparison + '</div><p class="anomaly-impact">+' + escapeHtml(formatUsd(finding.costImpact)) + ' above baseline · ' + (finding.percentageIncrease === null ? 'No spend in the comparison baseline' : escapeHtml(percent(finding.percentageIncrease)) + ' spend') + '</p><p class="notice small">' + escapeHtml(observed.length ? observed.join("; ") + ". These are observed changes, not a causal explanation." : "No increases were established among the reported comparison metrics; missing metrics remain unavailable.") + '</p><p class="muted small">Largest daily cost increase: ' + escapeHtml(peak.date + " · " + formatUsd(peak.actualSpend - peak.expectedSpend)) + '.</p><div class="table-wrap"><table class="anomaly-drivers" aria-label="' + escapeHtml("Usage changes for " + finding.model) + '"><thead><tr><th scope="col">Observed metric</th><th scope="col" class="numeric">Expected</th><th scope="col" class="numeric">Actual</th><th scope="col" class="numeric">Change</th><th scope="col" class="numeric">Change %</th></tr></thead><tbody>' + changes + '</tbody></table></div><details><summary>Daily cost comparison</summary><div class="table-wrap"><table aria-label="' + escapeHtml("Daily costs for " + finding.model) + '"><thead><tr><th scope="col">Date (UTC)</th><th scope="col" class="numeric">Expected · USD</th><th scope="col" class="numeric">Actual · USD</th><th scope="col" class="numeric">Difference · USD</th></tr></thead><tbody>' + daily + '</tbody></table></div></details></article>';
+  }
+
+  function publishAnomalyContext(report) {
+    const selection = { range: report.range, thresholds: report.thresholds, status: report.status, coverage: report.coverage, findings: report.findings.slice(0, 8).map(({ model, kind, actual, expected, costImpact, percentageIncrease }) => ({ model, kind, actual, expected, costImpact, percentageIncrease })) };
+    window.parent?.postMessage({
+      type: "caipe.agenticApp.context.v1", version: "1.0", appId: "litellm",
+      context: { route: appPath, title: "Gateway cost anomaly candidates", agentId, mcpServerId: "litellm", domainAnswersRequireMcp: true, summary: report.status === "ready" ? report.findings.length + " model anomaly candidate(s) for " + report.range.startDate + " to " + report.range.endDate + "." : "Insufficient history for anomaly conclusions.", selection: JSON.stringify(selection), resourceRefs: [{ kind: "agent", id: agentId }, { kind: "mcp-server", id: "litellm-mcp" }], suggestedPrompts: ["Review these gateway cost candidates and the available evidence.", "Which user or key activity should we inspect for these models?"] },
+    }, window.location.origin);
   }
 
   async function loadOverview(refresh = false) {
