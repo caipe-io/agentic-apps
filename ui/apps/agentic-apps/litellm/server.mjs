@@ -15,7 +15,7 @@ import { buildLiteLlmKeyPeriodSpend } from "./key-period-spend.mjs";
 import { registerLiteLlmMcpTools } from "./mcp.mjs";
 import { loadLiteLlmKeyDetails, loadLiteLlmModelCatalog, sanitizeLiteLlmModelInfo } from "./model-info.mjs";
 import { renderLiteLlmDashboard } from "./dashboard.mjs";
-import { buildLiteLlmAnomalyReport, resolveLiteLlmAnomalyRange } from "./anomalies.mjs";
+import { buildLiteLlmAnomalyReport, buildLiteLlmAnomalyContributors, resolveLiteLlmAnomalyRange } from "./anomalies.mjs";
 import {
   buildLiteLlmVirtualKeyListQuery,
   buildLiteLlmUsageDashboard,
@@ -45,6 +45,7 @@ const keyDetailsCache = new Map();
 const overviewCache = new Map();
 const OVERVIEW_CACHE_TTL_MS = 4 * 60 * 60 * 1000;
 const anomalyCache = new Map();
+const anomalyContributorCache = new Map();
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
@@ -73,6 +74,7 @@ const server = createServer(async (request, response) => {
           getDailyActivity: getLiteLlmDailyActivity,
           getModelInfo: getLiteLlmModelInfo,
           getCostAnomalies: getLiteLlmAnomalies,
+          getAnomalyContributors: getLiteLlmAnomalyContributors,
         });
       },
     });
@@ -195,6 +197,17 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (url.pathname === "/api/anomaly-contributors" && request.method === "GET") {
+    try {
+      const data = await getLiteLlmAnomalyContributors({ model: url.searchParams.get("model"), snapshotId: url.searchParams.get("snapshotId"), days: url.searchParams.get("days"), endDate: url.searchParams.get("endDate"), minImpactUsd: url.searchParams.get("minImpact"), minIncreasePercent: url.searchParams.get("minIncrease") });
+      sendJson(response, 200, { success: true, data });
+    } catch (error) {
+      console.error("LiteLLM anomaly attribution failed:", error instanceof Error ? error.message : "Unknown error");
+      sendJson(response, 502, { success: false, error: "Could not attribute this model spike. Refresh analysis and retry; no user or key was inferred." });
+    }
+    return;
+  }
+
   if (url.pathname === "/api/overview" && request.method === "GET") {
     try {
       const data = await getLiteLlmOverview({ period: url.searchParams.get("period"), refresh: url.searchParams.get("refresh") === "true" });
@@ -211,6 +224,8 @@ const server = createServer(async (request, response) => {
       const report = await getLiteLlmVirtualKeyUsage({
         keyId: url.searchParams.get("key"),
         period: url.searchParams.get("period"),
+        startDate: url.searchParams.get("startDate"),
+        endDate: url.searchParams.get("endDate"),
         refresh: url.searchParams.get("refresh") === "true",
       });
       sendJson(response, 200, { success: true, data: report });
@@ -254,8 +269,8 @@ server.listen(port, () => {
   console.log(`Configure CAIPE with AGENTIC_APP_LITELLM_ORIGIN=http://localhost:${port}`);
 });
 
-async function getLiteLlmDailyActivity({ startDate, endDate }) {
-  return fetchLiteLlmJson("/user/daily/activity/aggregated", { start_date: startDate, end_date: endDate });
+async function getLiteLlmDailyActivity({ startDate, endDate, model }) {
+  return fetchLiteLlmJson("/user/daily/activity/aggregated", { start_date: startDate, end_date: endDate, model });
 }
 
 async function getLiteLlmModelInfo() {
@@ -279,11 +294,11 @@ async function getLiteLlmVirtualKeys({ refresh = false } = {}) {
   }
 }
 
-async function getLiteLlmVirtualKeyUsage({ keyId, period, refresh }) {
+async function getLiteLlmVirtualKeyUsage({ keyId, period, startDate, endDate, refresh }) {
   const catalog = await getLiteLlmVirtualKeys({ refresh });
   const key = catalog.keys.find((candidate) => candidate.public.id === keyId);
   if (!key) throw new Error("Virtual key not found");
-  const range = resolveLiteLlmUsageRange(period);
+  const range = resolveLiteLlmUsageRange(period, new Date(), { startDate, endDate });
   const responses = [];
   for (const segment of range.segments) {
     responses.push(await fetchLiteLlmJson("/user/daily/activity/aggregated", {
@@ -337,6 +352,7 @@ async function getLiteLlmAnomalies({ days, minImpactUsd, minIncreasePercent, end
     now = new Date(timestamp + 86_400_000);
   }
   const range = resolveLiteLlmAnomalyRange(days, now);
+  if (refresh) anomalyContributorCache.clear();
   const cacheKey = range.windowDays + ":" + range.endDate;
   let entry = anomalyCache.get(cacheKey);
   if (!entry?.pending && (refresh || !entry || Date.now() - entry.loadedAt >= 30_000)) {
@@ -352,6 +368,32 @@ async function getLiteLlmAnomalies({ days, minImpactUsd, minIncreasePercent, end
   const { generatedAt, ...evidence } = report;
   const snapshotId = createHash("sha256").update(JSON.stringify(evidence)).digest("hex").slice(0, 32);
   return { ...report, snapshotId, sourceUpdatedAt: new Date(entry.loadedAt).toISOString() };
+}
+
+async function getLiteLlmAnomalyContributors({ model, snapshotId, ...options }) {
+  if (typeof model !== "string" || !model || model.length > 500 || typeof snapshotId !== "string" || !/^[a-f0-9]{32}$/.test(snapshotId)) throw new Error("A model and anomaly snapshot are required");
+  const report = await getLiteLlmAnomalies(options);
+  const finding = report.findings.find((row) => row.model === model);
+  if (report.snapshotId !== snapshotId || report.status !== "ready" || !finding) return { status: "unavailable", reason: "This model comparison changed or is unavailable. Refresh analysis before attributing spend.", model, contributors: [] };
+  const cacheKey = snapshotId + ":" + model;
+  const cached = anomalyContributorCache.get(cacheKey);
+  if (cached?.pending || (cached && Date.now() - cached.loadedAt < 30_000)) return cached.promise;
+  if (anomalyContributorCache.size >= 40) anomalyContributorCache.delete(anomalyContributorCache.keys().next().value);
+  const entry = { pending: true, loadedAt: Date.now() };
+  const sourceEntry = anomalyCache.get(report.range.windowDays + ":" + report.range.endDate);
+  entry.promise = (async () => {
+    const [response, globalResponse, catalog] = await Promise.all([
+      getLiteLlmDailyActivity({ startDate: report.range.baselineStartDate, endDate: report.range.endDate, model }),
+      sourceEntry.promise,
+      getLiteLlmVirtualKeys(),
+    ]);
+    const data = buildLiteLlmAnomalyContributors({ response, globalResponse, finding, range: report.range, keys: catalog.keys });
+    entry.pending = false;
+    entry.loadedAt = Date.now();
+    return { ...data, snapshotId, sourceUpdatedAt: new Date(entry.loadedAt).toISOString() };
+  })().catch((error) => { if (anomalyContributorCache.get(cacheKey) === entry) anomalyContributorCache.delete(cacheKey); throw error; });
+  anomalyContributorCache.set(cacheKey, entry);
+  return entry.promise;
 }
 
 async function getKeyDetails(key, { refresh = false } = {}) {

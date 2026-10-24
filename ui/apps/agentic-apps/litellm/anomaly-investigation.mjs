@@ -30,7 +30,7 @@ export function buildLiteLlmAnomalyInvestigationFormat() {
                   type: "object", additionalProperties: false,
                   required: ["tool", "description"],
                   properties: {
-                    tool: { type: "string", enum: ["litellm_get_cost_anomalies", "litellm_get_daily_activity", "litellm_get_model_info"] },
+                    tool: { type: "string", enum: ["litellm_get_cost_anomalies", "litellm_get_anomaly_contributors", "litellm_get_daily_activity", "litellm_get_model_info"] },
                     description: { type: "string", minLength: 1, maxLength: 400 },
                   },
                 },
@@ -68,7 +68,7 @@ export function validateLiteLlmAnomalyInvestigation(value, report) {
   const findings = value.findings.map((finding) => {
     if (!object(finding) || !text(finding.model, 500) || !candidates.has(finding.model) || seen.has(finding.model)) throw new Error("The agent returned an unknown or duplicate candidate model.");
     if (!["supported", "inconclusive", "not_supported"].includes(finding.assessment) || ![finding.observations, finding.hypotheses, finding.nextSteps].every(list)) throw new Error("The agent returned an invalid assessment.");
-    if (!Array.isArray(finding.evidence) || !finding.evidence.length || finding.evidence.length > 8 || finding.evidence.some((entry) => !object(entry) || !["litellm_get_cost_anomalies", "litellm_get_daily_activity", "litellm_get_model_info"].includes(entry.tool) || !text(entry.description, 1200))) throw new Error("The agent did not cite usable MCP evidence for a finding.");
+    if (!Array.isArray(finding.evidence) || !finding.evidence.length || finding.evidence.length > 8 || finding.evidence.some((entry) => !object(entry) || !["litellm_get_cost_anomalies", "litellm_get_anomaly_contributors", "litellm_get_daily_activity", "litellm_get_model_info"].includes(entry.tool) || !text(entry.description, 1200))) throw new Error("The agent did not cite usable MCP evidence for a finding.");
     seen.add(finding.model);
     return { model: finding.model, assessment: finding.assessment, observations: finding.observations, hypotheses: finding.hypotheses, nextSteps: finding.nextSteps, evidence: finding.evidence.map(({ tool, description }) => ({ tool, description })) };
   });

@@ -173,6 +173,20 @@ browser. Access remains subject to CAIPE identity and policy.
 
 ### Model cost anomalies
 
+- Each model spike automatically loads the top ten users/keys by **added spend**
+  against the same four-week weekday baseline. Model-filtered key spend must
+  reconcile with the exact model comparison before attribution is shown.
+- Contributor rows show expected spend, actual spend, added spend, and share of
+  all positive key increases. Decreases on other keys are shown as offsets;
+  unresolved/deleted key ownership stays unknown. Shared credentials identify
+  an owner, not necessarily the person or workload responsible.
+- **View key usage** preserves the anomaly's exact completed UTC dates in a
+  shareable `period=custom&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD` link.
+  Custom ranges are validated and bounded to 42 completed days.
+- Attribution reads run at concurrency two, coalesce with agent tool requests,
+  and cache only derived, sanitized results for 30 seconds (at most 40 entries).
+  The read-only `litellm_get_anomaly_contributors` MCP tool gives the agent the
+  same model-specific attribution without exposing raw key material.
 - Anomalies shows a spinner, elapsed time, and request stages while gateway data
   loads and the agent runs. Stages reflect actual request boundaries; the invoke
   endpoint does not stream individual tool progress or percentage completion.

@@ -134,7 +134,14 @@ export function prepareLiteLlmVirtualKeys(payload) {
   }).sort((left, right) => left.public.label.localeCompare(right.public.label));
 }
 
-export function resolveLiteLlmUsageRange(period, now = new Date()) {
+export function resolveLiteLlmUsageRange(period, now = new Date(), customRange = {}) {
+  if (period === "custom") {
+    const { startDate, endDate } = customRange;
+    const validDate = (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value + "T00:00:00Z")) && new Date(value + "T00:00:00Z").toISOString().slice(0, 10) === value;
+    const days = (Date.parse(endDate + "T00:00:00Z") - Date.parse(startDate + "T00:00:00Z")) / 86_400_000 + 1;
+    if (!validDate(startDate) || !validDate(endDate) || !Number.isInteger(days) || days < 1 || days > 42 || endDate >= isoDate(utcDate(now))) throw new Error("Custom usage requires 1 to 42 completed UTC dates.");
+    return { period: "custom", label: "Anomaly window", startDate, endDate, granularity: "day", segments: [{ startDate, endDate }] };
+  }
   const normalizedPeriod = Object.hasOwn(PERIOD_MONTHS, period) ? period : "month";
   const end = utcDate(now);
   let start;
