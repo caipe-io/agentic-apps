@@ -1,5 +1,5 @@
 export function buildLiteLlmAnomalyInvestigationFormat() {
-  const textList = { type: "array", maxItems: 8, items: { type: "string", minLength: 1, maxLength: 1200 } };
+  const textList = { type: "array", maxItems: 3, items: { type: "string", minLength: 1, maxLength: 400 } };
   return {
     type: "json_schema",
     schema_id: "litellm.anomaly_investigation.v1",
@@ -12,9 +12,9 @@ export function buildLiteLlmAnomalyInvestigationFormat() {
         sourceSnapshotId: { type: "string", maxLength: 64 },
         analysisStartDate: { type: "string", format: "date" },
         analysisEndDate: { type: "string", format: "date" },
-        summary: { type: "string", minLength: 1, maxLength: 2400 },
+        summary: { type: "string", minLength: 1, maxLength: 600 },
         findings: {
-          type: "array", maxItems: 50,
+          type: "array", maxItems: 5,
           items: {
             type: "object", additionalProperties: false,
             required: ["model", "assessment", "observations", "hypotheses", "nextSteps", "evidence"],
@@ -25,13 +25,13 @@ export function buildLiteLlmAnomalyInvestigationFormat() {
               hypotheses: textList,
               nextSteps: textList,
               evidence: {
-                type: "array", minItems: 1, maxItems: 8,
+                type: "array", minItems: 1, maxItems: 2,
                 items: {
                   type: "object", additionalProperties: false,
                   required: ["tool", "description"],
                   properties: {
                     tool: { type: "string", enum: ["litellm_get_cost_anomalies", "litellm_get_daily_activity", "litellm_get_model_info"] },
-                    description: { type: "string", minLength: 1, maxLength: 1200 },
+                    description: { type: "string", minLength: 1, maxLength: 400 },
                   },
                 },
               },
@@ -50,7 +50,9 @@ export function validateLiteLlmAnomalyInvestigation(value, report) {
   // structured_output field. Both transports must satisfy the same validation.
   if (typeof value === "string") {
     if (value.length > 500_000) throw new Error("The agent investigation response is too large.");
-    const json = value.trim().replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/i, "$1");
+    const trimmed = value.trim();
+    const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```$/i);
+    const json = fence ? fence[1] : trimmed.slice(Math.max(0, trimmed.indexOf("{")));
     try { value = JSON.parse(json); }
     catch { throw new Error("The agent did not return a JSON investigation result."); }
   }
