@@ -97,32 +97,116 @@ browser. Access remains subject to CAIPE identity and policy.
   full model breakdown is available in the details table. Missing activity dates use zero
   bars. Unknown budgets are labeled explicitly without a utilization meter.
 
+### Personal usage and budgets
+
+- **User usage** is the first/default tab. It opens with a single searchable user/key
+  picker and loads usage only after a selection (or an explicit user/key link).
+  There are no My usage/Find users mode buttons or automatic identity-based selections.
+- **Overview**, the second tab, shows gateway activity totals, model token/spend pie charts,
+  a usage trend, and an always-visible model totals table. Periods are current month, 3, 6, and 12
+  calendar months including the current month, or all retained history. Long periods
+  use monthly trend buckets. Pie colors match between token and spend charts; small
+  model shares are grouped as Other and missing attribution is labeled explicitly.
+- `/api/overview` reuses the existing aggregated activity loader without a key filter.
+  It never sums per-key budget counters or combines user/key totals. It uses the same
+  read authorization and configured gateway credential as the existing analytics API;
+  upstream access and retention determine coverage. Incomplete responses fail visibly.
+  All time requests the full date range from the Unix epoch and labels coverage from
+  the first retained activity date. Overview reads are coalesced and cached for 30 seconds.
+- **All users** contains the spend ranking with independent search, sorting, and
+  pagination. Selecting View usage opens **User usage** without changing the ranking's
+  filters or page. Personal key searches do not filter the all-users ranking.
+- The user picker searches the authorized catalog by username, email, or key name.
+  Matching users appear directly in a searchable dropdown, grouped by owner email
+  with their virtual keys underneath. Select a key to open its usage; typing alone
+  does not change the current usage view. Arrow keys, Home/End, Enter, and Escape
+  support keyboard selection. The dropdown has paging, loading, empty, and retry states.
+  The selected owner and key remain visible while searching or paging other results.
+  The key spend table is available in **All users**.
+  Browsing all keys never selects the first or highest-spend user automatically.
+- The selected owner/key remain visible. The verified JWT email is used only to label
+  whether the selected key belongs to the viewer; admins follow the same identity matching.
+  URL parameters and unsigned identity headers cannot establish ownership or authorization.
+- Budgets come from the selected key's `/key/info`, its owner's `/user/info`, and its
+  team's `/team/info` where present. The dashboard distinguishes key, user, and team
+  limits, spend, remaining balance, and reset periods. A missing key limit does not imply
+  that the owner has no budget. Lookup failures remain unavailable, not unlimited.
+- The main budget card shows a configured key limit first, then a team limit for team
+  keys or a user limit for personal keys. Other scope records remain visible below it.
+  User and team budgets cover more than the selected key; their spend is never mixed
+  with key-only usage totals. Enforcement remains the gateway's responsibility.
+- Key details are cached server-side for 30 seconds and concurrent pricing/usage reads
+  share the lookup. Refresh data requests fresh budget details.
+
 ### Shareable usage views
 
 - Open `/apps/litellm?user=example-user&period=month` to search a username, alias,
   or email and select an exact match or a unique search result. Ambiguous searches show
-  the matching directory for selection; missing users do not fall back to another key.
-  If several keys have the same exact alias or owner, the current sort determines which
-  one opens; a copied key-specific link identifies one key unambiguously.
+  the matching dropdown options for selection; missing users do not fall back to another key.
+  Several keys with the same alias or owner require an explicit key selection; a copied
+  key-specific link identifies one key unambiguously.
 - Optional `key=vk_…` selects an opaque virtual-key ID across the complete catalog,
   including keys outside the directory's current page. Missing key IDs require a new
   selection. These IDs are selectors, not credentials.
 - `period` accepts `current`, `month`, `3m`, `6m`, or `12m`; a valid URL period takes
   precedence over the host's default range. `sort` accepts `spend`, `spend-asc`, or `name`.
-- `tab=calculator` opens the model cost calculator tab directly. The default is the
-  usage and budgets tab; existing `#availableModels` links open the calculator tab.
-- **Copy link** creates a public app URL with the selected key, readable alias, period,
-  sorting, and active tab. If clipboard access fails, the dashboard displays the link for manual copy.
+- Without a user/key filter, the default is the **User usage** search page.
+  `tab=overview` opens **Overview**, which also accepts `period=all`.
+  `tab=usage`, `tab=users`, and `tab=calculator` explicitly select User usage, All users,
+  and the model cost calculator respectively. User/key links open the individual usage view.
+  Existing `#availableModels` links open the calculator tab.
+- **Copy link** preserves the active view: overview period, all-users search/sort, or
+  the selected key, alias, period, sort, and detail tab. If clipboard access fails, the
+  dashboard displays the link for manual copy.
   Recipients still need normal dashboard access; links never include API tokens.
 - The host forwards query parameters through the iframe and runtime proxy. The dashboard
   reads its own URL, so this also works when launched outside the host shell.
 
+### Model cost anomalies
+
+- **Analyze with agent** creates an authorized conversation and invokes the configured
+  LiteLLM agent through the shared host invoke client. Opening the tab loads only
+  calculated candidates; agent runs require the explicit button action.
+- The agent calls `litellm_get_cost_anomalies` with the same dates and thresholds,
+  then uses daily activity or model inventory MCP evidence as needed. Its structured
+  response must match the candidate snapshot and dates, and cite MCP evidence for
+  each assessed model. Agent-cited evidence is not an independently verified tool trace.
+- Agent findings separate observations, possible causes, recommended checks, and
+  limitations. Partial, unavailable, or malformed responses are shown explicitly;
+  calculated spend comparisons remain visible and are not replaced by agent estimates.
+  Changing settings or refreshing cancels the pending browser request and clears stale
+  results; cancellation does not guarantee that a host-side agent run stops immediately.
+
+- **Anomalies** compares a selected 1/3/4/7/14 completed UTC day window with the
+  preceding 28 completed days. The current UTC day is excluded.
+- Expected spend and usage sum the corresponding weekday means from those four weeks.
+  A spend-spike candidate must meet both thresholds: default $25 above baseline and
+  50% higher spend. Thresholds are editable. A zero-spend baseline is labeled **New
+  spend**, uses only the dollar threshold, and has no percentage increase.
+- Candidates show expected/actual spend, dollar impact, percentage change, the largest
+  daily increase, input/output/total tokens, requests, and cache read/write input tokens
+  when supplied. Daily expected/actual costs are inspectable below each finding.
+  Cache tokens may overlap input counts; these categories must not be summed.
+- These are transparent review rules, not a statistical confidence score, budget
+  forecast, or proof of a deployment/configuration cause. They analyze gateway records
+  only and do not reproduce provider billing anomaly estimates or issue notifications.
+- All baseline and analysis dates must have model breakdowns that reconcile to their
+  gateway spend totals. Missing dates or partial responses are not treated as zero.
+  Incomplete coverage shows **Insufficient history** instead of a clean/no-anomaly
+  conclusion. Models with missing spend or negative adjustments are excluded visibly;
+  unavailable token/cache fields stay unknown.
+- `/api/anomalies` uses the existing read authorization and aggregated activity source.
+  Bounded history loads are coalesced and cached for 30 seconds; changing thresholds
+  reuses the source snapshot. Only derived model metrics reach the browser.
+- `tab=anomalies&days=7&minImpact=25&minIncrease=50` opens a shareable analysis view.
+  The default landing tab remains **User usage**, followed by **Overview**.
+
 ### Model prices and key provisioning
 
-- **Usage & budgets** contains usage charts, model activity, and budget details.
+- **User usage** contains key usage charts, model activity, and budget details.
   **Model cost calculator** contains the calculator, searchable model prices, and key
   provisioning. Key selection is shared, and calculator lines survive tab switches.
-- Compare models links to a searchable, paginated catalog from the deployment's
+- The Model cost calculator tab includes a searchable, paginated catalog from the deployment's
   `/model/info`. Input and output rates are shown in USD per million text tokens.
   Users can adjust input/output token counts and sort by estimated cost or either rate.
 - Add catalog models to the multi-line token cost calculator. Each line has independent
@@ -136,7 +220,7 @@ browser. Access remains subject to CAIPE identity and policy.
   explicitly configured zero rates remain zero. Non-token model modes are not estimated.
   Rows represent deployments, so a load-balanced alias can have multiple price rows.
 - Selecting a virtual key loads `/key/info` using its hash, plus `/team/info` or
-  `/user/info` for inherited restrictions. Only model lists, status, expiry, and RPM/TPM
+  `/user/info` for inherited restrictions (both are read when present). Only model lists, status, expiry, and RPM/TPM
   limits reach the browser. Raw credentials, key hashes, provider configuration,
   user keys, and arbitrary metadata are excluded.
 - The catalog labels explicit key model/group/wildcard matches and unresolved inheritance.
@@ -147,7 +231,8 @@ browser. Access remains subject to CAIPE identity and policy.
   Refresh data reloads both prices and provisioning for the current selection.
 
 References: [LiteLLM model pricing](https://docs.litellm.ai/docs/proxy/model_cost_map),
-[model access](https://docs.litellm.ai/docs/proxy/model_access).
+[model access](https://docs.litellm.ai/docs/proxy/model_access),
+[budget scopes](https://docs.litellm.ai/docs/proxy/users).
 
 ## FinOps AWS account selection
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";
 
 import { handleAppMcpRequest } from "../../_lib/app-mcp-server.mjs";
 import { createRequiredAgenticAppJwtVerifier } from "../../_lib/jwt-verify.mjs";
@@ -11,8 +12,9 @@ import {
 } from "../../_lib/runtime-base-path.mjs";
 import { renderStaticDashboardExample } from "../../_lib/static-dashboard-examples.mjs";
 import { registerLiteLlmMcpTools } from "./mcp.mjs";
-import { loadLiteLlmModelCatalog, sanitizeLiteLlmModelInfo } from "./model-info.mjs";
+import { loadLiteLlmKeyDetails, loadLiteLlmModelCatalog, sanitizeLiteLlmModelInfo } from "./model-info.mjs";
 import { renderLiteLlmDashboard } from "./dashboard.mjs";
+import { buildLiteLlmAnomalyReport, resolveLiteLlmAnomalyRange } from "./anomalies.mjs";
 import {
   buildLiteLlmVirtualKeyListQuery,
   buildLiteLlmUsageDashboard,
@@ -38,6 +40,9 @@ const verifier = createRequiredAgenticAppJwtVerifier({
 
 let keyCatalog;
 let keyCatalogRequest;
+const keyDetailsCache = new Map();
+const overviewCache = new Map();
+const anomalyCache = new Map();
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
@@ -65,6 +70,7 @@ const server = createServer(async (request, response) => {
         registerLiteLlmMcpTools(mcpServer, {
           getDailyActivity: getLiteLlmDailyActivity,
           getModelInfo: getLiteLlmModelInfo,
+          getCostAnomalies: getLiteLlmAnomalies,
         });
       },
     });
@@ -116,7 +122,11 @@ const server = createServer(async (request, response) => {
   if (url.pathname === "/api/virtual-keys" && request.method === "GET") {
     try {
       const catalog = await getLiteLlmVirtualKeys({ refresh: url.searchParams.get("refresh") === "true" });
-      const result = selectLiteLlmVirtualKeys(catalog.keys, {
+      const email = request.caipeIdentity?.email?.trim().toLowerCase() || null;
+      const myKeys = email ? catalog.keys.filter((key) => key.public.owner.toLowerCase() === email || key.ownerId?.toLowerCase() === email) : [];
+      const scope = url.searchParams.get("scope") === "mine" ? "mine" : "all";
+      const scopedKeys = scope === "mine" ? myKeys : catalog.keys;
+      const result = selectLiteLlmVirtualKeys(scopedKeys, {
         search: url.searchParams.get("search") ?? "",
         sort: url.searchParams.get("sort") ?? "spend",
         page: url.searchParams.get("page") ?? 1,
@@ -126,13 +136,15 @@ const server = createServer(async (request, response) => {
       const requestedUser = url.searchParams.get("user")?.trim().toLowerCase();
       let selectedKey;
       if (requestedKey) {
-        selectedKey = catalog.keys.find((key) => key.public.id === requestedKey)?.public ?? null;
+        selectedKey = scopedKeys.find((key) => key.public.id === requestedKey)?.public ?? null;
       } else if (requestedUser) {
         const username = requestedUser.split("@")[0];
-        const exactMatches = catalog.keys.filter(({ public: key }) => key.label.toLowerCase() === requestedUser || key.owner.toLowerCase() === requestedUser || (requestedUser.includes("@") && key.label.toLowerCase() === username));
-        selectedKey = exactMatches.length ? selectLiteLlmVirtualKeys(exactMatches, { sort: result.sort, size: 1 }).keys[0] : result.pagination.totalCount === 1 ? result.keys[0] : null;
+        const exactMatches = scopedKeys.filter(({ public: key }) => key.label.toLowerCase() === requestedUser || key.owner.toLowerCase() === requestedUser || (requestedUser.includes("@") && key.label.toLowerCase() === username));
+        selectedKey = exactMatches.length === 1 ? exactMatches[0].public : result.pagination.totalCount === 1 ? result.keys[0] : null;
+      } else if (scope === "mine") {
+        selectedKey = myKeys.length === 1 ? myKeys[0].public : null;
       }
-      sendJson(response, 200, { success: true, ...result, ...(selectedKey !== undefined ? { selectedKey } : {}), updatedAt: catalog.updatedAt });
+      sendJson(response, 200, { success: true, ...result, scope, viewer: { email, name: request.caipeIdentity?.name ?? null, linkedKeys: myKeys.length, keyIds: myKeys.map((key) => key.public.id) }, ...(selectedKey !== undefined ? { selectedKey } : {}), updatedAt: catalog.updatedAt });
     } catch (error) {
       sendJson(response, 502, {
         success: false,
@@ -148,10 +160,37 @@ const server = createServer(async (request, response) => {
       const catalog = keyId ? await getLiteLlmVirtualKeys() : null;
       const key = keyId ? catalog.keys.find((candidate) => candidate.public.id === keyId) : null;
       if (keyId && !key) { sendJson(response, 404, { success: false, error: "Virtual key not found" }); return; }
-      const data = await loadLiteLlmModelCatalog(fetchLiteLlmJson, key);
+      const data = await loadLiteLlmModelCatalog(fetchLiteLlmJson, key, { keyDetails: key ? getKeyDetails(key) : undefined });
       sendJson(response, 200, { success: true, data });
     } catch {
       sendJson(response, 502, { success: false, error: "Could not load the configured LiteLLM model catalog" });
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/anomalies" && request.method === "GET") {
+    try {
+      const data = await getLiteLlmAnomalies({
+        days: url.searchParams.get("days"),
+        minImpactUsd: url.searchParams.get("minImpact"),
+        minIncreasePercent: url.searchParams.get("minIncrease"),
+        refresh: url.searchParams.get("refresh") === "true",
+      });
+      sendJson(response, 200, { success: true, data });
+    } catch (error) {
+      console.error("LiteLLM anomaly analysis failed:", error instanceof Error ? error.message : "Unknown error");
+      sendJson(response, 502, { success: false, error: "Could not analyze gateway usage. Check reporting access and activity completeness, then retry." });
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/overview" && request.method === "GET") {
+    try {
+      const data = await getLiteLlmOverview({ period: url.searchParams.get("period"), refresh: url.searchParams.get("refresh") === "true" });
+      sendJson(response, 200, { success: true, data });
+    } catch (error) {
+      console.error("LiteLLM gateway overview failed:", error instanceof Error ? error.message : "Unknown error");
+      sendJson(response, 502, { success: false, error: "Could not load gateway-wide usage for this period. Check the gateway reporting permissions and retained history." });
     }
     return;
   }
@@ -242,7 +281,65 @@ async function getLiteLlmVirtualKeyUsage({ keyId, period, refresh }) {
       api_key: key.upstreamKey,
     }));
   }
-  return { ...buildLiteLlmUsageDashboard({ key, range, responses }), keysUpdatedAt: catalog.updatedAt };
+  const details = await getKeyDetails(key, { refresh });
+  const report = buildLiteLlmUsageDashboard({ key, range, responses });
+  return { ...report, budgets: details.budgets, warnings: [...report.warnings, ...details.warnings], keysUpdatedAt: catalog.updatedAt };
+}
+
+async function getLiteLlmOverview({ period, refresh = false }) {
+  const range = resolveLiteLlmUsageRange(period);
+  const cacheKey = range.period + ":" + range.endDate;
+  const cached = overviewCache.get(cacheKey);
+  if (cached?.pending || (!refresh && cached && Date.now() - cached.loadedAt < 30_000)) return cached.promise;
+  if (overviewCache.size >= 10) overviewCache.delete(overviewCache.keys().next().value);
+  const entry = { loadedAt: Date.now(), pending: true };
+  entry.promise = (async () => {
+    const responses = [];
+    for (const segment of range.segments) {
+      const data = await getLiteLlmDailyActivity(segment);
+      if (!Array.isArray(data?.results) || data.metadata?.has_more || Number(data.metadata?.total_pages) > 1) throw new Error("Incomplete gateway usage response");
+      responses.push(data);
+    }
+    // Never sum key budget counters: these records already aggregate gateway activity.
+    return buildLiteLlmUsageDashboard({ range, responses });
+  })().then((value) => { entry.pending = false; return value; }).catch((error) => { overviewCache.delete(cacheKey); throw error; });
+  overviewCache.set(cacheKey, entry);
+  return entry.promise;
+}
+
+async function getLiteLlmAnomalies({ days, minImpactUsd, minIncreasePercent, endDate, refresh = false }) {
+  let now = new Date();
+  if (endDate !== undefined) {
+    const timestamp = Date.parse(endDate + "T00:00:00Z");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate) || !Number.isFinite(timestamp) || new Date(timestamp).toISOString().slice(0, 10) !== endDate || endDate > resolveLiteLlmAnomalyRange(1).endDate) throw new Error("Analysis end date must be a completed UTC date");
+    now = new Date(timestamp + 86_400_000);
+  }
+  const range = resolveLiteLlmAnomalyRange(days, now);
+  const cacheKey = range.windowDays + ":" + range.endDate;
+  let entry = anomalyCache.get(cacheKey);
+  if (!entry?.pending && (refresh || !entry || Date.now() - entry.loadedAt >= 30_000)) {
+    if (anomalyCache.size >= 10) anomalyCache.delete(anomalyCache.keys().next().value);
+    entry = { loadedAt: Date.now(), pending: true };
+    entry.promise = getLiteLlmDailyActivity({ startDate: range.baselineStartDate, endDate: range.endDate })
+      .then((value) => { entry.pending = false; return value; })
+      .catch((error) => { anomalyCache.delete(cacheKey); throw error; });
+    anomalyCache.set(cacheKey, entry);
+  }
+  const response = await entry.promise;
+  const report = buildLiteLlmAnomalyReport({ response, range, minImpactUsd, minIncreasePercent });
+  const { generatedAt, ...evidence } = report;
+  const snapshotId = createHash("sha256").update(JSON.stringify(evidence)).digest("hex").slice(0, 32);
+  return { ...report, snapshotId, sourceUpdatedAt: new Date(entry.loadedAt).toISOString() };
+}
+
+async function getKeyDetails(key, { refresh = false } = {}) {
+  const cached = keyDetailsCache.get(key.public.id);
+  if (cached?.pending || (!refresh && cached && Date.now() - cached.loadedAt < 30_000)) return cached.promise;
+  if (keyDetailsCache.size >= 500) keyDetailsCache.delete(keyDetailsCache.keys().next().value);
+  const entry = { loadedAt: Date.now(), pending: true };
+  entry.promise = loadLiteLlmKeyDetails(fetchLiteLlmJson, key).then((value) => { entry.pending = false; return value; }).catch((error) => { keyDetailsCache.delete(key.public.id); throw error; });
+  keyDetailsCache.set(key.public.id, entry);
+  return entry.promise;
 }
 
 async function fetchLiteLlmJson(pathname, query = {}) {

@@ -71,26 +71,47 @@ export function describeModelProvisioning(model, provisioning) {
   return "Not directly listed";
 }
 
-export async function loadLiteLlmModelCatalog(fetchJson, key = null) {
-  const inventoryRequest = fetchJson("/model/info");
+export async function loadLiteLlmKeyDetails(fetchJson, key) {
   const warnings = [];
-  const lookup = key ? (/^[a-f0-9]{64}$/i.test(key.upstreamKey) ? key.upstreamKey.toLowerCase() : createHash("sha256").update(key.upstreamKey).digest("hex")) : null;
+  const lookup = /^[a-f0-9]{64}$/i.test(key.upstreamKey) ? key.upstreamKey.toLowerCase() : createHash("sha256").update(key.upstreamKey).digest("hex");
   // Key material remains server-side; hashes also keep raw tokens out of access logs.
-  const infoRequest = key ? fetchJson("/key/info", { key: lookup }).catch(() => {
-    warnings.push("Key provisioning lookup failed. Model access has not been determined.");
+  const keyInfo = await fetchJson("/key/info", { key: lookup }).catch(() => {
+    warnings.push("Key details could not be refreshed; key budget values use the catalog snapshot.");
     return null;
-  }) : Promise.resolve(null);
-  const [rawInventory, keyInfo] = await Promise.all([inventoryRequest, infoRequest]);
+  });
+  const info = isRecord(keyInfo?.info) ? keyInfo.info : null;
+  const ownerId = safeString(info?.user_id) ?? key.ownerId;
+  const teamId = safeString(info?.team_id) ?? key.public.teamId;
+  const [owner, team] = await Promise.all([
+    ownerId ? fetchJson("/user/info", { user_id: ownerId }).catch(() => { warnings.push("User budget and model restrictions could not be loaded."); return null; }) : null,
+    teamId ? fetchJson("/team/info", { team_id: teamId }).catch(() => { warnings.push("Team model restrictions and budget could not be loaded."); return null; }) : null,
+  ]);
+  const fallbackKey = { max_budget: key.public.maxBudget, spend: key.public.spend, budget_duration: key.public.budgetDuration, budget_reset_at: key.public.budgetResetAt };
+  const budgets = [sanitizeBudget("key", info ? { ...fallbackKey, ...info } : fallbackKey, info ? "loaded" : "catalog")];
+  if (ownerId) budgets.push(sanitizeBudget("user", owner?.user_info, isRecord(owner?.user_info) ? "loaded" : "unavailable"));
+  if (teamId) budgets.push(sanitizeBudget("team", team?.team_info, isRecord(team?.team_info) ? "loaded" : "unavailable"));
+  return { provisioning: sanitizeKeyProvisioning(keyInfo, { team, owner, warnings }), budgets, warnings };
+}
+
+function sanitizeBudget(scope, record, status) {
+  const limit = safeNumber(record?.max_budget ?? record?.litellm_budget_table?.max_budget ?? record?.budget?.max_budget) ?? null;
+  const spend = safeNumber(record?.spend) ?? null;
+  return {
+    scope, status, maxBudget: limit, spend,
+    remainingBudget: limit !== null && spend !== null ? Math.max(0, limit - spend) : null,
+    budgetUtilizationPercent: limit > 0 && spend !== null ? spend / limit * 100 : null,
+    budgetDuration: safeString(record?.budget_duration ?? record?.litellm_budget_table?.budget_duration) ?? null,
+    budgetResetAt: safeString(record?.budget_reset_at) ?? null,
+  };
+}
+
+export async function loadLiteLlmModelCatalog(fetchJson, key = null, { keyDetails } = {}) {
+  const [rawInventory, details] = await Promise.all([
+    fetchJson("/model/info"),
+    key ? keyDetails ?? loadLiteLlmKeyDetails(fetchJson, key) : null,
+  ]);
   if (!Array.isArray(rawInventory?.data)) throw new Error("LiteLLM returned an invalid model inventory");
-  let team, owner;
-  if (typeof keyInfo?.info?.team_id === "string" && keyInfo.info.team_id) {
-    try { team = await fetchJson("/team/info", { team_id: keyInfo.info.team_id }); }
-    catch { warnings.push("Team model restrictions could not be loaded."); }
-  } else if (typeof keyInfo?.info?.user_id === "string" && keyInfo.info.user_id) {
-    try { owner = await fetchJson("/user/info", { user_id: keyInfo.info.user_id }); }
-    catch { warnings.push("Owner model restrictions could not be loaded."); }
-  }
-  const provisioning = key ? sanitizeKeyProvisioning(keyInfo, { team, owner, warnings }) : { status: "not-selected", models: null, warnings: [] };
+  const provisioning = details?.provisioning ?? { status: "not-selected", models: null, warnings: [] };
   const inventory = sanitizeLiteLlmModelInfo(rawInventory, { maxModels: Infinity });
   return {
     ...inventory,
