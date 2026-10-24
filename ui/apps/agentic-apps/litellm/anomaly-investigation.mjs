@@ -50,7 +50,9 @@ export function validateLiteLlmAnomalyInvestigation(value, report) {
   // structured_output field. Both transports must satisfy the same validation.
   if (typeof value === "string") {
     if (value.length > 500_000) throw new Error("The agent investigation response is too large.");
-    const json = value.trim().replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/i, "$1");
+    const trimmed = value.trim();
+    const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```$/i);
+    const json = fence ? fence[1] : trimmed.slice(Math.max(0, trimmed.indexOf("{")));
     try { value = JSON.parse(json); }
     catch { throw new Error("The agent did not return a JSON investigation result."); }
   }

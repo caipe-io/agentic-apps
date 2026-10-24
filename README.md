@@ -167,6 +167,9 @@ browser. Access remains subject to CAIPE identity and policy.
 - **Analyze with agent** creates an authorized conversation and invokes the configured
   LiteLLM agent through the shared host invoke client. Opening the tab loads only
   calculated candidates; agent runs require the explicit button action.
+- Daily-activity MCP evidence returns only compact numeric totals, supports an exact
+  model filter, and limits requests to 42 days. User/key breakdowns are excluded so
+  supporting evidence stays within gateway response buffers.
 - The agent calls `litellm_get_cost_anomalies` with the same dates and thresholds,
   then uses daily activity or model inventory MCP evidence as needed. Its structured
   response (native structured output or final JSON on older invoke runtimes) must
