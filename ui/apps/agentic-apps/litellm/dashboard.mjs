@@ -49,7 +49,6 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
     .numeric { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .spend-cell { min-width: 180px; } .spend-track { height: 6px; background: var(--track); margin-top: 6px; border-radius: 6px; overflow: hidden; } .spend-track i { display: block; height: 100%; background: var(--series); }
     .key-choice { white-space: nowrap; } .key-choice[aria-pressed="true"] { border-color: var(--series); color: var(--series); }
-    .scope-switch { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; } .scope-switch button[aria-pressed="true"] { border-color: var(--series); color: var(--series); }
     .viewing-context { padding: 10px 14px; border-left: 3px solid var(--series); background: var(--surface); margin-bottom: 14px; overflow-wrap: anywhere; }
     .budget-scope { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; } .budget-scope strong { display: block; color: var(--text); }
     .directory { margin-top: 14px; } .directory > summary { color: var(--text); } .directory[open] > summary { margin-bottom: 14px; }
@@ -88,20 +87,18 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
 <body class="${compact ? "compact" : ""}">
 <main>
   <header class="heading">
-    <div><h1>LLM usage &amp; budgets</h1><p class="subtitle">Gateway model usage, individual budgets, and cost planning.</p></div>
+    <div><h1>LLM usage &amp; budgets</h1><p class="subtitle">Search for a user to view their usage and budgets.</p></div>
     <div class="actions"><button id="compareModels">Compare models</button><button id="copyViewLink" disabled>Copy link</button><button id="refresh" disabled>Refresh data</button><button id="openAssistant" class="primary">Ask LiteLLM</button></div>
   </header>
   <div class="tabs" role="tablist" aria-label="Dashboard views" id="dashboardTabs">
-    <button role="tab" id="overviewTab" aria-selected="true" aria-controls="overviewTabPanel" tabindex="0">Overview</button>
-    <button role="tab" id="usageTab" aria-selected="false" aria-controls="usageTabPanel" tabindex="-1">User usage</button>
+    <button role="tab" id="usageTab" aria-selected="true" aria-controls="usageTabPanel" tabindex="0">User usage</button>
+    <button role="tab" id="overviewTab" aria-selected="false" aria-controls="overviewTabPanel" tabindex="-1">Overview</button>
     <button role="tab" id="allUsersTab" aria-selected="false" aria-controls="allUsersTabPanel" tabindex="-1">All users</button>
     <button role="tab" id="calculatorTab" aria-selected="false" aria-controls="calculatorTabPanel" tabindex="-1">Model cost calculator</button>
   </div>
-  <section class="panel catalog" aria-labelledby="usersTitle" aria-busy="true" id="catalog" hidden>
-    <div class="panel-heading"><h2 id="usersTitle">Users &amp; virtual keys</h2><span id="catalogCount" class="muted small" role="status" aria-live="polite">Loading keys…</span></div>
-    <p id="identityStatus" class="muted small" role="status">Matching your signed-in email to your keys…</p>
-    <div class="scope-switch" role="group" aria-label="Whose usage to view"><button id="myUsage" aria-pressed="true">My usage</button><button id="findUsers" aria-pressed="false">Find users</button></div>
-    <p id="userSelection" class="small picker-selection" role="status">No user selected.</p>
+  <section class="panel catalog" aria-labelledby="usersTitle" aria-busy="true" id="catalog">
+    <div class="panel-heading"><h2 id="usersTitle">Find a user</h2><span id="catalogCount" class="muted small" role="status" aria-live="polite">Loading users…</span></div>
+    <p id="userSelection" class="small picker-selection" role="status" hidden></p>
     <div class="controls">
       <div class="user-picker" id="userPicker">
         <label for="userSearch" id="userSearchLabel">Select a user or virtual key</label>
@@ -111,16 +108,15 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
           <div class="picker-footer"><span id="pickerStatus" class="muted small" role="status" aria-live="polite">Loading users…</span><div class="actions"><button id="retryUsers" hidden>Retry</button><button id="pickerPrevious" disabled aria-label="Previous user results">Previous</button><button id="pickerNext" disabled aria-label="Next user results">Next</button></div></div>
         </div>
       </div>
-      <label>Sort by<select id="keySort"><option value="spend">Highest spend</option><option value="spend-asc">Lowest spend</option><option value="name">Username A–Z</option></select></label>
     </div>
-    <p id="userSearchHelp" class="muted small picker-help">Type to find a user, then select their key from the dropdown. Use ↑ / ↓ and Enter to choose.</p>
+    <p id="userSearchHelp" class="muted small picker-help">Choose a user’s key from the dropdown to load their usage.</p>
     <p id="catalogStatus" class="notice small" role="status" aria-live="polite"></p>
   </section>
   <div id="shareControls">
     <p id="shareStatus" class="notice small" role="status" aria-live="polite"></p>
     <label id="shareLinkField" hidden>Shareable dashboard link<input id="shareLinkInput" type="url" readonly /></label>
   </div>
-  <div id="overviewTabPanel" role="tabpanel" aria-labelledby="overviewTab">
+  <div id="overviewTabPanel" role="tabpanel" aria-labelledby="overviewTab" hidden>
     <div class="selection"><div><h2>Gateway overview</h2><p class="muted small">Total recorded usage visible to this dashboard across users and virtual keys.</p></div><label>Overview period<select id="overviewPeriod"><option value="month">Current month</option><option value="3m">Last 3 months</option><option value="6m">Last 6 months</option><option value="12m">Last 12 months</option><option value="all">All time</option></select></label></div>
     <p id="overviewStatus" class="notice" role="status" aria-live="polite">Loading gateway usage…</p><button id="retryOverview" hidden>Retry loading overview</button>
     <div id="overviewContent" hidden>
@@ -128,7 +124,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
       <section class="kpis" aria-label="Gateway totals in selected period"><article class="panel kpi"><span class="muted small">Total spend · USD</span><strong id="overviewSpend">—</strong><small>Recorded spend in this period</small></article><article class="panel kpi"><span class="muted small">Total tokens</span><strong id="overviewTokens">—</strong><small id="overviewTokenSplit"></small></article><article class="panel kpi"><span class="muted small">Requests</span><strong id="overviewRequests">—</strong><small>Recorded API requests</small></article></section>
       <div class="pie-layout"><section class="panel" aria-labelledby="tokenPieTitle"><h2 id="tokenPieTitle">Tokens by model</h2><div class="pie-content"><svg id="tokenPie" class="pie-chart" role="img" aria-label="Model share of total tokens"></svg><ul id="tokenPieLegend" class="pie-legend" aria-label="Token share by model"></ul></div></section><section class="panel" aria-labelledby="spendPieTitle"><h2 id="spendPieTitle">Spend by model · USD</h2><div class="pie-content"><svg id="spendPie" class="pie-chart" role="img" aria-label="Model share of spend in USD"></svg><ul id="spendPieLegend" class="pie-legend" aria-label="Spend share by model"></ul></div></section></div>
       <section class="panel"><div class="panel-heading"><h2 id="overviewTrendTitle">Usage over time</h2><label>Overview chart measure<select id="overviewTrendMetric"><option value="spend">Spend · USD</option><option value="totalTokens">Tokens</option><option value="requests">Requests</option></select></label></div><p id="overviewTrendEmpty" class="empty" hidden>No usage recorded in this period.</p><svg id="overviewTrendChart" class="chart" role="img" aria-label="Gateway usage over time"></svg></section>
-      <details class="panel model-details"><summary>All model totals</summary><div class="table-wrap"><table aria-label="Gateway model totals"><thead><tr><th scope="col">Model</th><th scope="col" class="numeric">Spend · USD</th><th scope="col" class="numeric">Input tokens</th><th scope="col" class="numeric">Output tokens</th><th scope="col" class="numeric">Total tokens</th><th scope="col" class="numeric">Requests</th></tr></thead><tbody id="overviewModelRows"></tbody></table></div></details>
+      <section class="panel model-details" aria-labelledby="allModelTotalsTitle"><h2 id="allModelTotalsTitle">All model totals</h2><div class="table-wrap"><table aria-label="Gateway model totals"><thead><tr><th scope="col">Model</th><th scope="col" class="numeric">Spend · USD</th><th scope="col" class="numeric">Input tokens</th><th scope="col" class="numeric">Output tokens</th><th scope="col" class="numeric">Total tokens</th><th scope="col" class="numeric">Requests</th></tr></thead><tbody id="overviewModelRows"></tbody></table></div></section>
       <p id="overviewWarnings" class="warning small" role="status" hidden></p><p id="overviewFreshness" class="freshness"></p><p class="muted small">All time covers the gateway’s retained activity records; deleted or expired history cannot be recovered. Small model shares are grouped as Other; full model totals are available above.</p>
     </div>
   </div>
@@ -143,7 +139,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
     </section>
   </div>
   <div id="usageTabPanel" role="tabpanel" aria-labelledby="usageTab">
-  <section aria-labelledby="selectedTitle" id="usageSection">
+  <section aria-labelledby="selectedTitle" id="usageSection" hidden>
     <p id="viewingContext" class="viewing-context small" hidden></p>
     <div class="selection"><div><h2 id="selectedTitle">Select a user or virtual key</h2><p id="selectedOwner" class="muted small"></p></div><label>Usage period<select id="period"><option value="current">Today</option><option value="month" selected>Current month</option><option value="3m">Last 3 months</option><option value="6m">Last 6 months</option><option value="12m">Last 12 months</option></select></label></div>
     <p id="reportStatus" class="notice" role="status" aria-live="polite">Usage will load after the key list is ready.</p>
@@ -212,7 +208,6 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   const initialPeriod = initialQuery.get("period");
   let explicitPeriod = ["current", "month", "3m", "6m", "12m"].includes(initialPeriod);
   let selectionRequest = requestedKey || requestedUser ? { key: requestedKey, user: requestedUser } : null;
-  state.scope = selectionRequest ? "all" : "mine";
   state.viewer = null;
   state.search = requestedUser;
   state.pickerOpen = false;
@@ -228,7 +223,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   if (initialAllUsers && ["spend", "spend-asc", "name"].includes(initialQuery.get("sort"))) byId("allUsersSort").value = initialQuery.get("sort");
   byId("userSearch").value = requestedUser;
   if (explicitPeriod) byId("period").value = initialPeriod;
-  if (["spend", "spend-asc", "name"].includes(initialQuery.get("sort"))) byId("keySort").value = initialQuery.get("sort");
+  state.keySort = ["spend", "spend-asc", "name"].includes(initialQuery.get("sort")) ? initialQuery.get("sort") : "name";
   let catalogController;
   let reportController;
   let modelsController;
@@ -248,8 +243,8 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   const text = (id, value) => { byId(id).textContent = value; };
   const notice = (id, message, error = false) => { text(id, message); byId(id).classList.toggle("error", error); };
   const tabs = [
-    { name: "overview", button: "overviewTab", panel: "overviewTabPanel" },
     { name: "usage", button: "usageTab", panel: "usageTabPanel" },
+    { name: "overview", button: "overviewTab", panel: "overviewTabPanel" },
     { name: "users", button: "allUsersTab", panel: "allUsersTabPanel" },
     { name: "calculator", button: "calculatorTab", panel: "calculatorTabPanel" },
   ];
@@ -264,7 +259,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   });
   byId("compareModels").addEventListener("click", () => activateTab("calculator", true));
   window.addEventListener("hashchange", () => { if (window.location.hash === "#availableModels") activateTab("calculator"); });
-  activateTab(initialAllUsers ? "users" : initialQuery.get("tab") === "calculator" || window.location.hash === "#availableModels" ? "calculator" : initialQuery.get("tab") === "usage" || selectionRequest ? "usage" : "overview");
+  activateTab(initialAllUsers ? "users" : initialQuery.get("tab") === "calculator" || window.location.hash === "#availableModels" ? "calculator" : initialQuery.get("tab") === "overview" && !selectionRequest ? "overview" : "usage");
 
   function activateTab(name, focus = false) {
     state.activeTab = name;
@@ -290,13 +285,11 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   byId("userSearch").addEventListener("input", () => {
     clearTimeout(searchTimer);
     catalogController?.abort();
-    state.scope = "all";
     state.search = byId("userSearch").value.trim();
     state.catalogLoading = true;
     state.catalogError = "";
     state.activeOption = -1;
-    renderScope();
-    // Typing only searches. Opening another user's usage requires an explicit selection.
+      // Typing only searches. Opening another user's usage requires an explicit selection.
     selectionRequest = null;
     openUserPicker();
     searchTimer = setTimeout(() => { state.page = 1; loadVirtualKeys(); }, 250);
@@ -335,25 +328,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   byId("retryUsers").addEventListener("click", () => loadVirtualKeys());
   byId("pickerPrevious").addEventListener("click", () => { state.page -= 1; byId("userSearch").focus(); loadVirtualKeys(); });
   byId("pickerNext").addEventListener("click", () => { state.page += 1; byId("userSearch").focus(); loadVirtualKeys(); });
-  for (const [id, scope] of [["myUsage", "mine"], ["findUsers", "all"]]) byId(id).addEventListener("click", () => {
-    clearTimeout(searchTimer);
-    clearSelection();
-    state.scope = scope;
-    state.search = "";
-    byId("userSearch").value = "";
-    selectionRequest = null;
-    state.page = 1;
-    renderScope();
-    loadVirtualKeys();
-    if (scope === "all") byId("userSearch").focus();
-    else closeUserPicker();
-  });
-  function renderScope() {
-    byId("myUsage").setAttribute("aria-pressed", String(state.scope === "mine"));
-    byId("findUsers").setAttribute("aria-pressed", String(state.scope === "all"));
-  }
   function openUserPicker() {
-    const searchAll = state.scope === "mine";
     state.pickerOpen = true;
     byId("userSearch").value = state.search;
     byId("userSearch").setAttribute("aria-expanded", "true");
@@ -361,13 +336,6 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     byId("toggleUsers").setAttribute("aria-label", "Hide users");
     byId("userPopup").hidden = false;
     renderUserOptions();
-    if (searchAll) {
-      state.scope = "all";
-      state.page = 1;
-      selectionRequest = null;
-      renderScope();
-      loadVirtualKeys();
-    }
   }
   function closeUserPicker() {
     state.pickerOpen = false;
@@ -425,8 +393,6 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     closeUserPicker();
     byId("userSearch").select();
   }
-  renderScope();
-  byId("keySort").addEventListener("change", () => { clearTimeout(searchTimer); clearSharedLink(); state.page = 1; loadVirtualKeys(); });
   byId("allUsersSearch").addEventListener("input", () => {
     clearTimeout(directorySearchTimer);
     directoryController?.abort();
@@ -448,11 +414,9 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     const key = button && state.directory.keys.find((candidate) => candidate.id === button.dataset.keyId);
     if (key) {
       clearTimeout(searchTimer);
-      state.scope = "all";
       state.search = key.label;
       state.page = 1;
       selectionRequest = null;
-      renderScope();
       selectKey(key);
       activateTab("usage", true);
       loadVirtualKeys();
@@ -469,13 +433,14 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
       if (byId("allUsersSearch").value.trim()) url.searchParams.set("user", byId("allUsersSearch").value.trim());
       url.searchParams.set("sort", byId("allUsersSort").value);
     } else if (state.activeTab === "overview") {
+      url.searchParams.set("tab", "overview");
       url.searchParams.set("period", byId("overviewPeriod").value);
     } else {
       const user = state.selectedKey?.label ?? state.search;
       if (user) url.searchParams.set("user", user);
       if (state.selectedKey) url.searchParams.set("key", state.selectedKey.id);
       url.searchParams.set("period", byId("period").value);
-      url.searchParams.set("sort", byId("keySort").value);
+      url.searchParams.set("sort", state.keySort);
       url.searchParams.set("tab", state.activeTab);
     }
     const link = url.toString();
@@ -565,26 +530,6 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     byId("shareLinkInput").value = "";
   }
 
-  function clearSelection() {
-    reportController?.abort();
-    modelsController?.abort();
-    state.selectedKey = null;
-    if (state.directory.loaded) renderDirectory();
-    text("userSelection", "No user selected.");
-    state.report = null;
-    state.modelCatalog = null;
-    byId("viewingContext").hidden = true;
-    byId("reportContent").hidden = true;
-    byId("availableModels").hidden = true;
-    byId("modelsPendingStatus").hidden = false;
-    text("modelsPendingStatus", "Loading models for the current search…");
-    byId("usageSection").setAttribute("aria-busy", "false");
-    text("selectedTitle", "Select a user or virtual key");
-    text("selectedOwner", "");
-    notice("reportStatus", "Choose a matching key to view its usage.");
-    clearSharedLink();
-  }
-
   async function loadVirtualKeys(refresh = false) {
     clearTimeout(searchTimer);
     searchTimer = null;
@@ -598,7 +543,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     byId("catalog").setAttribute("aria-busy", "true");
     notice("catalogStatus", "Loading keys…");
     text("catalogCount", "Searching…");
-    const query = new URLSearchParams({ scope: state.scope, page: String(state.page), size: "10", sort: byId("keySort").value, search: state.search });
+    const query = new URLSearchParams({ scope: "all", page: String(state.page), size: "10", sort: state.keySort, search: state.search });
     const requestedSelection = selectionRequest;
     if (requestedSelection?.key) query.set("key", requestedSelection.key);
     if (requestedSelection?.user) query.set("user", requestedSelection.user);
@@ -608,21 +553,19 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
       if (controller.signal.aborted) return false;
       state.keys = payload.keys;
       state.viewer = payload.viewer;
-      const viewer = state.viewer;
-      text("identityStatus", viewer?.email ? "Signed in as " + viewer.email + " · " + viewer.linkedKeys + " linked key(s)." : "Your sign-in email is unavailable to this app. Select Find users and search manually; another user's usage will not open automatically.");
       state.pagination = payload.pagination;
       state.page = payload.pagination.page;
       state.maxSpend = payload.maxSpend;
       state.catalogLoading = false;
       renderKeys();
-      byId("copyViewLink").disabled = false;
-      notice("catalogStatus", "Key spend updated " + new Date(payload.updatedAt).toLocaleString() + ".");
+      byId("copyViewLink").disabled = !state.selectedKey && ["usage", "calculator"].includes(state.activeTab);
+      notice("catalogStatus", requestedSelection?.key && !payload.selectedKey ? "The linked key was not found. Search for a user and choose a key." : "");
       if (!state.selectedKey) {
         selectionRequest = null;
         if (payload.selectedKey) {
           selectKey(payload.selectedKey);
         } else {
-          notice("reportStatus", requestedSelection?.key ? "The linked key was not found. Choose a key from the search results." : payload.pagination.totalCount ? "Choose one of the matching keys to view its usage." : state.scope === "mine" ? "No keys are linked to your signed-in email. Select Find users to search by username, email, or key name." : "No virtual key matches this search.");
+          notice("reportStatus", requestedSelection?.key ? "The linked key was not found. Choose a key from the search results." : payload.pagination.totalCount ? "Choose one of the matching keys to view its usage." : "No virtual key matches this search.");
           loadModels();
         }
       }
@@ -648,7 +591,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   function renderKeys() {
     const pagination = state.pagination;
     if (!pagination) return;
-    text("catalogCount", exact(pagination.totalCount) + " matching / " + exact(pagination.totalKeys) + (state.scope === "mine" ? " of your keys" : " keys"));
+    text("catalogCount", exact(pagination.totalCount) + " matching / " + exact(pagination.totalKeys) + " keys");
     renderUserOptions();
   }
 
@@ -812,6 +755,9 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   function selectKey(key) {
     clearSharedLink();
     state.selectedKey = key;
+    byId("usageSection").hidden = false;
+    byId("userSelection").hidden = false;
+    byId("copyViewLink").disabled = false;
     text("userSelection", "Selected: " + key.owner + " · Key: " + key.label);
     if (!state.pickerOpen) byId("userSearch").value = key.owner + " · " + key.label;
     byId("viewingContext").hidden = false;

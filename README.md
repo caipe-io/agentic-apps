@@ -99,8 +99,11 @@ browser. Access remains subject to CAIPE identity and policy.
 
 ### Personal usage and budgets
 
-- The default **Overview** shows gateway activity totals, model token/spend pie charts,
-  a usage trend, and the full model totals. Periods are current month, 3, 6, and 12
+- **User usage** is the first/default tab. It opens with a single searchable user/key
+  picker and loads usage only after a selection (or an explicit user/key link).
+  There are no My usage/Find users mode buttons or automatic identity-based selections.
+- **Overview**, the second tab, shows gateway activity totals, model token/spend pie charts,
+  a usage trend, and an always-visible model totals table. Periods are current month, 3, 6, and 12
   calendar months including the current month, or all retained history. Long periods
   use monthly trend buckets. Pie colors match between token and spend charts; small
   model shares are grouped as Other and missing attribution is labeled explicitly.
@@ -113,10 +116,7 @@ browser. Access remains subject to CAIPE identity and policy.
 - **All users** contains the spend ranking with independent search, sorting, and
   pagination. Selecting View usage opens **User usage** without changing the ranking's
   filters or page. Personal key searches do not filter the all-users ranking.
-- The **User usage → My usage** view matches key ownership to the verified app JWT's email.
-  It selects a key only when exactly one owned key matches. Multiple owned keys require
-  an explicit choice. Admins follow the same identity matching as other signed-in users.
-- **Find users** searches the authorized catalog by username, email, or key name.
+- The user picker searches the authorized catalog by username, email, or key name.
   Matching users appear directly in a searchable dropdown, grouped by owner email
   with their virtual keys underneath. Select a key to open its usage; typing alone
   does not change the current usage view. Arrow keys, Home/End, Enter, and Escape
@@ -124,9 +124,9 @@ browser. Access remains subject to CAIPE identity and policy.
   The selected owner and key remain visible while searching or paging other results.
   The key spend table is available in **All users**.
   Browsing all keys never selects the first or highest-spend user automatically.
-- The page identifies the signed-in email and states whose key is being viewed.
-  Missing identity or an unmatched email leaves usage unselected with instructions to
-  search manually. URL parameters and unsigned identity headers cannot define My usage.
+- The selected owner/key remain visible. The verified JWT email is used only to label
+  whether the selected key belongs to the viewer; admins follow the same identity matching.
+  URL parameters and unsigned identity headers cannot establish ownership or authorization.
 - Budgets come from the selected key's `/key/info`, its owner's `/user/info`, and its
   team's `/team/info` where present. The dashboard distinguishes key, user, and team
   limits, spend, remaining balance, and reset periods. A missing key limit does not imply
@@ -150,9 +150,10 @@ browser. Access remains subject to CAIPE identity and policy.
   selection. These IDs are selectors, not credentials.
 - `period` accepts `current`, `month`, `3m`, `6m`, or `12m`; a valid URL period takes
   precedence over the host's default range. `sort` accepts `spend`, `spend-asc`, or `name`.
-- Without a user/key filter, the default is **Overview**, which also accepts `period=all`.
-  A user/key filter opens **User usage**. `tab=usage`, `tab=users`, and `tab=calculator`
-  explicitly select User usage, All users, and the model cost calculator respectively.
+- Without a user/key filter, the default is the **User usage** search page.
+  `tab=overview` opens **Overview**, which also accepts `period=all`.
+  `tab=usage`, `tab=users`, and `tab=calculator` explicitly select User usage, All users,
+  and the model cost calculator respectively. User/key links open the individual usage view.
   Existing `#availableModels` links open the calculator tab.
 - **Copy link** preserves the active view: overview period, all-users search/sort, or
   the selected key, alias, period, sort, and detail tab. If clipboard access fails, the
