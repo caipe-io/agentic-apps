@@ -39,6 +39,7 @@ const verifier = createRequiredAgenticAppJwtVerifier({
 let keyCatalog;
 let keyCatalogRequest;
 const keyDetailsCache = new Map();
+const overviewCache = new Map();
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
@@ -163,6 +164,17 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (url.pathname === "/api/overview" && request.method === "GET") {
+    try {
+      const data = await getLiteLlmOverview({ period: url.searchParams.get("period"), refresh: url.searchParams.get("refresh") === "true" });
+      sendJson(response, 200, { success: true, data });
+    } catch (error) {
+      console.error("LiteLLM gateway overview failed:", error instanceof Error ? error.message : "Unknown error");
+      sendJson(response, 502, { success: false, error: "Could not load gateway-wide usage for this period. Check the gateway reporting permissions and retained history." });
+    }
+    return;
+  }
+
   if (url.pathname === "/api/usage" && request.method === "GET") {
     try {
       const report = await getLiteLlmVirtualKeyUsage({
@@ -252,6 +264,27 @@ async function getLiteLlmVirtualKeyUsage({ keyId, period, refresh }) {
   const details = await getKeyDetails(key, { refresh });
   const report = buildLiteLlmUsageDashboard({ key, range, responses });
   return { ...report, budgets: details.budgets, warnings: [...report.warnings, ...details.warnings], keysUpdatedAt: catalog.updatedAt };
+}
+
+async function getLiteLlmOverview({ period, refresh = false }) {
+  const range = resolveLiteLlmUsageRange(period);
+  const cacheKey = range.period + ":" + range.endDate;
+  const cached = overviewCache.get(cacheKey);
+  if (cached?.pending || (!refresh && cached && Date.now() - cached.loadedAt < 30_000)) return cached.promise;
+  if (overviewCache.size >= 10) overviewCache.delete(overviewCache.keys().next().value);
+  const entry = { loadedAt: Date.now(), pending: true };
+  entry.promise = (async () => {
+    const responses = [];
+    for (const segment of range.segments) {
+      const data = await getLiteLlmDailyActivity(segment);
+      if (!Array.isArray(data?.results) || data.metadata?.has_more || Number(data.metadata?.total_pages) > 1) throw new Error("Incomplete gateway usage response");
+      responses.push(data);
+    }
+    // Never sum key budget counters: these records already aggregate gateway activity.
+    return buildLiteLlmUsageDashboard({ range, responses });
+  })().then((value) => { entry.pending = false; return value; }).catch((error) => { overviewCache.delete(cacheKey); throw error; });
+  overviewCache.set(cacheKey, entry);
+  return entry.promise;
 }
 
 async function getKeyDetails(key, { refresh = false } = {}) {

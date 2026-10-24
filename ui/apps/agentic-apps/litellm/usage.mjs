@@ -6,6 +6,7 @@ const PERIOD_MONTHS = Object.freeze({
   "3m": 2,
   "6m": 5,
   "12m": 11,
+  all: null,
 });
 
 const VIRTUAL_KEY_PAGE_SIZE = 100;
@@ -134,7 +135,10 @@ export function resolveLiteLlmUsageRange(period, now = new Date()) {
   const end = utcDate(now);
   let start;
   let label;
-  if (normalizedPeriod === "current") {
+  if (normalizedPeriod === "all") {
+    start = new Date("1970-01-01T00:00:00Z");
+    label = "All time";
+  } else if (normalizedPeriod === "current") {
     start = new Date(end);
     label = "Today";
   } else if (normalizedPeriod === "month") {
@@ -154,8 +158,10 @@ export function resolveLiteLlmUsageRange(period, now = new Date()) {
     label,
     startDate: isoDate(start),
     endDate: isoDate(end),
-    granularity: ["6m", "12m"].includes(normalizedPeriod) ? "month" : "day",
-    segments: monthSegments(start, end),
+    granularity: ["6m", "12m", "all"].includes(normalizedPeriod) ? "month" : "day",
+    // The aggregated endpoint accepts a full date range. Do not issue hundreds of
+    // empty monthly requests to discover the beginning of retained history.
+    segments: normalizedPeriod === "all" ? [{ startDate: isoDate(start), endDate: isoDate(end) }] : monthSegments(start, end),
   };
 }
 
@@ -189,7 +195,9 @@ export function buildLiteLlmUsageDashboard({ key, range, responses }) {
     }
   }
 
-  const trend = aggregateTrend([...daily.values()], range);
+  const dates = [...daily.keys()].filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)).sort();
+  const reportRange = range.period === "all" && dates.length ? { ...range, startDate: dates[0] } : range;
+  const trend = aggregateTrend([...daily.values()], reportRange);
   const modelRows = [...models.values()]
     .sort((left, right) => (right.spend - left.spend) || (right.totalTokens - left.totalTokens));
 
@@ -199,11 +207,12 @@ export function buildLiteLlmUsageDashboard({ key, range, responses }) {
     range: {
       period: range.period,
       label: range.label,
-      startDate: range.startDate,
+      startDate: reportRange.startDate,
       endDate: range.endDate,
       granularity: range.granularity,
     },
-    virtualKey: key.public,
+    virtualKey: key?.public ?? null,
+    scope: key ? "key" : "gateway",
     totals,
     trend,
     models: modelRows,

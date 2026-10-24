@@ -99,7 +99,21 @@ browser. Access remains subject to CAIPE identity and policy.
 
 ### Personal usage and budgets
 
-- The default **My usage** view matches key ownership to the verified app JWT's email.
+- The default **Overview** shows gateway activity totals, model token/spend pie charts,
+  a usage trend, and the full model totals. Periods are current month, 3, 6, and 12
+  calendar months including the current month, or all retained history. Long periods
+  use monthly trend buckets. Pie colors match between token and spend charts; small
+  model shares are grouped as Other and missing attribution is labeled explicitly.
+- `/api/overview` reuses the existing aggregated activity loader without a key filter.
+  It never sums per-key budget counters or combines user/key totals. It uses the same
+  read authorization and configured gateway credential as the existing analytics API;
+  upstream access and retention determine coverage. Incomplete responses fail visibly.
+  All time requests the full date range from the Unix epoch and labels coverage from
+  the first retained activity date. Overview reads are coalesced and cached for 30 seconds.
+- **All users** contains the spend ranking with independent search, sorting, and
+  pagination. Selecting View usage opens **User usage** without changing the ranking's
+  filters or page. Personal key searches do not filter the all-users ranking.
+- The **User usage → My usage** view matches key ownership to the verified app JWT's email.
   It selects a key only when exactly one owned key matches. Multiple owned keys require
   an explicit choice. Admins follow the same identity matching as other signed-in users.
 - **Find users** searches the authorized catalog by username, email, or key name.
@@ -108,7 +122,7 @@ browser. Access remains subject to CAIPE identity and policy.
   does not change the current usage view. Arrow keys, Home/End, Enter, and Escape
   support keyboard selection. The dropdown has paging, loading, empty, and retry states.
   The selected owner and key remain visible while searching or paging other results.
-  **Browse key spend ranking** expands the optional spend table.
+  The key spend table is available in **All users**.
   Browsing all keys never selects the first or highest-spend user automatically.
 - The page identifies the signed-in email and states whose key is being viewed.
   Missing identity or an unmatched email leaves usage unselected with instructions to
