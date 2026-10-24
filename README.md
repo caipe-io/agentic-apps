@@ -167,7 +167,7 @@ browser. Access remains subject to CAIPE identity and policy.
 - **User usage** contains key usage charts, model activity, and budget details.
   **Model cost calculator** contains the calculator, searchable model prices, and key
   provisioning. Key selection is shared, and calculator lines survive tab switches.
-- Compare models links to a searchable, paginated catalog from the deployment's
+- The Model cost calculator tab includes a searchable, paginated catalog from the deployment's
   `/model/info`. Input and output rates are shown in USD per million text tokens.
   Users can adjust input/output token counts and sort by estimated cost or either rate.
 - Add catalog models to the multi-line token cost calculator. Each line has independent

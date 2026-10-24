@@ -88,7 +88,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
 <main>
   <header class="heading">
     <div><h1>LLM usage &amp; budgets</h1><p class="subtitle">Search for a user to view their usage and budgets.</p></div>
-    <div class="actions"><button id="compareModels">Compare models</button><button id="copyViewLink" disabled>Copy link</button><button id="refresh" disabled>Refresh data</button><button id="openAssistant" class="primary">Ask LiteLLM</button></div>
+    <div class="actions"><button id="copyViewLink" disabled>Copy link</button><button id="refresh" disabled>Refresh data</button></div>
   </header>
   <div class="tabs" role="tablist" aria-label="Dashboard views" id="dashboardTabs">
     <button role="tab" id="usageTab" aria-selected="true" aria-controls="usageTabPanel" tabindex="0">User usage</button>
@@ -257,7 +257,6 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     event.preventDefault();
     activateTab(tabs[next].name, true);
   });
-  byId("compareModels").addEventListener("click", () => activateTab("calculator", true));
   window.addEventListener("hashchange", () => { if (window.location.hash === "#availableModels") activateTab("calculator"); });
   activateTab(initialAllUsers ? "users" : initialQuery.get("tab") === "calculator" || window.location.hash === "#availableModels" ? "calculator" : initialQuery.get("tab") === "overview" && !selectionRequest ? "overview" : "usage");
 
@@ -505,10 +504,6 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
       const next = state.calculatorRows[Math.min(index, state.calculatorRows.length - 1)];
       (next ? byId("calculator-input-" + next.id) : byId("addCalculatorModel")).focus();
     }
-  });
-  byId("openAssistant").addEventListener("click", () => {
-    if (state.report) publishContext(state.report);
-    window.parent?.postMessage({ type: "caipe.agenticApp.assistant.open.v1", version: "1.0", appId: "litellm" }, window.location.origin);
   });
   window.addEventListener("caipe:microfrontend-initialize", (event) => {
     const period = { "30d": "month", "90d": "3m" }[event.detail?.preferences?.defaultRange];

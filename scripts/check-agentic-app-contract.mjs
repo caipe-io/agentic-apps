@@ -74,7 +74,8 @@ for (const [appId, expectedName, expectedMountPath] of apps) {
     '"/health/live", "/health/ready", "/healthz"',
     'url.pathname === "/api/context"',
     "caipe.agenticApp.context.v1",
-    "caipe.agenticApp.assistant.open.v1",
+    // LiteLLM publishes context for the host's launcher without an iframe launch button.
+    ...(appId === "litellm" ? [] : ["caipe.agenticApp.assistant.open.v1"]),
     'version: "1.0"',
     "window.location.origin",
   ]) {
