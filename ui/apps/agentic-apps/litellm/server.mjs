@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";
 
 import { handleAppMcpRequest } from "../../_lib/app-mcp-server.mjs";
 import { createRequiredAgenticAppJwtVerifier } from "../../_lib/jwt-verify.mjs";
@@ -69,6 +70,7 @@ const server = createServer(async (request, response) => {
         registerLiteLlmMcpTools(mcpServer, {
           getDailyActivity: getLiteLlmDailyActivity,
           getModelInfo: getLiteLlmModelInfo,
+          getCostAnomalies: getLiteLlmAnomalies,
         });
       },
     });
@@ -305,8 +307,14 @@ async function getLiteLlmOverview({ period, refresh = false }) {
   return entry.promise;
 }
 
-async function getLiteLlmAnomalies({ days, minImpactUsd, minIncreasePercent, refresh = false }) {
-  const range = resolveLiteLlmAnomalyRange(days);
+async function getLiteLlmAnomalies({ days, minImpactUsd, minIncreasePercent, endDate, refresh = false }) {
+  let now = new Date();
+  if (endDate !== undefined) {
+    const timestamp = Date.parse(endDate + "T00:00:00Z");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate) || !Number.isFinite(timestamp) || new Date(timestamp).toISOString().slice(0, 10) !== endDate || endDate > resolveLiteLlmAnomalyRange(1).endDate) throw new Error("Analysis end date must be a completed UTC date");
+    now = new Date(timestamp + 86_400_000);
+  }
+  const range = resolveLiteLlmAnomalyRange(days, now);
   const cacheKey = range.windowDays + ":" + range.endDate;
   let entry = anomalyCache.get(cacheKey);
   if (!entry?.pending && (refresh || !entry || Date.now() - entry.loadedAt >= 30_000)) {
@@ -318,7 +326,10 @@ async function getLiteLlmAnomalies({ days, minImpactUsd, minIncreasePercent, ref
     anomalyCache.set(cacheKey, entry);
   }
   const response = await entry.promise;
-  return { ...buildLiteLlmAnomalyReport({ response, range, minImpactUsd, minIncreasePercent }), sourceUpdatedAt: new Date(entry.loadedAt).toISOString() };
+  const report = buildLiteLlmAnomalyReport({ response, range, minImpactUsd, minIncreasePercent });
+  const { generatedAt, ...evidence } = report;
+  const snapshotId = createHash("sha256").update(JSON.stringify(evidence)).digest("hex").slice(0, 32);
+  return { ...report, snapshotId, sourceUpdatedAt: new Date(entry.loadedAt).toISOString() };
 }
 
 async function getKeyDetails(key, { refresh = false } = {}) {

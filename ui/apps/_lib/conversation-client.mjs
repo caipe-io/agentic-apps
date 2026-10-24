@@ -28,13 +28,14 @@ function requiredAgenticAppText(value, label) {
   return normalized;
 }
 
-async function createAgenticAppConversation({ agentId, appId, title, metadata = {} }) {
+async function createAgenticAppConversation({ agentId, appId, title, metadata = {}, signal }) {
   const normalizedAgentId = requiredAgenticAppText(agentId, "agentId");
   const normalizedAppId = requiredAgenticAppText(appId, "appId");
   const normalizedTitle = String(title || normalizedAppId + " dashboard").trim().slice(0, 120);
   const response = await fetch("/api/chat/conversations", {
     method: "POST",
     credentials: "same-origin",
+    ...(signal ? { signal } : {}),
     headers: { "content-type": "application/json", accept: "application/json" },
     body: JSON.stringify({
       title: normalizedTitle,
@@ -52,7 +53,7 @@ async function createAgenticAppConversation({ agentId, appId, title, metadata = 
   return conversationId;
 }
 
-async function invokeAgenticApp({ agentId, appId, title, message, clientContext = {} }) {
+async function invokeAgenticApp({ agentId, appId, title, message, clientContext = {}, signal }) {
   const normalizedAgentId = requiredAgenticAppText(agentId, "agentId");
   const normalizedAppId = requiredAgenticAppText(appId, "appId");
   const conversationId = await createAgenticAppConversation({
@@ -60,10 +61,12 @@ async function invokeAgenticApp({ agentId, appId, title, message, clientContext 
     appId: normalizedAppId,
     title,
     metadata: { dashboardKind: clientContext.dashboardKind },
+    signal,
   });
   const response = await fetch("/api/v1/chat/invoke", {
     method: "POST",
     credentials: "same-origin",
+    ...(signal ? { signal } : {}),
     headers: { "content-type": "application/json", accept: "application/json" },
     body: JSON.stringify({
       agent_id: normalizedAgentId,
@@ -72,7 +75,8 @@ async function invokeAgenticApp({ agentId, appId, title, message, clientContext 
       client_context: { ...clientContext, source: "agentic-app", appId: normalizedAppId },
     }),
   });
-  return readAgenticAppJsonResponse(response, "Dashboard agent invocation failed");
+  const payload = await readAgenticAppJsonResponse(response, "Dashboard agent invocation failed");
+  return { ...payload, conversation_id: payload.conversation_id || conversationId };
 }
 `;
 
