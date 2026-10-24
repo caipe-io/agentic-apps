@@ -3,10 +3,9 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 Source-backed agentic-app runtimes for the [CAIPE](https://github.com/caipe-io/ai-platform-engineering) platform.
-The source-backed runtimes serve their dashboard, readiness and liveness endpoints, context endpoint,
-and app-scoped MCP endpoint;
-Jira Project Dashboard currently uses a host-configured agent integration and is included here so
-the runtime image has one source boundary. CAIPE deployment configuration
+The source-backed runtimes serve their dashboard, readiness and liveness endpoints, and context
+endpoint. Most also expose an app-scoped MCP endpoint. EC2 and Jira reuse host-configured
+agent/MCP integrations; their runtime images retain one application source boundary. CAIPE deployment configuration
 remains in the separate `platform-apps-deployment` repository.
 
 > [!WARNING]
@@ -23,6 +22,7 @@ remains in the separate `platform-apps-deployment` repository.
 | FinOps Command Center | `/apps/finops` | 3010 | `agent-finops` | AWS Cost Explorer workflows |
 | Weather Lab | `/apps/weather` | 3020 | `agent-weather-agent` | Open-Meteo forecast and air-quality data |
 | Agentic SDLC | `/apps/agentic-sdlc` | 3030 | `agent-agentic-sdlc` | Repository delivery and ship-loop workflows |
+| EC2 Instances Dashboard | `/apps/ec2` | 3043 | `agent-ec2` | Account/region EC2 inventory, sizing, OS, tags, and on-demand estimates via AWS MCP |
 | LiteLLM Usage Dashboard | `/apps/litellm` | 3042 | `agent-litellm` | LiteLLM usage, spend, model, and virtual-key operations |
 | OSS Repo Report Card | `/apps/oss-repo-management` | 3040 | `agent-oss-repo-report-card` | Repository health and OSS readiness evidence |
 | Jira Project Dashboard | `/apps/jira-project-dashboard` | 3041 | `agent-jira-agent` | Jira project and delivery metrics |
@@ -54,7 +54,7 @@ npm test
 npm run smoke
 ```
 
-The smoke test runs all six servers with JWT verification disabled on loopback only. Production
+The smoke test runs the six original servers with JWT verification disabled on loopback only. Production
 deployments must keep forwarded-bearer validation enabled and configure the corresponding
 `deploy/caipe/agentic-app.json`, `agent.yaml`, and `mcp-server.yaml` files where the app owns its MCP.
 
@@ -285,6 +285,19 @@ the AWS MCP server. The dashboard exposes canonical profile names, requires an e
 when multiple profiles are available, and passes only the selected profile to the FinOps agent.
 `FINOPS_AWS_DEFAULT_PROFILE` may select a valid default. When no account list is configured, the
 runtime retains the single-account environment-credential behavior.
+
+## EC2 instance inventory
+
+See [EC2 configuration and data definitions](ui/apps/agentic-apps/ec2/README.md).
+
+- Reuses `mcp-aws` through the dedicated EC2 agent for both inventory and questions.
+- Choose configured profiles/regions, inspect paged instances, search/sort loaded
+  records, and open instance/tag details. Overview adds instance-type pies, verified
+  x86/Graviton CPU composition, and a separate GPU-presence pie with hardware filters. Unavailable scopes and remaining AWS pages
+  stay visible; summary charts and costs cover the same filtered loaded population.
+- Costs are evidence-backed on-demand reference estimates, not actual billed costs.
+- Import the supplied private app/agent registration in the host platform; the new
+  runtime does not install itself or grant AWS account access.
 
 ## Governance
 

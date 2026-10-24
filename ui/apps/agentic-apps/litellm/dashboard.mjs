@@ -1,3 +1,4 @@
+import { renderDonutSvg } from "../../_lib/donut-svg.mjs";
 import { estimateModelRequestCost } from "./model-info.mjs";
 import { buildLiteLlmAnomalyInvestigationFormat, validateLiteLlmAnomalyInvestigation } from "./anomaly-investigation.mjs";
 import { renderAgenticAppConversationClient } from "../../_lib/conversation-client.mjs";
@@ -238,7 +239,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId, ga
 </main>
 ${renderMicrofrontendClient("litellm")}
 ${renderAgenticAppConversationClient()}
-<script>(${initializeLiteLlmDashboard.toString()})(${config}, ${estimateModelRequestCost.toString()}, ${validateLiteLlmAnomalyInvestigation.toString()});</script>
+<script>(${initializeLiteLlmDashboard.toString()})(${config}, ${estimateModelRequestCost.toString()}, ${validateLiteLlmAnomalyInvestigation.toString()}, ${renderDonutSvg.toString()});</script>
 </body>
 </html>`;
 }
@@ -248,7 +249,7 @@ function escapeHtml(value) {
 }
 
 /** Browser entry point: serialized into the page so chart and request state stay together. */
-function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyResponseFormat }, estimateModelRequestCost, validateInvestigation) {
+function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyResponseFormat }, estimateModelRequestCost, validateInvestigation, renderDonutSvg) {
   const byId = (id) => document.getElementById(id);
   const state = { report: null, keys: [], selectedKey: null, modelCatalog: null, modelPage: 1, page: 1, pagination: null, maxSpend: 0, calculatorRows: [], calculatorNextId: 1, activeTab: "usage" };
   const initialQuery = new URLSearchParams(window.location.search);
@@ -1032,14 +1033,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
     const other = models.filter((row) => !palette.has(row.name)).reduce((sum, row) => sum + number(row[metric]), 0);
     if (other > 0) rows.push({ name: "Other", value: other, color: "#94a3b8" });
     const positive = rows.filter((row) => row.value > 0);
-    let angle = -Math.PI / 2;
-    chart.innerHTML = positive.map((row) => {
-      const fraction = row.value / total, end = angle + fraction * Math.PI * 2;
-      const label = row.name + ": " + format(row.value) + " · " + (fraction * 100).toFixed(1) + "%";
-      const path = '<path d="M120 120 L' + (120 + 110 * Math.cos(angle)) + ' ' + (120 + 110 * Math.sin(angle)) + ' A110 110 0 ' + (fraction > .5 ? 1 : 0) + ' 1 ' + (120 + 110 * Math.cos(end)) + ' ' + (120 + 110 * Math.sin(end)) + ' Z" fill="' + row.color + '" stroke="var(--surface)" stroke-width="2"><title>' + escapeHtml(label) + '</title></path>';
-      angle = end;
-      return fraction > .999999 ? '<circle cx="120" cy="120" r="110" fill="' + row.color + '"><title>' + escapeHtml(label) + '</title></circle>' : path;
-    }).join("") + '<circle cx="120" cy="120" r="68" fill="var(--surface)"/><text x="120" y="119" text-anchor="middle" fill="var(--text)" font-size="23" font-weight="600">' + escapeHtml(format(total)) + '</text><text x="120" y="140" text-anchor="middle" fill="var(--muted)" font-size="11">' + (metric === "spend" ? "USD" : "tokens") + '</text>';
+    chart.innerHTML = renderDonutSvg(positive.map((row) => ({ ...row, label: format(row.value) })), { totalLabel: format(total), unit: metric === "spend" ? "USD" : "tokens" });
     chart.setAttribute("aria-label", (metric === "spend" ? "Model spend in USD" : "Model token usage") + ": " + positive.map((row) => row.name + " " + (row.value / total * 100).toFixed(1) + "%").join(", "));
     legend.innerHTML = positive.map((row) => '<li><i aria-hidden="true" style="background:' + row.color + '"></i><span class="model-label">' + escapeHtml(row.name) + '</span><span class="numeric"><strong>' + escapeHtml(format(row.value)) + '</strong><small>' + (row.value / total * 100).toFixed(1) + '%</small></span></li>').join("");
   }
