@@ -25,6 +25,17 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
     .actions, .controls { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; } .controls { margin: 16px 0 12px; }
     label { display: grid; gap: 5px; color: var(--muted); font-size: .82rem; }
     .search-field { flex: 1; min-width: min(260px, 100%); }
+    .user-picker { position: relative; flex: 1; min-width: min(300px, 100%); }
+    .picker-input { display: flex; gap: 6px; } .picker-input input { min-width: 0; } .picker-input button { flex: 0 0 auto; }
+    .picker-popup { position: absolute; z-index: 10; top: calc(100% + 6px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 16px 36px #0006; overflow: hidden; }
+    .picker-options { max-height: min(330px, 32vh); overflow-y: auto; overscroll-behavior: contain; }
+    .picker-owner { padding: 10px 12px 4px; color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
+    .picker-option { display: flex; justify-content: space-between; gap: 16px; padding: 9px 12px 9px 24px; cursor: pointer; font-size: .9rem; overflow-wrap: anywhere; }
+    .picker-option[aria-selected="true"] { color: var(--series); } .picker-option[data-active="true"], .picker-option:hover { background: var(--track); }
+    .picker-option .numeric { flex-shrink: 0; color: var(--muted); font-size: .8rem; } .picker-option small { display: block; }
+    .picker-footer { border-top: 1px solid var(--line); padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .picker-footer .actions { gap: 6px; } .picker-footer button { min-height: 32px; padding: 4px 8px; font-size: .8rem; }
+    .picker-selection { margin: 6px 0 0; overflow-wrap: anywhere; } .picker-help { margin-top: 8px; }
     input, select, button { font: inherit; min-height: 40px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); max-width: 100%; }
     input { width: 100%; } button { cursor: pointer; } button:hover:not(:disabled) { border-color: var(--series); } button:disabled { opacity: .5; cursor: default; }
     :is(input, select, button, a):focus-visible { outline: 2px solid var(--series); outline-offset: 3px; }
@@ -79,16 +90,24 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
     <div class="panel-heading"><h2 id="usersTitle">Users &amp; virtual keys</h2><span id="catalogCount" class="muted small" role="status" aria-live="polite">Loading keys…</span></div>
     <p id="identityStatus" class="muted small" role="status">Matching your signed-in email to your keys…</p>
     <div class="scope-switch" role="group" aria-label="Whose usage to view"><button id="myUsage" aria-pressed="true">My usage</button><button id="findUsers" aria-pressed="false">Find users</button></div>
+    <p id="userSelection" class="small picker-selection" role="status">No user selected.</p>
     <div class="controls">
-      <label class="search-field">Search users or keys<input id="userSearch" type="search" placeholder="Username, email, or key name" autocomplete="off" /></label>
-      <button id="searchUsers">Search</button>
+      <div class="user-picker" id="userPicker">
+        <label for="userSearch" id="userSearchLabel">Select a user or virtual key</label>
+        <div class="picker-input"><input id="userSearch" type="search" role="combobox" aria-labelledby="userSearchLabel" aria-autocomplete="list" aria-expanded="false" aria-controls="userOptions" aria-describedby="userSearchHelp userSelection" placeholder="Search username, email, or key name…" autocomplete="off" /><button id="toggleUsers" aria-label="Show users" aria-expanded="false" aria-controls="userOptions">▾</button></div>
+        <div id="userPopup" class="picker-popup" hidden>
+          <div id="userOptions" class="picker-options" role="listbox" aria-label="Users and virtual keys" aria-busy="true"></div>
+          <div class="picker-footer"><span id="pickerStatus" class="muted small" role="status" aria-live="polite">Loading users…</span><div class="actions"><button id="retryUsers" hidden>Retry</button><button id="pickerPrevious" disabled aria-label="Previous user results">Previous</button><button id="pickerNext" disabled aria-label="Next user results">Next</button></div></div>
+        </div>
+      </div>
       <label>Sort by<select id="keySort"><option value="spend">Highest spend</option><option value="spend-asc">Lowest spend</option><option value="name">Username A–Z</option></select></label>
     </div>
-    <div id="keyDirectory" class="directory">
+    <p id="userSearchHelp" class="muted small picker-help">Type to find a user, then select their key from the dropdown. Use ↑ / ↓ and Enter to choose.</p>
+    <details id="keyDirectory" class="directory"><summary>Browse key spend ranking</summary>
     <p class="muted small catalog-note">Choose a key to view its usage. Each row is one key, not a team total. Key spend follows its own budget cycle; user and team budgets appear after selection.</p>
     <div class="table-wrap"><table aria-label="Matching virtual keys"><thead><tr><th scope="col">Owner / virtual key</th><th scope="col" class="numeric">Key spend</th><th scope="col" class="numeric">Key budget remaining</th><th scope="col">Usage</th></tr></thead><tbody id="keyRows"><tr><td colspan="4" class="empty">Loading virtual keys…</td></tr></tbody></table></div>
     <nav class="pagination" aria-label="Virtual-key pages"><span id="pageInfo" class="muted small"></span><div class="actions"><label>Rows<select id="pageSize"><option>10</option><option>25</option><option>50</option></select></label><button id="previousPage" disabled>Previous</button><button id="nextPage" disabled>Next</button></div></nav>
-    </div>
+    </details>
     <p id="catalogStatus" class="notice small" role="status" aria-live="polite"></p>
     <p id="shareStatus" class="notice small" role="status" aria-live="polite"></p>
     <label id="shareLinkField" hidden>Shareable dashboard link<input id="shareLinkInput" type="url" readonly /></label>
@@ -164,6 +183,11 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   let selectionRequest = requestedKey || requestedUser ? { key: requestedKey, user: requestedUser } : null;
   state.scope = selectionRequest ? "all" : "mine";
   state.viewer = null;
+  state.search = requestedUser;
+  state.pickerOpen = false;
+  state.activeOption = -1;
+  state.catalogLoading = true;
+  state.catalogError = "";
   byId("userSearch").value = requestedUser;
   if (explicitPeriod) byId("period").value = initialPeriod;
   if (["spend", "spend-asc", "name"].includes(initialQuery.get("sort"))) byId("keySort").value = initialQuery.get("sort");
@@ -215,37 +239,140 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   byId("userSearch").addEventListener("input", () => {
     clearTimeout(searchTimer);
     catalogController?.abort();
-    clearSelection();
     state.scope = "all";
+    state.search = byId("userSearch").value.trim();
+    state.catalogLoading = true;
+    state.catalogError = "";
+    state.activeOption = -1;
     renderScope();
-    selectionRequest = byId("userSearch").value.trim() ? { user: byId("userSearch").value.trim() } : null;
+    // Typing only searches. Opening another user's usage requires an explicit selection.
+    selectionRequest = null;
+    openUserPicker();
     searchTimer = setTimeout(() => { state.page = 1; loadVirtualKeys(); }, 250);
   });
-  byId("searchUsers").addEventListener("click", searchUsers);
-  byId("userSearch").addEventListener("keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); searchUsers(); } });
+  byId("userSearch").addEventListener("focus", () => { byId("userSearch").value = state.search; openUserPicker(); });
+  byId("userSearch").addEventListener("click", () => { if (!state.pickerOpen) openUserPicker(); });
+  byId("toggleUsers").addEventListener("click", () => {
+    if (state.pickerOpen) closeUserPicker();
+    else { byId("userSearch").focus(); openUserPicker(); }
+  });
+  byId("userSearch").addEventListener("keydown", (event) => {
+    if (event.key === "Escape") { event.preventDefault(); closeUserPicker(); return; }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (state.pickerOpen && !state.catalogLoading && !state.catalogError && state.activeOption >= 0) chooseUserOption(state.activeOption);
+      else if (!state.pickerOpen) openUserPicker();
+      else if (searchTimer) { clearTimeout(searchTimer); state.page = 1; loadVirtualKeys(); }
+      return;
+    }
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    if (!state.pickerOpen && ["Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    if (!state.pickerOpen) openUserPicker();
+    if (state.catalogLoading || state.catalogError || !state.pickerKeys?.length) return;
+    const last = state.pickerKeys.length - 1;
+    state.activeOption = event.key === "Home" ? 0 : event.key === "End" ? last : event.key === "ArrowDown" ? Math.min(last, state.activeOption + 1) : state.activeOption < 0 ? last : Math.max(0, state.activeOption - 1);
+    renderActiveOption(true);
+  });
+  byId("userOptions").addEventListener("mousedown", (event) => event.preventDefault());
+  byId("userOptions").addEventListener("click", (event) => {
+    const option = event.target.closest('[role="option"]');
+    if (option) chooseUserOption(Number(option.dataset.index));
+  });
+  byId("userPicker").addEventListener("focusout", (event) => { if (!byId("userPicker").contains(event.relatedTarget)) closeUserPicker(); });
+  document.addEventListener("pointerdown", (event) => { if (!byId("userPicker").contains(event.target)) closeUserPicker(); });
+  byId("retryUsers").addEventListener("click", () => loadVirtualKeys());
+  byId("pickerPrevious").addEventListener("click", () => { state.page -= 1; byId("userSearch").focus(); loadVirtualKeys(); });
+  byId("pickerNext").addEventListener("click", () => { state.page += 1; byId("userSearch").focus(); loadVirtualKeys(); });
   for (const [id, scope] of [["myUsage", "mine"], ["findUsers", "all"]]) byId(id).addEventListener("click", () => {
     clearTimeout(searchTimer);
     clearSelection();
     state.scope = scope;
+    state.search = "";
     byId("userSearch").value = "";
     selectionRequest = null;
     state.page = 1;
     renderScope();
     loadVirtualKeys();
     if (scope === "all") byId("userSearch").focus();
+    else closeUserPicker();
   });
-  function searchUsers() {
-    clearTimeout(searchTimer);
-    clearSelection();
-    state.scope = "all";
-    selectionRequest = byId("userSearch").value.trim() ? { user: byId("userSearch").value.trim() } : null;
-    state.page = 1;
-    renderScope();
-    loadVirtualKeys();
-  }
   function renderScope() {
     byId("myUsage").setAttribute("aria-pressed", String(state.scope === "mine"));
     byId("findUsers").setAttribute("aria-pressed", String(state.scope === "all"));
+  }
+  function openUserPicker() {
+    const searchAll = state.scope === "mine";
+    state.pickerOpen = true;
+    byId("userSearch").value = state.search;
+    byId("userSearch").setAttribute("aria-expanded", "true");
+    byId("toggleUsers").setAttribute("aria-expanded", "true");
+    byId("toggleUsers").setAttribute("aria-label", "Hide users");
+    byId("userPopup").hidden = false;
+    renderUserOptions();
+    if (searchAll) {
+      state.scope = "all";
+      state.page = 1;
+      selectionRequest = null;
+      renderScope();
+      loadVirtualKeys();
+    }
+  }
+  function closeUserPicker() {
+    state.pickerOpen = false;
+    state.activeOption = -1;
+    byId("userSearch").setAttribute("aria-expanded", "false");
+    byId("userSearch").removeAttribute("aria-activedescendant");
+    byId("toggleUsers").setAttribute("aria-expanded", "false");
+    byId("toggleUsers").setAttribute("aria-label", "Show users");
+    byId("userPopup").hidden = true;
+    byId("userSearch").value = state.selectedKey ? state.selectedKey.owner + " · " + state.selectedKey.label : state.search;
+  }
+  function renderUserOptions() {
+    const unavailable = state.catalogLoading || Boolean(state.catalogError);
+    byId("userOptions").setAttribute("aria-busy", String(state.catalogLoading));
+    byId("retryUsers").hidden = !state.catalogError;
+    const pagination = state.pagination;
+    byId("pickerPrevious").disabled = unavailable || !pagination || pagination.page <= 1;
+    byId("pickerNext").disabled = unavailable || !pagination || pagination.page >= pagination.totalPages;
+    state.pickerKeys = [];
+    if (unavailable || !state.keys.length) {
+      state.activeOption = -1;
+      byId("userOptions").innerHTML = '<div class="empty">' + (state.catalogLoading ? "Searching users…" : state.catalogError ? "Users could not be loaded. Retry your search." : "No users or keys match. Try a username or email.") + '</div>';
+      text("pickerStatus", state.catalogLoading ? "Searching…" : state.catalogError ? "Search unavailable" : "No matches");
+    } else {
+      // The server owns filtering and paging; group only the authorized page by owner.
+      const owners = new Map();
+      for (const key of state.keys) {
+        if (!owners.has(key.owner)) owners.set(key.owner, []);
+        owners.get(key.owner).push(key);
+      }
+      byId("userOptions").innerHTML = [...owners].map(([owner, keys]) => '<div role="group" aria-label="' + escapeHtml(owner) + '"><div class="picker-owner" aria-hidden="true">' + escapeHtml(owner) + '</div>' + keys.map((key) => {
+        const index = state.pickerKeys.push(key) - 1;
+        const selected = key.id === state.selectedKey?.id;
+        return '<div role="option" id="user-option-' + index + '" class="picker-option" data-index="' + index + '" aria-label="' + escapeHtml(owner + ' · Key: ' + key.label) + '" aria-selected="' + selected + '"><span><strong>' + escapeHtml(key.label) + '</strong><small>' + (selected ? 'Selected key' : 'View this key’s usage') + '</small></span><span class="numeric">' + escapeHtml(formatUsd(key.spend)) + '<small>Key spend</small></span></div>';
+      }).join("") + '</div>').join("");
+      text("pickerStatus", "Page " + pagination.page + " of " + pagination.totalPages + " · " + exact(pagination.totalCount) + " matching keys");
+    }
+    renderActiveOption();
+  }
+  function renderActiveOption(scroll = false) {
+    const options = byId("userOptions").querySelectorAll('[role="option"]');
+    for (const [index, option] of options.entries()) option.dataset.active = String(state.pickerOpen && index === state.activeOption);
+    const active = state.pickerOpen && options[state.activeOption];
+    if (active) {
+      byId("userSearch").setAttribute("aria-activedescendant", active.id);
+      if (scroll) active.scrollIntoView({ block: "nearest" });
+    } else byId("userSearch").removeAttribute("aria-activedescendant");
+  }
+  function chooseUserOption(index) {
+    if (state.catalogLoading || state.catalogError) return;
+    const key = state.pickerKeys[index];
+    if (!key) return;
+    selectKey(key);
+    byId("userSearch").focus();
+    closeUserPicker();
+    byId("userSearch").select();
   }
   renderScope();
   for (const id of ["keySort", "pageSize"]) byId(id).addEventListener("change", () => { clearTimeout(searchTimer); clearSharedLink(); state.page = 1; loadVirtualKeys(); });
@@ -350,6 +477,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     reportController?.abort();
     modelsController?.abort();
     state.selectedKey = null;
+    text("userSelection", "No user selected.");
     state.report = null;
     state.modelCatalog = null;
     byId("viewingContext").hidden = true;
@@ -365,15 +493,21 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
   }
 
   async function loadVirtualKeys(refresh = false) {
+    clearTimeout(searchTimer);
+    searchTimer = null;
     catalogController?.abort();
     const controller = new AbortController();
     catalogController = controller;
+    state.catalogLoading = true;
+    state.catalogError = "";
+    state.activeOption = -1;
+    renderUserOptions();
     byId("catalog").setAttribute("aria-busy", "true");
     byId("previousPage").disabled = true;
     byId("nextPage").disabled = true;
     notice("catalogStatus", "Loading keys…");
     text("catalogCount", "Searching…");
-    const query = new URLSearchParams({ scope: state.scope, page: String(state.page), size: byId("pageSize").value, sort: byId("keySort").value, search: byId("userSearch").value.trim() });
+    const query = new URLSearchParams({ scope: state.scope, page: String(state.page), size: byId("pageSize").value, sort: byId("keySort").value, search: state.search });
     const requestedSelection = selectionRequest;
     if (requestedSelection?.key) query.set("key", requestedSelection.key);
     if (requestedSelection?.user) query.set("user", requestedSelection.user);
@@ -388,6 +522,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
       state.pagination = payload.pagination;
       state.page = payload.pagination.page;
       state.maxSpend = payload.maxSpend;
+      state.catalogLoading = false;
       renderKeys();
       byId("copyViewLink").disabled = false;
       notice("catalogStatus", "Key spend updated " + new Date(payload.updatedAt).toLocaleString() + ".");
@@ -404,6 +539,9 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
     } catch (error) {
       if (controller.signal.aborted) return false;
       state.keys = [];
+      state.catalogLoading = false;
+      state.catalogError = error.message;
+      renderUserOptions();
       text("catalogCount", "Keys unavailable");
       byId("keyRows").innerHTML = '<tr><td colspan="4" class="empty">Could not load virtual keys.</td></tr>';
       text("pageInfo", "");
@@ -429,11 +567,14 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId }, estimateMode
       const width = state.maxSpend > 0 ? Math.max(0, key.spend) / state.maxSpend * 100 : 0;
       return '<tr><td><strong>' + escapeHtml(key.owner) + '</strong><span class="owner">Key: ' + escapeHtml(key.label) + '</span></td><td class="numeric spend-cell">' + escapeHtml(formatUsd(key.spend)) + '<div class="spend-track" aria-hidden="true"><i style="width:' + width + '%"></i></div></td><td class="numeric">' + (key.remainingBudget === null ? '<span class="muted">No key-specific limit</span>' : escapeHtml(formatUsd(key.remainingBudget))) + '</td><td><button class="key-choice" data-key-id="' + escapeHtml(key.id) + '" aria-label="View usage for ' + escapeHtml(key.label) + '" aria-pressed="' + selected + '">' + (selected ? "Selected" : "View usage") + '</button></td></tr>';
     }).join("") : '<tr><td colspan="4" class="empty">No keys match your search. Try a username without the email suffix.</td></tr>';
+    renderUserOptions();
   }
 
   function selectKey(key) {
     clearSharedLink();
     state.selectedKey = key;
+    text("userSelection", "Selected: " + key.owner + " · Key: " + key.label);
+    if (!state.pickerOpen) byId("userSearch").value = key.owner + " · " + key.label;
     byId("viewingContext").hidden = false;
     const own = state.viewer?.keyIds?.includes(key.id);
     text("viewingContext", (own ? "Your usage" : "Viewing " + key.owner + " — this is not identified as your usage") + " · Virtual key: " + key.label + ". Usage charts cover this key only.");

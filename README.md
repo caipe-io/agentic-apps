@@ -103,7 +103,12 @@ browser. Access remains subject to CAIPE identity and policy.
   It selects a key only when exactly one owned key matches. Multiple owned keys require
   an explicit choice. Admins follow the same identity matching as other signed-in users.
 - **Find users** searches the authorized catalog by username, email, or key name.
-  Results are visible immediately; Enter and the Search button submit the current query.
+  Matching users appear directly in a searchable dropdown, grouped by owner email
+  with their virtual keys underneath. Select a key to open its usage; typing alone
+  does not change the current usage view. Arrow keys, Home/End, Enter, and Escape
+  support keyboard selection. The dropdown has paging, loading, empty, and retry states.
+  The selected owner and key remain visible while searching or paging other results.
+  **Browse key spend ranking** expands the optional spend table.
   Browsing all keys never selects the first or highest-spend user automatically.
 - The page identifies the signed-in email and states whose key is being viewed.
   Missing identity or an unmatched email leaves usage unselected with instructions to
