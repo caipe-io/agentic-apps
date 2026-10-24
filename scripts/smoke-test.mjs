@@ -46,7 +46,9 @@ try {
       failures.push(`${entry.name}: / returned HTTP ${page.status}`);
     } else {
       const html = await page.text();
-      for (const messageType of ["caipe.agenticApp.context.v1", "caipe.agenticApp.assistant.open.v1"]) {
+      // LiteLLM uses the host's launcher and only publishes context from its iframe.
+      const messageTypes = entry.name === "litellm" ? ["caipe.agenticApp.context.v1"] : ["caipe.agenticApp.context.v1", "caipe.agenticApp.assistant.open.v1"];
+      for (const messageType of messageTypes) {
         if (!html.includes(messageType)) failures.push(`${entry.name}: missing ${messageType}`);
       }
       if (entry.name === "weather" && /\bagentId:\s*defaultAgentId\b/.test(html)) {
