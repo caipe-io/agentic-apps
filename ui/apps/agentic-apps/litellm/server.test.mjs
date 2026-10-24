@@ -14,7 +14,7 @@ test("dashboard scripts compile with hostile configuration safely serialized", (
   const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\b[^>]*>/gi)];
   assert.equal(scripts.length, 2);
   for (const [, source] of scripts) new vm.Script(source);
-  assert.match(html, /Search users or keys/);
+  assert.match(html, /Select a user or virtual key/);
   assert.match(html, /Most-used models/);
 });
 
