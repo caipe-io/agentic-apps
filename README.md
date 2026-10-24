@@ -142,7 +142,7 @@ browser. Access remains subject to CAIPE identity and policy.
 
 - Open `/apps/litellm?user=example-user&period=month` to search a username, alias,
   or email and select an exact match or a unique search result. Ambiguous searches show
-  the matching directory for selection; missing users do not fall back to another key.
+  the matching dropdown options for selection; missing users do not fall back to another key.
   Several keys with the same alias or owner require an explicit key selection; a copied
   key-specific link identifies one key unambiguously.
 - Optional `key=vk_…` selects an opaque virtual-key ID across the complete catalog,
@@ -150,17 +150,20 @@ browser. Access remains subject to CAIPE identity and policy.
   selection. These IDs are selectors, not credentials.
 - `period` accepts `current`, `month`, `3m`, `6m`, or `12m`; a valid URL period takes
   precedence over the host's default range. `sort` accepts `spend`, `spend-asc`, or `name`.
-- `tab=calculator` opens the model cost calculator tab directly. The default is the
-  usage and budgets tab; existing `#availableModels` links open the calculator tab.
-- **Copy link** creates a public app URL with the selected key, readable alias, period,
-  sorting, and active tab. If clipboard access fails, the dashboard displays the link for manual copy.
+- Without a user/key filter, the default is **Overview**, which also accepts `period=all`.
+  A user/key filter opens **User usage**. `tab=usage`, `tab=users`, and `tab=calculator`
+  explicitly select User usage, All users, and the model cost calculator respectively.
+  Existing `#availableModels` links open the calculator tab.
+- **Copy link** preserves the active view: overview period, all-users search/sort, or
+  the selected key, alias, period, sort, and detail tab. If clipboard access fails, the
+  dashboard displays the link for manual copy.
   Recipients still need normal dashboard access; links never include API tokens.
 - The host forwards query parameters through the iframe and runtime proxy. The dashboard
   reads its own URL, so this also works when launched outside the host shell.
 
 ### Model prices and key provisioning
 
-- **Usage & budgets** contains usage charts, model activity, and budget details.
+- **User usage** contains key usage charts, model activity, and budget details.
   **Model cost calculator** contains the calculator, searchable model prices, and key
   provisioning. Key selection is shared, and calculator lines survive tab switches.
 - Compare models links to a searchable, paginated catalog from the deployment's
