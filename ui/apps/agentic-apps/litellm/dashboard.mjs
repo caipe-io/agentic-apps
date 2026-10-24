@@ -4,6 +4,7 @@ import { renderAgenticAppConversationClient } from "../../_lib/conversation-clie
 import { renderMicrofrontendClient } from "../../_lib/microfrontend-client.mjs";
 
 export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId, gatewayName = "LLM Gateway" }) {
+  const searchInputAttributes = 'autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore="true" data-form-type="other"';
   const config = JSON.stringify({ basePath, appPath, agentId, anomalyResponseFormat: buildLiteLlmAnomalyInvestigationFormat() }).replaceAll("<", "\\u003c");
   return `<!doctype html>
 <html lang="en">
@@ -120,15 +121,17 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId, ga
     <p id="userSelection" class="small picker-selection" role="status" hidden></p>
     <div class="controls">
       <div class="user-picker" id="userPicker">
-        <label for="userSearch" id="userSearchLabel">Select a user or virtual key</label>
-        <div class="picker-input"><input id="userSearch" type="search" role="combobox" aria-labelledby="userSearchLabel" aria-autocomplete="list" aria-expanded="false" aria-controls="userOptions" aria-describedby="userSearchHelp userSelection" placeholder="Search username, email, or key name…" autocomplete="off" /><button id="toggleUsers" aria-label="Show users" aria-expanded="false" aria-controls="userOptions">▾</button></div>
+        <form id="usageSearchForm" role="search" aria-label="Find gateway usage" autocomplete="off">
+        <label for="keyFilter" id="userSearchLabel">Select a user or virtual key</label>
+        <div class="picker-input"><input id="keyFilter" name="gateway-key-filter" type="search" role="combobox" aria-labelledby="userSearchLabel" aria-autocomplete="list" aria-expanded="false" aria-controls="userOptions" aria-describedby="userSearchHelp userSelection" placeholder="Search people or virtual keys…" ${searchInputAttributes} /><button type="button" id="toggleUsers" aria-label="Show users" aria-expanded="false" aria-controls="userOptions">▾</button></div>
+        </form>
         <div id="userPopup" class="picker-popup" hidden>
           <div id="userOptions" class="picker-options" role="listbox" aria-label="Users and virtual keys" aria-busy="true"></div>
           <div class="picker-footer"><span id="pickerStatus" class="muted small" role="status" aria-live="polite">Loading users…</span><div class="actions"><button id="retryUsers" hidden>Retry</button><button id="pickerPrevious" disabled aria-label="Previous user results">Previous</button><button id="pickerNext" disabled aria-label="Next user results">Next</button></div></div>
         </div>
       </div>
     </div>
-    <p id="userSearchHelp" class="muted small picker-help">Choose a user’s key from the dropdown to load their usage.</p>
+    <p id="userSearchHelp" class="muted small picker-help">Search by name, email, or key alias, then choose a key to load usage.</p>
     <p id="catalogStatus" class="notice small" role="status" aria-live="polite"></p>
   </section>
   <div id="shareControls">
@@ -178,7 +181,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId, ga
       <div class="panel-heading"><h2 id="allUsersTitle">All users · current-month spend</h2><span id="allUsersCount" class="muted small" role="status" aria-live="polite"></span></div>
       <p class="muted small catalog-note">Spend is recorded for the current calendar month in UTC. Each row is one virtual key. Budget remaining follows its own reset cycle. Select View usage for this month’s detailed usage and owner or team budgets.</p>
       <p id="allUsersRange" class="muted small"></p>
-      <div class="controls"><label class="search-field">Search all users<input id="allUsersSearch" type="search" placeholder="Username, email, or key name" autocomplete="off" /></label><label>Sort all users by<select id="allUsersSort"><option value="spend">Highest monthly spend</option><option value="spend-asc">Lowest monthly spend</option><option value="name">Username A–Z</option></select></label></div>
+      <div class="controls"><label class="search-field">Search all users<input id="allUsersSearch" name="gateway-directory-filter" type="search" placeholder="Search people or virtual keys" ${searchInputAttributes} /></label><label>Sort all users by<select id="allUsersSort"><option value="spend">Highest monthly spend</option><option value="spend-asc">Lowest monthly spend</option><option value="name">Username A–Z</option></select></label></div>
       <div class="table-wrap"><table aria-label="Matching virtual keys"><thead><tr><th scope="col">Owner / virtual key</th><th scope="col" class="numeric">Current month · USD</th><th scope="col" class="numeric">Budget remaining · key cycle</th><th scope="col">Usage</th></tr></thead><tbody id="keyRows"><tr><td colspan="4" class="empty">Open All users to browse current-month spend.</td></tr></tbody></table></div>
       <nav class="pagination" aria-label="Virtual-key pages"><span id="pageInfo" class="muted small"></span><div class="actions"><label>Rows<select id="pageSize"><option>10</option><option>25</option><option>50</option></select></label><button id="previousPage" disabled>Previous</button><button id="nextPage" disabled>Next</button></div></nav>
       <p id="allUsersStatus" class="notice small" role="status" aria-live="polite"></p><button id="retryAllUsers" hidden>Retry loading users</button>
@@ -216,7 +219,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId, ga
         <p id="calculatorStatus" class="notice small" role="status" aria-live="polite">Estimates use the current catalog rates. No requests are sent and no credits are spent.</p>
       </section>
       <div class="controls">
-        <label class="search-field">Search available models<input id="modelSearch" type="search" placeholder="Model name or provider" autocomplete="off" /></label>
+        <label class="search-field">Search available models<input id="modelSearch" name="gateway-model-filter" type="search" placeholder="Model name or provider" ${searchInputAttributes} /></label>
         <label>Show<select id="modelScope"><option value="all">All configured models</option><option value="listed">Matching key list</option></select></label>
         <label>Sort models by<select id="catalogModelSort"><option value="estimate">Lowest estimated cost</option><option value="input">Lowest input price</option><option value="output">Lowest output price</option><option value="name">Model name A–Z</option></select></label>
       </div>
@@ -282,7 +285,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
   if (["month", "3m", "6m", "12m", "all"].includes(initialPeriod)) byId("overviewPeriod").value = initialPeriod;
   byId("allUsersSearch").value = initialAllUsers ? initialQuery.get("user")?.trim() ?? "" : "";
   if (initialAllUsers && ["spend", "spend-asc", "name"].includes(initialQuery.get("sort"))) byId("allUsersSort").value = initialQuery.get("sort");
-  byId("userSearch").value = requestedUser;
+  byId("keyFilter").value = requestedUser;
   if (explicitPeriod) byId("period").value = initialPeriod;
   state.keySort = ["spend", "spend-asc", "name"].includes(initialQuery.get("sort")) ? initialQuery.get("sort") : "name";
   let catalogController;
@@ -353,10 +356,11 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
     }
   }
 
-  byId("userSearch").addEventListener("input", () => {
+  byId("usageSearchForm").addEventListener("submit", (event) => event.preventDefault());
+  byId("keyFilter").addEventListener("input", () => {
     clearTimeout(searchTimer);
     catalogController?.abort();
-    state.search = byId("userSearch").value.trim();
+    state.search = byId("keyFilter").value.trim();
     state.catalogLoading = true;
     state.catalogError = "";
     state.activeOption = -1;
@@ -365,13 +369,13 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
     openUserPicker();
     searchTimer = setTimeout(() => { state.page = 1; loadVirtualKeys(); }, 250);
   });
-  byId("userSearch").addEventListener("focus", () => { byId("userSearch").value = state.search; openUserPicker(); });
-  byId("userSearch").addEventListener("click", () => { if (!state.pickerOpen) openUserPicker(); });
+  byId("keyFilter").addEventListener("focus", () => { byId("keyFilter").value = state.search; openUserPicker(); });
+  byId("keyFilter").addEventListener("click", () => { if (!state.pickerOpen) openUserPicker(); });
   byId("toggleUsers").addEventListener("click", () => {
     if (state.pickerOpen) closeUserPicker();
-    else { byId("userSearch").focus(); openUserPicker(); }
+    else { byId("keyFilter").focus(); openUserPicker(); }
   });
-  byId("userSearch").addEventListener("keydown", (event) => {
+  byId("keyFilter").addEventListener("keydown", (event) => {
     if (event.key === "Escape") { event.preventDefault(); closeUserPicker(); return; }
     if (event.key === "Enter") {
       event.preventDefault();
@@ -397,12 +401,12 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
   byId("userPicker").addEventListener("focusout", (event) => { if (!byId("userPicker").contains(event.relatedTarget)) closeUserPicker(); });
   document.addEventListener("pointerdown", (event) => { if (!byId("userPicker").contains(event.target)) closeUserPicker(); });
   byId("retryUsers").addEventListener("click", () => loadVirtualKeys());
-  byId("pickerPrevious").addEventListener("click", () => { state.page -= 1; byId("userSearch").focus(); loadVirtualKeys(); });
-  byId("pickerNext").addEventListener("click", () => { state.page += 1; byId("userSearch").focus(); loadVirtualKeys(); });
+  byId("pickerPrevious").addEventListener("click", () => { state.page -= 1; byId("keyFilter").focus(); loadVirtualKeys(); });
+  byId("pickerNext").addEventListener("click", () => { state.page += 1; byId("keyFilter").focus(); loadVirtualKeys(); });
   function openUserPicker() {
     state.pickerOpen = true;
-    byId("userSearch").value = state.search;
-    byId("userSearch").setAttribute("aria-expanded", "true");
+    byId("keyFilter").value = state.search;
+    byId("keyFilter").setAttribute("aria-expanded", "true");
     byId("toggleUsers").setAttribute("aria-expanded", "true");
     byId("toggleUsers").setAttribute("aria-label", "Hide users");
     byId("userPopup").hidden = false;
@@ -411,12 +415,12 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
   function closeUserPicker() {
     state.pickerOpen = false;
     state.activeOption = -1;
-    byId("userSearch").setAttribute("aria-expanded", "false");
-    byId("userSearch").removeAttribute("aria-activedescendant");
+    byId("keyFilter").setAttribute("aria-expanded", "false");
+    byId("keyFilter").removeAttribute("aria-activedescendant");
     byId("toggleUsers").setAttribute("aria-expanded", "false");
     byId("toggleUsers").setAttribute("aria-label", "Show users");
     byId("userPopup").hidden = true;
-    byId("userSearch").value = state.selectedKey ? state.selectedKey.owner + " · " + state.selectedKey.label : state.search;
+    byId("keyFilter").value = state.selectedKey ? state.selectedKey.owner + " · " + state.selectedKey.label : state.search;
   }
   function renderUserOptions() {
     const unavailable = state.catalogLoading || Boolean(state.catalogError);
@@ -451,18 +455,18 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
     for (const [index, option] of options.entries()) option.dataset.active = String(state.pickerOpen && index === state.activeOption);
     const active = state.pickerOpen && options[state.activeOption];
     if (active) {
-      byId("userSearch").setAttribute("aria-activedescendant", active.id);
+      byId("keyFilter").setAttribute("aria-activedescendant", active.id);
       if (scroll) active.scrollIntoView({ block: "nearest" });
-    } else byId("userSearch").removeAttribute("aria-activedescendant");
+    } else byId("keyFilter").removeAttribute("aria-activedescendant");
   }
   function chooseUserOption(index) {
     if (state.catalogLoading || state.catalogError) return;
     const key = state.pickerKeys[index];
     if (!key) return;
     selectKey(key);
-    byId("userSearch").focus();
+    byId("keyFilter").focus();
     closeUserPicker();
-    byId("userSearch").select();
+    byId("keyFilter").select();
   }
   byId("allUsersSearch").addEventListener("input", () => {
     clearTimeout(directorySearchTimer);
@@ -1110,7 +1114,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
     byId("userSelection").hidden = false;
     byId("copyViewLink").disabled = false;
     text("userSelection", "Selected: " + key.owner + " · Key: " + key.label);
-    if (!state.pickerOpen) byId("userSearch").value = key.owner + " · " + key.label;
+    if (!state.pickerOpen) byId("keyFilter").value = key.owner + " · " + key.label;
     byId("viewingContext").hidden = false;
     const own = state.viewer?.keyIds?.includes(key.id);
     text("viewingContext", (own ? "Your usage" : "Viewing " + key.owner + " — this is not identified as your usage") + " · Virtual key: " + key.label + ". Usage charts cover this key only.");

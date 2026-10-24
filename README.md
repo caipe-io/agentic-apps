@@ -88,6 +88,10 @@ Organization-specific branding belongs in deployment configuration.
 - The runtime loads every `/key/list` page (up to 100 keys per request) before searching,
   sorting, and paginating the browser results. Incomplete or stalled upstream pagination
   returns an error instead of a partial list.
+- Search fields disable browser autocomplete and text correction, use non-login
+  identifiers, and include password-manager ignore hints. The user picker has its
+  own search form and retains its accessible result dropdown. Browsers or password
+  managers may override page hints.
 - Search accepts key aliases, usernames, and owner emails. Email searches also match an
   exact username alias without the domain. These matches select display rows; they do not
   change authorization.
