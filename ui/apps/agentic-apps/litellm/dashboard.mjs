@@ -185,7 +185,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
       <p id="modelPricesFreshness" class="freshness"></p>
     </section>
   </div>
-  <footer><span>Usage dates are in UTC. Budgets follow each key’s configured reset period.</span><a href="${escapeHtml(basePath)}/example">View static example</a></footer>
+  <footer><span>Usage dates are in UTC. Budgets follow each key’s configured reset period.</span></footer>
 </main>
 ${renderMicrofrontendClient("litellm")}
 <script>(${initializeLiteLlmDashboard.toString()})(${config}, ${estimateModelRequestCost.toString()});</script>
