@@ -26,6 +26,22 @@
   organization-owned endpoint or credentials with the generic example.
 - Deployment-specific account identities and branding belong in deployment config.
 
+## Views
+
+- **Instances** is the first tab. Select an account/profile and region, load inventory,
+  then search/filter and inspect its instances.
+- **Overview** is the second tab. Instance-type, CPU-platform, and GPU-presence pie
+  charts share the selected account/region scope and visible search/state/hardware filters.
+- CPU groups distinguish x86, verified Graviton, other Arm, unverified Arm, and
+  other/unknown architecture. Arm alone does not prove Graviton (for example, Arm Mac).
+- GPU presence is a separate dimension: GPU instances can use x86 or Graviton CPUs.
+  Unknown GPU metadata remains a separate pie slice. No GPU is established only by
+  a successful DescribeInstanceTypes result without GPU metadata. Any reported GPU
+  entry or positive GPU memory counts as GPU enabled, including fractional/vGPU devices.
+- Hardware filters let the instance list show x86, Graviton, other Arm, GPU-enabled,
+  no-GPU, or unknown-hardware records. Shared links preserve the active tab and filters.
+- Type pies show the six largest types plus Other types; all records remain in the table.
+
 ## Data and cost definitions
 
 - Inventory grain: verified AWS account + region + instance ID.
@@ -35,7 +51,8 @@
 - Counts, size/OS charts, filters, and cost totals use the same loaded population.
   Unavailable scopes, pending pages, and price coverage are visible. No full-fleet
   count or empty-account conclusion is inferred from incomplete data.
-- Size comes from EC2 instance type. vCPU/RAM come from DescribeInstanceTypes.
+- Size comes from EC2 instance type. vCPU/RAM, CPU manufacturer, and GPU presence
+  come from DescribeInstanceTypes.
 - Platform is EC2 PlatformDetails. Exact OS name/version requires SSM evidence;
   missing SSM access never creates an inferred Linux distribution.
 - Initial inventory includes three tag previews and the reported tag count.

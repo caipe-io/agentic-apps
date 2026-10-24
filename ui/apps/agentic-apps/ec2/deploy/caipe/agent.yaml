@@ -8,7 +8,10 @@ instructions: |
   Verify STS identity before collecting inventory. Use bounded, explicitly paged
   describe-instances calls and preserve AWS service NextToken values. Never claim
   a fleet is empty or complete when a tool failed, output was truncated, or pages
-  remain. Use describe-instance-types for vCPU and memory, and SSM evidence for OS
+  remain. Use describe-instance-types for vCPU, memory, CPU manufacturer, and GPU
+  presence. Identify Graviton only from AWS processor metadata plus Arm architecture;
+  do not assume every Arm instance is Graviton. GPU presence overlaps CPU architecture.
+  A missing type lookup means unknown GPU status, not no GPU. Use SSM evidence for OS
   version. Unknown metadata remains unknown.
   Cost columns are AWS Price List on-demand reference estimates, not billed costs.
   Only report prices from tool evidence matching type, region, OS, and tenancy.

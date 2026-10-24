@@ -292,7 +292,8 @@ See [EC2 configuration and data definitions](ui/apps/agentic-apps/ec2/README.md)
 
 - Reuses `mcp-aws` through the dedicated EC2 agent for both inventory and questions.
 - Choose configured profiles/regions, inspect paged instances, search/sort loaded
-  records, and open instance/tag details. Unavailable scopes and remaining AWS pages
+  records, and open instance/tag details. Overview adds instance-type pies, verified
+  x86/Graviton CPU composition, and a separate GPU-presence pie with hardware filters. Unavailable scopes and remaining AWS pages
   stay visible; summary charts and costs cover the same filtered loaded population.
 - Costs are evidence-backed on-demand reference estimates, not actual billed costs.
 - Import the supplied private app/agent registration in the host platform; the new
