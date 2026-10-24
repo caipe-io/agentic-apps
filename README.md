@@ -173,6 +173,12 @@ browser. Access remains subject to CAIPE identity and policy.
 
 ### Model cost anomalies
 
+- Anomalies shows a spinner, elapsed time, and request stages while gateway data
+  loads and the agent runs. Stages reflect actual request boundaries; the invoke
+  endpoint does not stream individual tool progress or percentage completion.
+- Cancel stops the browser request. Agent work already started on the server may
+  continue. Changes to analysis settings cancel pending browser work.
+
 - **Analyze with agent** creates an authorized conversation and invokes the configured
   LiteLLM agent through the shared host invoke client. Opening the tab loads only
   calculated candidates; agent runs require the explicit button action.
