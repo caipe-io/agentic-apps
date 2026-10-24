@@ -49,6 +49,14 @@
       "serverPath": "ui/apps/agentic-apps/jira-project-dashboard/server.mjs",
       "image": "agentic-apps-jira-project-dashboard",
       "port": 3041
+    },
+    {
+      "id": "ec2",
+      "displayName": "EC2 Instances Dashboard",
+      "sourcePath": "ui/apps/agentic-apps/ec2",
+      "serverPath": "ui/apps/agentic-apps/ec2/server.mjs",
+      "image": "agentic-apps-ec2-instances-dashboard",
+      "port": 3043
     }
   ]
 }

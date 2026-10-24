@@ -1,0 +1,11 @@
+# Reuse the existing AWS MCP registration. Replace the endpoint in deployment configuration.
+id: mcp-aws
+name: AWS MCP
+description: Read-only AWS CLI operations for EC2 inventory and pricing.
+transport: http
+endpoint: http://mcp-aws:8000/mcp/
+enabled: true
+authentication:
+  mode: forwarded_oidc
+allowedTools:
+  - aws_cli_execute
