@@ -11,6 +11,7 @@ import {
   resolveAgenticAppSurface,
 } from "../../_lib/runtime-base-path.mjs";
 import { renderStaticDashboardExample } from "../../_lib/static-dashboard-examples.mjs";
+import { buildLiteLlmKeyPeriodSpend } from "./key-period-spend.mjs";
 import { registerLiteLlmMcpTools } from "./mcp.mjs";
 import { loadLiteLlmKeyDetails, loadLiteLlmModelCatalog, sanitizeLiteLlmModelInfo } from "./model-info.mjs";
 import { renderLiteLlmDashboard } from "./dashboard.mjs";
@@ -42,6 +43,7 @@ let keyCatalog;
 let keyCatalogRequest;
 const keyDetailsCache = new Map();
 const overviewCache = new Map();
+const OVERVIEW_CACHE_TTL_MS = 4 * 60 * 60 * 1000;
 const anomalyCache = new Map();
 
 const server = createServer(async (request, response) => {
@@ -126,11 +128,20 @@ const server = createServer(async (request, response) => {
       const myKeys = email ? catalog.keys.filter((key) => key.public.owner.toLowerCase() === email || key.ownerId?.toLowerCase() === email) : [];
       const scope = url.searchParams.get("scope") === "mine" ? "mine" : "all";
       const scopedKeys = scope === "mine" ? myKeys : catalog.keys;
-      const result = selectLiteLlmVirtualKeys(scopedKeys, {
+      const monthly = url.searchParams.get("period") === "month";
+      const snapshot = monthly ? await getLiteLlmGatewaySnapshot({ period: "month", refresh: url.searchParams.get("refresh") === "true" }) : null;
+      const periodSpend = snapshot?.keySpend;
+      const hasKnownKeys = periodSpend?.complete && (periodSpend.totalSpend === 0 || catalog.keys.some((key) => periodSpend.spendByKey.has(key.upstreamKey) || periodSpend.spendByKey.has(createHash("sha256").update(key.upstreamKey).digest("hex"))));
+      const rankedKeys = monthly ? scopedKeys.map((key) => {
+        const amount = periodSpend?.complete ? periodSpend.spendByKey.get(key.upstreamKey) ?? periodSpend.spendByKey.get(createHash("sha256").update(key.upstreamKey).digest("hex")) : undefined;
+        return { ...key, public: { ...key.public, periodSpend: amount ?? (hasKnownKeys ? 0 : null) } };
+      }) : scopedKeys;
+      const result = selectLiteLlmVirtualKeys(rankedKeys, {
         search: url.searchParams.get("search") ?? "",
         sort: url.searchParams.get("sort") ?? "spend",
         page: url.searchParams.get("page") ?? 1,
         size: url.searchParams.get("size") ?? 10,
+        spendField: monthly ? "periodSpend" : "spend",
       });
       const requestedKey = url.searchParams.get("key");
       const requestedUser = url.searchParams.get("user")?.trim().toLowerCase();
@@ -144,7 +155,7 @@ const server = createServer(async (request, response) => {
       } else if (scope === "mine") {
         selectedKey = myKeys.length === 1 ? myKeys[0].public : null;
       }
-      sendJson(response, 200, { success: true, ...result, scope, viewer: { email, name: request.caipeIdentity?.name ?? null, linkedKeys: myKeys.length, keyIds: myKeys.map((key) => key.public.id) }, ...(selectedKey !== undefined ? { selectedKey } : {}), updatedAt: catalog.updatedAt });
+      sendJson(response, 200, { success: true, ...result, scope, viewer: { email, name: request.caipeIdentity?.name ?? null, linkedKeys: myKeys.length, keyIds: myKeys.map((key) => key.public.id) }, ...(selectedKey !== undefined ? { selectedKey } : {}), updatedAt: monthly ? snapshot.overview.cache.updatedAt : catalog.updatedAt, ...(monthly ? { range: snapshot.overview.range, cache: snapshot.overview.cache, warnings: [...periodSpend.warnings, ...(!hasKnownKeys && periodSpend.totalSpend !== 0 ? ["Activity could not be matched to the current key catalog; monthly spend remains unavailable."] : [])] } : {}) });
     } catch (error) {
       sendJson(response, 502, {
         success: false,
@@ -286,13 +297,19 @@ async function getLiteLlmVirtualKeyUsage({ keyId, period, refresh }) {
   return { ...report, budgets: details.budgets, warnings: [...report.warnings, ...details.warnings], keysUpdatedAt: catalog.updatedAt };
 }
 
-async function getLiteLlmOverview({ period, refresh = false }) {
+async function getLiteLlmOverview(options) {
+  return (await getLiteLlmGatewaySnapshot(options)).overview;
+}
+
+// Overview and the monthly key ranking share a compact, coalesced source snapshot.
+// Keep only derived reports and private key sums, not the bulky upstream records.
+async function getLiteLlmGatewaySnapshot({ period, refresh = false }) {
   const range = resolveLiteLlmUsageRange(period);
-  const cacheKey = range.period + ":" + range.endDate;
+  const cacheKey = range.period + ":" + range.startDate + ":" + range.endDate;
   const cached = overviewCache.get(cacheKey);
-  if (cached?.pending || (!refresh && cached && Date.now() - cached.loadedAt < 30_000)) return cached.promise;
-  if (overviewCache.size >= 10) overviewCache.delete(overviewCache.keys().next().value);
-  const entry = { loadedAt: Date.now(), pending: true };
+  if (cached?.pending || (!refresh && cached && Date.now() < cached.expiresAt)) return cached.promise;
+  if (!cached && overviewCache.size >= 10) overviewCache.delete(overviewCache.keys().next().value);
+  const entry = { pending: true, expiresAt: 0 };
   entry.promise = (async () => {
     const responses = [];
     for (const segment of range.segments) {
@@ -300,9 +317,14 @@ async function getLiteLlmOverview({ period, refresh = false }) {
       if (!Array.isArray(data?.results) || data.metadata?.has_more || Number(data.metadata?.total_pages) > 1) throw new Error("Incomplete gateway usage response");
       responses.push(data);
     }
-    // Never sum key budget counters: these records already aggregate gateway activity.
-    return buildLiteLlmUsageDashboard({ range, responses });
-  })().then((value) => { entry.pending = false; return value; }).catch((error) => { overviewCache.delete(cacheKey); throw error; });
+    const report = buildLiteLlmUsageDashboard({ range, responses });
+    const keySpend = range.period === "month" ? buildLiteLlmKeyPeriodSpend({ range, responses }) : null;
+    const updatedAt = new Date().toISOString();
+    entry.expiresAt = Date.now() + OVERVIEW_CACHE_TTL_MS;
+    entry.pending = false;
+    const cache = { updatedAt, expiresAt: new Date(entry.expiresAt).toISOString(), ttlSeconds: OVERVIEW_CACHE_TTL_MS / 1000 };
+    return { overview: { ...report, cache }, keySpend };
+  })().catch((error) => { if (overviewCache.get(cacheKey) === entry) overviewCache.delete(cacheKey); throw error; });
   overviewCache.set(cacheKey, entry);
   return entry.promise;
 }

@@ -112,10 +112,19 @@ browser. Access remains subject to CAIPE identity and policy.
   read authorization and configured gateway credential as the existing analytics API;
   upstream access and retention determine coverage. Incomplete responses fail visibly.
   All time requests the full date range from the Unix epoch and labels coverage from
-  the first retained activity date. Overview reads are coalesced and cached for 30 seconds.
-- **All users** contains the spend ranking with independent search, sorting, and
-  pagination. Selecting View usage opens **User usage** without changing the ranking's
-  filters or page. Personal key searches do not filter the all-users ranking.
+  the first retained activity date. Overview reads are coalesced and cached in process
+  for four hours, bounded to ten period/date snapshots. Only derived reports and private
+  per-key sums are retained. UTC date changes use a new snapshot. Refresh data bypasses
+  cached results while concurrent refreshes share one load; failures are not cached.
+  The page displays the snapshot update time and checks expiry when returning to a tab.
+- **All users** ranks virtual keys by recorded **current-calendar-month** spend in UTC,
+  with independent search, sorting, and pagination. Monthly spend comes from reconciled
+  daily key-attributed records; missing/unmatched attribution is unavailable, never
+  replaced with lifetime or budget-cycle counters. Budget balances keep their own reset
+  cycles and are labeled separately. The ranking shares the current-month Overview
+  snapshot, so searching and paging do not reload aggregate activity.
+  View usage opens **User usage** for the same current month without changing the
+  ranking's filters or page. Personal searches do not filter the ranking.
 - The user picker searches the authorized catalog by username, email, or key name.
   Matching users appear directly in a searchable dropdown, grouped by owner email
   with their virtual keys underneath. Select a key to open its usage; typing alone

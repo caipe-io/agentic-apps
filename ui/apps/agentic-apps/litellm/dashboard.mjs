@@ -130,13 +130,14 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
   <div id="overviewTabPanel" role="tabpanel" aria-labelledby="overviewTab" hidden>
     <div class="selection"><div><h2>Gateway overview</h2><p class="muted small">Total recorded usage visible to this dashboard across users and virtual keys.</p></div><label>Overview period<select id="overviewPeriod"><option value="month">Current month</option><option value="3m">Last 3 months</option><option value="6m">Last 6 months</option><option value="12m">Last 12 months</option><option value="all">All time</option></select></label></div>
     <p id="overviewStatus" class="notice" role="status" aria-live="polite">Loading gateway usage…</p><button id="retryOverview" hidden>Retry loading overview</button>
+    <p id="overviewFreshness" class="freshness"></p>
     <div id="overviewContent" hidden>
       <p id="overviewRange" class="muted small"></p>
       <section class="kpis" aria-label="Gateway totals in selected period"><article class="panel kpi"><span class="muted small">Total spend · USD</span><strong id="overviewSpend">—</strong><small>Recorded spend in this period</small></article><article class="panel kpi"><span class="muted small">Total tokens</span><strong id="overviewTokens">—</strong><small id="overviewTokenSplit"></small></article><article class="panel kpi"><span class="muted small">Requests</span><strong id="overviewRequests">—</strong><small>Recorded API requests</small></article></section>
       <div class="pie-layout"><section class="panel" aria-labelledby="tokenPieTitle"><h2 id="tokenPieTitle">Tokens by model</h2><div class="pie-content"><svg id="tokenPie" class="pie-chart" role="img" aria-label="Model share of total tokens"></svg><ul id="tokenPieLegend" class="pie-legend" aria-label="Token share by model"></ul></div></section><section class="panel" aria-labelledby="spendPieTitle"><h2 id="spendPieTitle">Spend by model · USD</h2><div class="pie-content"><svg id="spendPie" class="pie-chart" role="img" aria-label="Model share of spend in USD"></svg><ul id="spendPieLegend" class="pie-legend" aria-label="Spend share by model"></ul></div></section></div>
       <section class="panel"><div class="panel-heading"><h2 id="overviewTrendTitle">Usage over time</h2><label>Overview chart measure<select id="overviewTrendMetric"><option value="spend">Spend · USD</option><option value="totalTokens">Tokens</option><option value="requests">Requests</option></select></label></div><p id="overviewTrendEmpty" class="empty" hidden>No usage recorded in this period.</p><svg id="overviewTrendChart" class="chart" role="img" aria-label="Gateway usage over time"></svg></section>
       <section class="panel model-details" aria-labelledby="allModelTotalsTitle"><h2 id="allModelTotalsTitle">All model totals</h2><div class="table-wrap"><table aria-label="Gateway model totals"><thead><tr><th scope="col">Model</th><th scope="col" class="numeric">Spend · USD</th><th scope="col" class="numeric">Input tokens</th><th scope="col" class="numeric">Output tokens</th><th scope="col" class="numeric">Total tokens</th><th scope="col" class="numeric">Requests</th></tr></thead><tbody id="overviewModelRows"></tbody></table></div></section>
-      <p id="overviewWarnings" class="warning small" role="status" hidden></p><p id="overviewFreshness" class="freshness"></p><p class="muted small">All time covers the gateway’s retained activity records; deleted or expired history cannot be recovered. Small model shares are grouped as Other; full model totals are available above.</p>
+      <p id="overviewWarnings" class="warning small" role="status" hidden></p><p class="muted small">All time covers the gateway’s retained activity records; deleted or expired history cannot be recovered. Small model shares are grouped as Other; full model totals are available above.</p>
     </div>
   </div>
   <div id="anomaliesTabPanel" role="tabpanel" aria-labelledby="anomaliesTab" hidden>
@@ -161,10 +162,11 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
   </div>
   <div id="allUsersTabPanel" role="tabpanel" aria-labelledby="allUsersTab" hidden>
     <section class="panel" id="keyDirectory" aria-labelledby="allUsersTitle" aria-busy="false">
-      <div class="panel-heading"><h2 id="allUsersTitle">All users · key spend ranking</h2><span id="allUsersCount" class="muted small" role="status" aria-live="polite"></span></div>
-      <p class="muted small catalog-note">Browse all users available to this dashboard. Each row is one virtual key; spend and remaining key budget follow that key’s budget cycle. Select View usage for detailed charts and owner or team budgets.</p>
-      <div class="controls"><label class="search-field">Search all users<input id="allUsersSearch" type="search" placeholder="Username, email, or key name" autocomplete="off" /></label><label>Sort all users by<select id="allUsersSort"><option value="spend">Highest spend</option><option value="spend-asc">Lowest spend</option><option value="name">Username A–Z</option></select></label></div>
-      <div class="table-wrap"><table aria-label="Matching virtual keys"><thead><tr><th scope="col">Owner / virtual key</th><th scope="col" class="numeric">Key spend</th><th scope="col" class="numeric">Key budget remaining</th><th scope="col">Usage</th></tr></thead><tbody id="keyRows"><tr><td colspan="4" class="empty">Open All users to browse the key spend ranking.</td></tr></tbody></table></div>
+      <div class="panel-heading"><h2 id="allUsersTitle">All users · current-month spend</h2><span id="allUsersCount" class="muted small" role="status" aria-live="polite"></span></div>
+      <p class="muted small catalog-note">Spend is recorded for the current calendar month in UTC. Each row is one virtual key. Budget remaining follows its own reset cycle. Select View usage for this month’s detailed usage and owner or team budgets.</p>
+      <p id="allUsersRange" class="muted small"></p>
+      <div class="controls"><label class="search-field">Search all users<input id="allUsersSearch" type="search" placeholder="Username, email, or key name" autocomplete="off" /></label><label>Sort all users by<select id="allUsersSort"><option value="spend">Highest monthly spend</option><option value="spend-asc">Lowest monthly spend</option><option value="name">Username A–Z</option></select></label></div>
+      <div class="table-wrap"><table aria-label="Matching virtual keys"><thead><tr><th scope="col">Owner / virtual key</th><th scope="col" class="numeric">Current month · USD</th><th scope="col" class="numeric">Budget remaining · key cycle</th><th scope="col">Usage</th></tr></thead><tbody id="keyRows"><tr><td colspan="4" class="empty">Open All users to browse current-month spend.</td></tr></tbody></table></div>
       <nav class="pagination" aria-label="Virtual-key pages"><span id="pageInfo" class="muted small"></span><div class="actions"><label>Rows<select id="pageSize"><option>10</option><option>25</option><option>50</option></select></label><button id="previousPage" disabled>Previous</button><button id="nextPage" disabled>Next</button></div></nav>
       <p id="allUsersStatus" class="notice small" role="status" aria-live="polite"></p><button id="retryAllUsers" hidden>Retry loading users</button>
     </section>
@@ -314,9 +316,9 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
     clearSharedLink();
     closeUserPicker();
     byId("catalog").hidden = !["usage", "calculator"].includes(name);
-    if (name === "users" && !state.directory.loaded && !state.directory.loading) loadAllUsers();
+    if (name === "users" && (!state.directory.loaded || Date.now() >= Date.parse(state.directory.cache?.expiresAt)) && !state.directory.loading) loadAllUsers();
     if (name === "overview") {
-      if (!state.overview && !state.overviewLoading) loadOverview();
+      if ((!state.overview || Date.now() >= Date.parse(state.overview.cache?.expiresAt)) && !state.overviewLoading) loadOverview();
       else if (state.overview) { renderOverviewTrend(); publishContext(state.overview); }
     }
     if (name === "usage" && state.report) renderTrend();
@@ -462,6 +464,8 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
       state.search = key.label;
       state.page = 1;
       selectionRequest = null;
+      byId("period").value = "month";
+      explicitPeriod = true;
       selectKey(key);
       activateTab("usage", true);
       loadVirtualKeys();
@@ -796,6 +800,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
   }
 
   async function loadOverview(refresh = false) {
+    if (refresh) state.directory.loaded = false;
     overviewController?.abort();
     const controller = new AbortController();
     overviewController = controller;
@@ -804,6 +809,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
     byId("overviewTabPanel").setAttribute("aria-busy", "true");
     byId("overviewContent").hidden = true;
     byId("retryOverview").hidden = true;
+    text("overviewFreshness", "");
     notice("overviewStatus", "Loading gateway usage…");
     const query = new URLSearchParams({ period: byId("overviewPeriod").value });
     if (refresh) query.set("refresh", "true");
@@ -845,7 +851,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
       byId("overviewModelRows").innerHTML = models.map((row) => '<tr><th scope="row">' + escapeHtml(row.name) + '</th>' + [formatUsd(row.spend), exact(row.promptTokens), exact(row.completionTokens), exact(row.totalTokens), exact(row.requests)].map((value) => '<td class="numeric">' + escapeHtml(value) + '</td>').join("") + '</tr>').join("") || '<tr><td colspan="6" class="empty">No model activity recorded.</td></tr>';
       byId("overviewWarnings").hidden = !warnings.length;
       text("overviewWarnings", [...new Set(warnings)].join(" "));
-      text("overviewFreshness", "Source: LiteLLM aggregated activity · Loaded " + new Date(report.generatedAt).toLocaleString() + ".");
+      text("overviewFreshness", "Source: LiteLLM aggregated activity · Updated " + new Date(report.cache.updatedAt).toLocaleString() + " · Cached for up to 4 hours. Refresh data reloads the source.");
       byId("overviewContent").hidden = false;
       byId("copyViewLink").disabled = false;
       notice("overviewStatus", "");
@@ -902,6 +908,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
   }
 
   async function loadAllUsers(refresh = false) {
+    if (refresh) state.overview = null;
     clearTimeout(directorySearchTimer);
     directoryController?.abort();
     const controller = new AbortController();
@@ -909,12 +916,12 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
     state.directory.loading = true;
     state.directory.error = "";
     renderDirectory();
-    const query = new URLSearchParams({ scope: "all", search: byId("allUsersSearch").value.trim(), sort: byId("allUsersSort").value, page: String(state.directory.page), size: byId("pageSize").value });
+    const query = new URLSearchParams({ scope: "all", period: "month", search: byId("allUsersSearch").value.trim(), sort: byId("allUsersSort").value, page: String(state.directory.page), size: byId("pageSize").value });
     if (refresh) query.set("refresh", "true");
     try {
       const payload = await requestJson(route("/api/virtual-keys") + "?" + query, controller.signal);
       if (controller.signal.aborted) return;
-      Object.assign(state.directory, { keys: payload.keys, pagination: payload.pagination, page: payload.pagination.page, maxSpend: payload.maxSpend, loaded: true, updatedAt: payload.updatedAt });
+      Object.assign(state.directory, { keys: payload.keys, pagination: payload.pagination, page: payload.pagination.page, maxSpend: payload.maxSpend, loaded: true, updatedAt: payload.updatedAt, range: payload.range, cache: payload.cache, warnings: payload.warnings ?? [] });
       byId("copyViewLink").disabled = false;
     } catch (error) {
       if (controller.signal.aborted) return;
@@ -944,11 +951,12 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
     }
     text("allUsersCount", exact(pagination.totalCount) + " matching / " + exact(pagination.totalKeys) + " keys");
     text("pageInfo", pagination.totalCount ? "Showing " + ((pagination.page - 1) * pagination.size + 1) + "–" + Math.min(pagination.page * pagination.size, pagination.totalCount) + " · Page " + pagination.page + " of " + pagination.totalPages : "No matching keys");
-    notice("allUsersStatus", "Key spend updated " + new Date(directory.updatedAt).toLocaleString() + ".");
+    text("allUsersRange", new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(directory.range.startDate + "T00:00:00Z")) + " · " + directory.range.startDate + " to " + directory.range.endDate + " · UTC");
+    notice("allUsersStatus", "Monthly spend updated " + new Date(directory.updatedAt).toLocaleString() + " · Cached for up to 4 hours. Refresh data reloads the source." + (directory.warnings.length ? " " + directory.warnings.join(" ") : ""), directory.warnings.length > 0);
     byId("keyRows").innerHTML = directory.keys.length ? directory.keys.map((key) => {
       const selected = key.id === state.selectedKey?.id;
-      const width = directory.maxSpend > 0 ? Math.max(0, key.spend) / directory.maxSpend * 100 : 0;
-      return '<tr><td><strong>' + escapeHtml(key.owner) + '</strong><span class="owner">Key: ' + escapeHtml(key.label) + '</span></td><td class="numeric spend-cell">' + escapeHtml(formatUsd(key.spend)) + '<div class="spend-track" aria-hidden="true"><i style="width:' + width + '%"></i></div></td><td class="numeric">' + (key.remainingBudget === null ? '<span class="muted">No key-specific limit</span>' : escapeHtml(formatUsd(key.remainingBudget))) + '</td><td><button class="key-choice" data-key-id="' + escapeHtml(key.id) + '" aria-label="View usage for ' + escapeHtml(key.label) + '" aria-pressed="' + selected + '">' + (selected ? "Selected" : "View usage") + '</button></td></tr>';
+      const width = directory.maxSpend > 0 && Number.isFinite(key.periodSpend) ? Math.max(0, key.periodSpend) / directory.maxSpend * 100 : 0;
+      return '<tr><td><strong>' + escapeHtml(key.owner) + '</strong><span class="owner">Key: ' + escapeHtml(key.label) + '</span></td><td class="numeric spend-cell">' + (Number.isFinite(key.periodSpend) ? escapeHtml(formatUsd(key.periodSpend)) : 'Unavailable') + '<div class="spend-track" aria-hidden="true"><i style="width:' + width + '%"></i></div></td><td class="numeric">' + (key.remainingBudget === null ? '<span class="muted">No key-specific limit</span>' : escapeHtml(formatUsd(key.remainingBudget))) + '</td><td><button class="key-choice" data-key-id="' + escapeHtml(key.id) + '" aria-label="View usage for ' + escapeHtml(key.label) + '" aria-pressed="' + selected + '">' + (selected ? "Selected" : "View usage") + '</button></td></tr>';
     }).join("") : '<tr><td colspan="4" class="empty">No keys match your search. Try a username without the email suffix.</td></tr>';
   }
 

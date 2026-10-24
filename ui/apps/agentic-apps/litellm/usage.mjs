@@ -61,7 +61,7 @@ export async function loadLiteLlmVirtualKeys(fetchPage) {
   throw new Error("LiteLLM virtual-key pagination exceeded the page limit");
 }
 
-export function selectLiteLlmVirtualKeys(keys, { search = "", sort = "spend", page = 1, size = 10 } = {}) {
+export function selectLiteLlmVirtualKeys(keys, { search = "", sort = "spend", page = 1, size = 10, spendField = "spend" } = {}) {
   const query = String(search).trim().toLowerCase();
   const aliasQuery = query.includes("@") ? query.split("@")[0] : query;
   const matches = keys.filter(({ public: key }) => !query
@@ -69,8 +69,12 @@ export function selectLiteLlmVirtualKeys(keys, { search = "", sort = "spend", pa
     || key.owner.toLowerCase().includes(query)
     || (aliasQuery && key.label.toLowerCase() === aliasQuery));
   const sortBy = ["spend", "spend-asc", "name"].includes(sort) ? sort : "spend";
+  const metric = spendField === "periodSpend" ? "periodSpend" : "spend";
   matches.sort((a, b) => {
-    const difference = sortBy === "name" ? 0 : (a.public.spend - b.public.spend) * (sortBy === "spend" ? -1 : 1);
+    const left = a.public[metric], right = b.public[metric];
+    const unknownOrder = sortBy === "name" ? 0 : Number(!Number.isFinite(left)) - Number(!Number.isFinite(right));
+    const difference = sortBy === "name" || !Number.isFinite(left) || !Number.isFinite(right) ? 0 : (left - right) * (sortBy === "spend" ? -1 : 1);
+    if (unknownOrder) return unknownOrder;
     return difference || a.public.label.localeCompare(b.public.label) || a.public.id.localeCompare(b.public.id);
   });
   const pageSize = boundedInteger(size, 10, 1, 100);
@@ -80,7 +84,7 @@ export function selectLiteLlmVirtualKeys(keys, { search = "", sort = "spend", pa
     keys: matches.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((key) => key.public),
     pagination: { page: currentPage, size: pageSize, totalPages, totalCount: matches.length, totalKeys: keys.length },
     sort: sortBy,
-    maxSpend: matches.reduce((max, key) => Math.max(max, key.public.spend), 0),
+    maxSpend: matches.reduce((max, key) => Math.max(max, Number.isFinite(key.public[metric]) ? key.public[metric] : 0), 0),
   };
 }
 
