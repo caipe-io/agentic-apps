@@ -80,6 +80,11 @@ opaque selectors and may show owners, budgets, spend, token counts, requests, mo
 daily or monthly trends. Raw key material, bearer tokens, and other credentials never reach the
 browser. Access remains subject to CAIPE identity and policy.
 
+The usage disclaimer names **LLM Gateway** by default. Deployments can set
+`LITELLM_GATEWAY_NAME` to their gateway’s display name (for example,
+`Example LLM Gateway`). Blank values use the default; names are HTML-escaped.
+Organization-specific branding belongs in deployment configuration.
+
 - The runtime loads every `/key/list` page (up to 100 keys per request) before searching,
   sorting, and paginating the browser results. Incomplete or stalled upstream pagination
   returns an error instead of a partial list.

@@ -29,6 +29,7 @@ const configuredBasePath = normalizeBasePath(
   process.env.LITELLM_APP_BASE_PATH ?? "/apps/litellm",
 );
 const agentId = String(process.env.LITELLM_AGENT_ID ?? "agent-litellm").trim();
+const gatewayName = String(process.env.LITELLM_GATEWAY_NAME ?? "").trim() || "LLM Gateway";
 const litellmApiUrl = String(process.env.LITELLM_API_URL ?? "").replace(/\/+$/, "");
 const litellmApiToken = String(
   process.env.LITELLM_API_KEY ?? process.env.LITELLM_TOKEN ?? process.env.LITELLM_API_TOKEN ?? "",
@@ -256,6 +257,7 @@ const server = createServer(async (request, response) => {
         basePath,
         appPath: configuredBasePath,
         agentId,
+        gatewayName,
       }),
     );
     return;

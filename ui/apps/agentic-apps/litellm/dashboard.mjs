@@ -3,7 +3,7 @@ import { buildLiteLlmAnomalyInvestigationFormat, validateLiteLlmAnomalyInvestiga
 import { renderAgenticAppConversationClient } from "../../_lib/conversation-client.mjs";
 import { renderMicrofrontendClient } from "../../_lib/microfrontend-client.mjs";
 
-export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) {
+export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId, gatewayName = "LLM Gateway" }) {
   const config = JSON.stringify({ basePath, appPath, agentId, anomalyResponseFormat: buildLiteLlmAnomalyInvestigationFormat() }).replaceAll("<", "\\u003c");
   return `<!doctype html>
 <html lang="en">
@@ -107,7 +107,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId }) 
     <div><h1>LLM usage &amp; budgets</h1><p class="subtitle">Search for a user to view their usage and budgets.</p></div>
     <div class="actions"><button id="copyViewLink" disabled>Copy link</button><button id="refresh" disabled>Refresh data</button></div>
   </header>
-  <p class="notice small"><em>Only usage routed through the Outshift AI Gateway is shown in this dashboard.</em></p>
+  <p class="notice small"><em>Only usage routed through the ${escapeHtml(gatewayName)} is shown in this dashboard.</em></p>
   <div class="tabs" role="tablist" aria-label="Dashboard views" id="dashboardTabs">
     <button role="tab" id="usageTab" aria-selected="true" aria-controls="usageTabPanel" tabindex="0">User usage</button>
     <button role="tab" id="overviewTab" aria-selected="false" aria-controls="overviewTabPanel" tabindex="-1">Overview</button>
