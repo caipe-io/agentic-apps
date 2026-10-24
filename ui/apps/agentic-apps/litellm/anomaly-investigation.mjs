@@ -46,6 +46,14 @@ export function buildLiteLlmAnomalyInvestigationFormat() {
 
 /** Serialized into the iframe; reject mismatched evidence and render only bounded text. */
 export function validateLiteLlmAnomalyInvestigation(value, report) {
+  // Older invoke runtimes return the agent's final JSON as content rather than a
+  // structured_output field. Both transports must satisfy the same validation.
+  if (typeof value === "string") {
+    if (value.length > 500_000) throw new Error("The agent investigation response is too large.");
+    const json = value.trim().replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/i, "$1");
+    try { value = JSON.parse(json); }
+    catch { throw new Error("The agent did not return a JSON investigation result."); }
+  }
   const object = (entry) => entry !== null && typeof entry === "object" && !Array.isArray(entry);
   const text = (entry, max) => typeof entry === "string" && entry.trim().length > 0 && entry.length <= max;
   const list = (entry) => Array.isArray(entry) && entry.length <= 8 && entry.every((item) => text(item, 1200));

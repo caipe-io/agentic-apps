@@ -169,7 +169,8 @@ browser. Access remains subject to CAIPE identity and policy.
   calculated candidates; agent runs require the explicit button action.
 - The agent calls `litellm_get_cost_anomalies` with the same dates and thresholds,
   then uses daily activity or model inventory MCP evidence as needed. Its structured
-  response must match the candidate snapshot and dates, and cite MCP evidence for
+  response (native structured output or final JSON on older invoke runtimes) must
+  match the candidate snapshot and dates, and cite MCP evidence for
   each assessed model. Agent-cited evidence is not an independently verified tool trace.
 - Agent findings separate observations, possible causes, recommended checks, and
   limitations. Partial, unavailable, or malformed responses are shown explicitly;

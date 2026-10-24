@@ -14,7 +14,8 @@ instructions: |
   or provider pricing without supporting tool results. A rule-based candidate is a review
   signal, not proof of a root cause. Report incomplete evidence and tool failures explicitly.
   When a response schema is supplied, submit_structured_response with that schema and return
-  a partial or unavailable investigation instead of inventing findings.
+  a partial or unavailable investigation instead of inventing findings. If that tool is
+  unavailable in the invoke runtime, return only a JSON object matching the supplied schema.
 mcpServers:
   - id: litellm
     allowedTools: []
