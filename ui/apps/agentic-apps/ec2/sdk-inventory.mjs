@@ -146,7 +146,24 @@ export function createAwsInventoryService(configuration, { clientsForScope = cre
         }, refresh);
         sourceTimes.push(result.fetchedAt);
         for (const item of result.value) typeMap.set(item.InstanceType, item);
-      } catch (error) { warnings.add("Instance size/CPU/GPU metadata unavailable: " + errorSummary(error)); }
+      } catch (error) {
+        // A terminated instance can reference a type no longer offered in this region.
+        // Isolate that type so valid instances retain their hardware metadata.
+        if (error?.name === "InvalidInstanceType" && names.length > 1) {
+          const queue = [...names];
+          const worker = async () => {
+            while (queue.length) {
+              const name = queue.shift();
+              try {
+                const result = await lookup("type:" + scope.profile + ":" + scope.region + ":" + name, async () => (await send(clients.ec2, new DescribeInstanceTypesCommand({ InstanceTypes: [name] }), "ec2")).InstanceTypes || [], refresh);
+                sourceTimes.push(result.fetchedAt);
+                for (const item of result.value) typeMap.set(item.InstanceType, item);
+              } catch (lookupError) { warnings.add("Some instance hardware metadata is unavailable: " + errorSummary(lookupError)); }
+            }
+          };
+          await Promise.all([worker(), worker()]);
+        } else warnings.add("Instance size/CPU/GPU metadata unavailable: " + errorSummary(error));
+      }
     }
     const osMap = new Map();
     if (raw.length) try {
