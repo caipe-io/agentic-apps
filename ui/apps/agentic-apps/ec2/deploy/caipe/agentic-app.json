@@ -1,0 +1,11 @@
+{
+  "id": "ec2",
+  "name": "EC2 Instances Dashboard",
+  "description": "Read-only AWS EC2 inventory, instance sizing, OS, tags, and on-demand cost estimates.",
+  "runtime": { "type": "remote", "target": "http://agentic-app-ec2:3043", "mountPath": "/apps/ec2" },
+  "visibility": "private",
+  "createdBy": "deployment-owner",
+  "requiredScopes": ["ec2:read", "ec2:agent:invoke", "agents:invoke"],
+  "assistant": { "agentId": "agent-ec2", "name": "EC2 Assistant", "label": "Ask AWS", "contextEndpoint": "/api/context" },
+  "healthEndpoint": "/health/ready"
+}
