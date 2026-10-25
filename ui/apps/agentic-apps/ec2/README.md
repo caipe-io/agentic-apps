@@ -16,6 +16,7 @@
 | `EC2_AWS_ACCOUNT_LIST` | `AWS_ACCOUNT_LIST` | Canonical `profile:account_id` pairs matching AWS MCP |
 | `EC2_AWS_REGIONS` | `AWS_REGION`, `AWS_DEFAULT_REGION`, then `us-east-1` | Comma-separated permitted regions |
 | `EC2_CROSS_ACCOUNT_ROLE_NAME` | `CROSS_ACCOUNT_ROLE_NAME`, then `read-only` | Role assumed in each configured account |
+| `EC2_OWNER_TAG_KEYS` | `Owner,ResourceOwner,User,Username,CreatedBy,Email` | Tag keys used for owner/user filtering and display; up to 16 keys |
 | `EC2_AWS_PARTITION` | `aws` | AWS ARN partition |
 | `EC2_CACHE_TTL_SECONDS` | `28800` | Fresh snapshot lifetime and background refresh interval; 60–86400 seconds |
 | `EC2_BACKGROUND_REFRESH_ENABLED` | `true` | Warm all configured scopes at startup and refresh on schedule; disable only for isolated previews |
@@ -58,6 +59,23 @@
   shared links keep stable IDs because names can repeat or change.
 - “Copy link” shares the selected instance, or the active search/view when none is selected.
 
+## Filters and sorting
+
+- Combine hardware/state, exact instance type, AWS size suffix, owner/user, tag presence,
+  independent tag key/value expressions, and minimum/maximum modeled monthly USD cost.
+- Owner/user values come from configurable tags, not verified AWS creator identities.
+  Key aliases ignore case/separators; owner values preserve punctuation and ignore case.
+  “No owner tag” requires a complete tag list. Ownership is shown in inventory/details.
+- Cost ranges exclude unknown estimates. Invalid or inverted ranges show no results
+  and an error. Type/size/owner choices come from the full cached population, remain
+  selected during partial loads, and do not silently broaden unavailable URL selections.
+- Sort by type, vCPU/RAM size (largest/smallest), memory, estimated cost (high/low),
+  owner/user, tag count (fewest/most), tag keys/values, name, or launch date. Unknown
+  hardware/cost/owner values sort after known values. Filters apply across all tabs.
+- Copy link preserves `type`, `size`, `owner`, `tags`, `tagStatus`, `minCost`, `maxCost`,
+  `sort`, and anomaly `signal`/`highCost` settings. “Clear filters” keeps the account/region
+  scope and anomaly thresholds while clearing inventory filters and the signal category.
+
 ## Views
 
 - **Instances** is the first tab and automatically loads all configured account/region
@@ -86,6 +104,11 @@
 
 - The fifth tab shows configurable snapshot review signals: high monthly on-demand
   reference cost, stopped instances with older launch dates, and missing required tags.
+- Untagged instances have an explicit signal even when no required tag keys are set.
+  The complete tag list must be empty; truncated/unknown tags do not prove absence.
+  Nonempty lists missing required keys are a separate category. Select High estimated
+  cost, Without tags, Missing required tags, Older stopped, or All signals; the agent
+  investigates the visible category. Cost remains a configurable reference threshold.
 - Signals use the same loaded account/region population and filters as the other views.
   Incomplete pricing, dates, tags, and AWS pages remain visible coverage gaps. Missing
   tags are flagged only from a complete reported tag list; tag key matching is exact.

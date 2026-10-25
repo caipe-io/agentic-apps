@@ -9,9 +9,11 @@ export function ec2Configuration(env = process.env) {
   if (!/^[A-Za-z0-9+=,.@_/-]{1,128}$/.test(crossAccountRoleName)) throw new Error("Invalid configured cross-account role name.");
   const partition = env.EC2_AWS_PARTITION || "aws";
   if (!["aws", "aws-us-gov", "aws-cn"].includes(partition)) throw new Error("Invalid AWS partition.");
+  const ownerTagKeys = [...new Set(String(env.EC2_OWNER_TAG_KEYS || "Owner,ResourceOwner,User,Username,CreatedBy,Email").split(",").map((value) => value.trim()).filter(Boolean))];
+  if (!ownerTagKeys.length || ownerTagKeys.length > 16 || ownerTagKeys.some((key) => key.length > 128)) throw new Error("Configure one to sixteen ownership tag keys, each at most 128 characters.");
   const cacheSeconds = Number(env.EC2_CACHE_TTL_SECONDS || 28800);
   if (!Number.isFinite(cacheSeconds) || cacheSeconds < 60 || cacheSeconds > 86400) throw new Error("EC2 cache lifetime must be between 60 seconds and one day.");
-  return { accounts: accounts.length ? accounts : [{ profile: "", accountId: "", label: "Default AWS credentials" }], regions, agentId: env.EC2_AGENT_ID || "agent-ec2", crossAccountRoleName, partition, cacheTtlMs: cacheSeconds * 1000, cacheMaxStaleMs: cacheSeconds * 1000 * 3, backgroundRefreshEnabled: env.EC2_BACKGROUND_REFRESH_ENABLED !== "false", cacheMaxBytes: 64 * 1024 * 1024 };
+  return { ownerTagKeys, accounts: accounts.length ? accounts : [{ profile: "", accountId: "", label: "Default AWS credentials" }], regions, agentId: env.EC2_AGENT_ID || "agent-ec2", crossAccountRoleName, partition, cacheTtlMs: cacheSeconds * 1000, cacheMaxStaleMs: cacheSeconds * 1000 * 3, backgroundRefreshEnabled: env.EC2_BACKGROUND_REFRESH_ENABLED !== "false", cacheMaxBytes: 64 * 1024 * 1024 };
 }
 
 export function resolveEc2Scope(input, configuration) {
