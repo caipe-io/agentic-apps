@@ -87,7 +87,12 @@ export function validateEc2AnomalyResponse(value, plan) {
   if (!Array.isArray(value.warnings) || value.warnings.length > 8 || !value.warnings.every((item) => text(item))) throw new Error("Invalid investigation warnings.");
   if (value.status === "unavailable") throw new Error(value.summary || value.warnings.join(" ") || "AWS investigation unavailable.");
   if (!/^\d{12}$/.test(value.accountId) || (plan.scope.accountId && value.accountId !== plan.scope.accountId)) throw new Error("The investigation used a different AWS account.");
-  if (!Array.isArray(value.evidence) || value.evidence.length > 12 || value.evidence.some((entry) => !object(entry) || entry.tool !== "aws_cli_execute" || entry.profile !== plan.scope.profile || entry.region !== plan.scope.region || !text(entry.command, 4096)) || !value.evidence.some((entry) => entry.command.startsWith("sts get-caller-identity")) || !value.evidence.some((entry) => entry.command === plan.command)) throw new Error("Verified STS and EC2 evidence are required.");
+  if (!Array.isArray(value.evidence) || value.evidence.length > 12 || value.evidence.some((entry) => !object(entry) || entry.tool !== "aws_cli_execute" || entry.profile !== plan.scope.profile || entry.region !== plan.scope.region || !text(entry.command, 4096))) throw new Error("Investigation evidence has an invalid tool or account/region scope.");
+  // This generated JMESPath expression contains no whitespace or quote characters.
+  // AWS CLI receives the same argument with single, double, or omitted outer quotes.
+  const inventoryCommands = new Set([plan.command, plan.command.replace(/'([^']*)'$/, "$1"), plan.command.replace(/'([^']*)'$/, '\"$1\"')]);
+  if (!value.evidence.some((entry) => entry.command === "sts get-caller-identity")) throw new Error("Verified STS identity evidence is required.");
+  if (!value.evidence.some((entry) => inventoryCommands.has(entry.command))) throw new Error("Evidence must include the requested instance IDs and exact EC2 projection.");
   if (!Array.isArray(value.findings) || value.findings.length > 5) throw new Error("Invalid investigation findings.");
   const seen = new Set();
   for (const finding of value.findings) {

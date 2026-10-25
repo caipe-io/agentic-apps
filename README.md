@@ -22,7 +22,7 @@ remains in the separate `platform-apps-deployment` repository.
 | FinOps Command Center | `/apps/finops` | 3010 | `agent-finops` | AWS Cost Explorer workflows |
 | Weather Lab | `/apps/weather` | 3020 | `agent-weather-agent` | Open-Meteo forecast and air-quality data |
 | Agentic SDLC | `/apps/agentic-sdlc` | 3030 | `agent-agentic-sdlc` | Repository delivery and ship-loop workflows |
-| EC2 Instances Dashboard | `/apps/ec2` | 3043 | `agent-ec2` | Account/region EC2 inventory, sizing, OS, tags, and on-demand estimates via AWS MCP |
+| EC2 Instances Dashboard | `/apps/ec2` | 3043 | `agent-ec2` | Account/region EC2 inventory, sizing, OS, tags, and on-demand estimates via AWS SDK; MCP agent investigations |
 | LiteLLM Usage Dashboard | `/apps/litellm` | 3042 | `agent-litellm` | LiteLLM usage, spend, model, and virtual-key operations |
 | OSS Repo Report Card | `/apps/oss-repo-management` | 3040 | `agent-oss-repo-report-card` | Repository health and OSS readiness evidence |
 | Jira Project Dashboard | `/apps/jira-project-dashboard` | 3041 | `agent-jira-agent` | Jira project and delivery metrics |
@@ -49,6 +49,7 @@ Requirements: Node.js 22 or newer and Docker for container checks.
 
 ```bash
 npm ci
+npm ci --prefix ui/apps/agentic-apps/ec2 --ignore-scripts
 npm run check
 npm test
 npm run smoke

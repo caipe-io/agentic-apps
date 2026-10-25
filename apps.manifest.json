@@ -56,7 +56,8 @@
       "sourcePath": "ui/apps/agentic-apps/ec2",
       "serverPath": "ui/apps/agentic-apps/ec2/server.mjs",
       "image": "agentic-apps-ec2-instances-dashboard",
-      "port": 3043
+      "port": 3043,
+      "dockerfile": "build/Dockerfile.ec2"
     }
   ]
 }
