@@ -41,7 +41,10 @@
 
 - Search names, instance IDs, profile/account/region, size, OS, and every tag key/value.
   Case, spaces, hyphens, and underscores match consistently. Filtering loaded records
-  does not call AWS. “Search all accounts & regions” searches every configured scope.
+  does not call AWS. Choose All fields, Name or instance ID, or Tags. Tag expressions
+  such as `Owner=example-team` match the complete normalized key and a partial value;
+  `Owner=` finds instances with that key. “Search all accounts & regions” searches
+  every configured scope. Search mode is preserved with `searchIn=name` or `searchIn=tags`.
 - `?profile=primary&region=us-east-1&search=simulation` loads that search automatically.
 - `?profile=primary&region=us-east-1&instanceId=i-0123456789abcdef0` directly describes
   the instance and opens its details without loading earlier service pages.
@@ -53,7 +56,11 @@
 
 - **Instances** is the first tab. Select an account/profile and region, load inventory,
   then search/filter and inspect its instances.
-- **Overview** is the second tab. Instance-type, CPU-platform, and GPU-presence pie
+- **GPU instances** is the second tab, using the same cached inventory, search, state,
+  sort, pagination, details, and account/region scope. Only verified GPU hosts appear;
+  unknown GPU metadata is excluded with a visible count. The general hardware filter
+  is preserved when returning to other tabs. Share the GPU view with `tab=gpu`.
+- **Overview** is the third tab. Instance-type, CPU-platform, and GPU-presence pie
   charts share the selected account/region scope and visible search/state/hardware filters.
 - CPU groups distinguish x86, verified Graviton, other Arm, unverified Arm, and
   other/unknown architecture. Arm alone does not prove Graviton (for example, Arm Mac).
@@ -67,7 +74,7 @@
 
 ## Anomalies
 
-- The third tab shows configurable snapshot review signals: high monthly on-demand
+- The fourth tab shows configurable snapshot review signals: high monthly on-demand
   reference cost, stopped instances with older launch dates, and missing required tags.
 - Signals use the same loaded account/region population and filters as the other views.
   Incomplete pricing, dates, tags, and AWS pages remain visible coverage gaps. Missing
