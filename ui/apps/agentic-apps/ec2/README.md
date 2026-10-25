@@ -103,6 +103,10 @@
 - Loading shows elapsed time and actual request phases; the invoke endpoint does
   not stream tool-level progress. Cancel aborts browser requests; agent work already
   started on the server may continue.
+- Inventory, tag, and investigation prompts include their complete response schema
+  as well as the structured-response metadata, supporting hosts whose deployed
+  agent runtime returns final JSON without a structured-response tool. Client
+  validation still rejects mismatched scope, identity, evidence, and malformed data.
 - STS, scope, bounded rows/tags, price matching, pagination, response format, and
   evidence are validated before rendering. Agent-reported evidence is not a signed
   attestation of execution; the dedicated agent and MCP policies must be installed.
