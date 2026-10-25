@@ -50,6 +50,11 @@
   the instance and opens its details without loading earlier service pages.
 - Search or instance links without a scope use all configured accounts/regions.
   Invalid IDs or unconfigured scopes show an error. Recipients need their own app access.
+- Instance labels prefer the AWS `Name` tag, then `ApplicationName`; absent names
+  display as “Unnamed instance”. Names lead the inventory, GPU list, details, and
+  review/investigation headings. IDs remain secondary for disambiguation. Named
+  investigation links use the verified account/region/ID to open the correct instance;
+  shared links keep stable IDs because names can repeat or change.
 - “Copy link” shares the selected instance, or the active search/view when none is selected.
 
 ## Views
