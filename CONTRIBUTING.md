@@ -13,6 +13,7 @@ Install dependencies and run the same checks used by CI:
 
 ```bash
 npm ci
+npm ci --prefix ui/apps/agentic-apps/ec2 --ignore-scripts
 npm run check
 npm test
 npm run smoke
