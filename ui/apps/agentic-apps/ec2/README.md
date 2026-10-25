@@ -17,12 +17,13 @@
 | `EC2_AWS_REGIONS` | `AWS_REGION`, `AWS_DEFAULT_REGION`, then `us-east-1` | Comma-separated permitted regions |
 | `EC2_CROSS_ACCOUNT_ROLE_NAME` | `CROSS_ACCOUNT_ROLE_NAME`, then `read-only` | Role assumed in each configured account |
 | `EC2_AWS_PARTITION` | `aws` | AWS ARN partition |
-| `EC2_CACHE_TTL_SECONDS` | `14400` | Server snapshot lifetime; 60–86400 seconds |
+| `EC2_CACHE_TTL_SECONDS` | `28800` | Fresh snapshot lifetime and background refresh interval; 60–86400 seconds |
+| `EC2_BACKGROUND_REFRESH_ENABLED` | `true` | Warm all configured scopes at startup and refresh on schedule; disable only for isolated previews |
 | `AWS_ROLE_ARN`, `AWS_WEB_IDENTITY_TOKEN_FILE` | AWS provider chain | Configure both for IRSA |
 | `AGENTIC_APP_TOKEN_SECRET` | Required by shared verifier | Host-issued app JWT verification |
 
-- Multiple accounts require an explicit selection. “All configured” stays within the
-  account/region allowlists. Each configured account is reached through its read-only
+- The landing page automatically loads all configured accounts and regions. Account
+  and region filters immediately apply cached views within these allowlists. Each configured account is reached through its read-only
   role using server credentials. Profile names are labels, never local AWS profile selectors.
 - Without an account list, the server uses its default AWS credential provider chain
   and verifies the resulting identity through STS. Local development can use `AWS_PROFILE`.
@@ -59,8 +60,9 @@
 
 ## Views
 
-- **Instances** is the first tab. Select an account/profile and region, load inventory,
-  then search/filter and inspect its instances.
+- **Instances** is the first tab and automatically loads all configured account/region
+  snapshots. Account/region changes apply immediately; search/filter the cached fleet
+  and inspect its instances without a manual initial load.
 - **GPU instances** is the second tab, using the same cached inventory, search, state,
   sort, pagination, details, and account/region scope. Only verified GPU hosts appear;
   unknown GPU metadata is excluded with a visible count. The general hardware filter
@@ -77,9 +79,12 @@
   no-GPU, or unknown-hardware records. Shared links preserve the active tab and filters.
 - Type pies show the six largest types plus Other types; all records remain in the table.
 
+- **Cost overview** is the fourth tab, showing state-aware reference cost estimates,
+  pricing coverage, account/type breakdowns, and the highest-cost named instances.
+
 ## Anomalies
 
-- The fourth tab shows configurable snapshot review signals: high monthly on-demand
+- The fifth tab shows configurable snapshot review signals: high monthly on-demand
   reference cost, stopped instances with older launch dates, and missing required tags.
 - Signals use the same loaded account/region population and filters as the other views.
   Incomplete pricing, dates, tags, and AWS pages remain visible coverage gaps. Missing
@@ -119,14 +124,31 @@
   running instance. Missing running-instance prices are excluded with visible coverage.
   Stopped/terminated instances have zero modeled compute runtime; their storage and
   other charges continue to be excluded. Other transitional states remain unknown.
+- The Cost overview tab includes known compute subtotals per hour, 24-hour day, and 730-hour
+  modeled month, priced-running coverage, account/type cost breakdowns, and the ten
+  highest modeled running-instance costs with named links. Unknown rates are excluded
+  and counted; partially priced groups are never presented as complete spend.
+- Instance details show the reference hourly rate and state-aware daily/monthly compute
+  estimates. Stopped/terminated compute is modeled as zero; storage remains excluded.
 - These are reference prices, **not actual billed costs**. Spot, RI/Savings Plans,
   EBS, networking, tax, and additional license charges are not modeled. Ask AWS can
   investigate billing separately when billing data and permissions are available.
-- Server snapshots expire after four hours by default, including complete tags and
+- Server snapshots are refreshed every eight hours by default, including complete tags and
   metadata. Cache keys include scope, continuation token, and direct instance ID.
   Concurrent identical reads share one job; canceling a browser does not cancel it
   for other readers. Snapshot storage is bounded to 64 MiB with oldest-use eviction;
-  metadata has a separate 2,048-entry bound. Process restarts clear the cache.
+  metadata has a separate 2,048-entry bound. A startup job warms every configured
+  account/region scope with at most two concurrent reads and follows continuation
+  batches automatically. Process restarts clear the in-memory cache and start a new warm-up.
+- Background refreshes do not overlap. Failed cycles retry after five minutes (or the
+  configured interval if shorter). Existing snapshots remain readable during refresh
+  until a maximum source age of three refresh intervals (24 hours by default), explicitly marked
+  stale. Failures preserve prior snapshots; unavailable/partial scopes remain visible.
+  `/api/cache-status` exposes progress and scheduling behind normal app read authorization.
+- Direct instance lookups reuse a matching cached fleet snapshot when available,
+  including verified absence from complete cached coverage. Forced refresh bypasses it.
+- Upgrade deployments that explicitly set the old four-hour value to
+  `EC2_CACHE_TTL_SECONDS=28800` to use the requested eight-hour schedule.
 - Cache age uses the oldest source lookup. “Refresh live data” bypasses both snapshot
   and metadata caches. Snapshot times, cache hits, expiry, and partial coverage are visible.
   Shared links contain scope/filters, never inventory or credentials.

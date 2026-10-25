@@ -12,13 +12,15 @@ export function renderEc2Dashboard({ basePath, appPath, compact, configuration }
   :root[data-caipe-theme=light]{color-scheme:light;--bg:#f7f9fc;--surface:#fff;--text:#15233a;--muted:#50627b;--line:#dce3ed;--track:#e3eaf1;--accent:#087a83;--warning:#925705;--error:#a82323}
   *{box-sizing:border-box}body{margin:0}main{max-width:1440px;margin:auto;padding:28px 24px 44px}h1,h2,h3,p{margin:0}h1{font-size:1.85rem;letter-spacing:-.03em}h2{font-size:1.12rem}h3{font-size:1rem}.muted,small{color:var(--muted)}.small,small{font-size:.82rem}.subtitle{margin:6px 0 22px;color:var(--muted)}.row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.actions,.controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap}.controls{margin:18px 0 14px}label{display:grid;gap:5px;color:var(--muted);font-size:.82rem}input,select,button{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px}button{cursor:pointer;font-size:.88rem}button:disabled{opacity:.5;cursor:default}button.primary{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:600}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}a{color:var(--accent)}input[type=search]{width:100%;min-width:240px}select{min-width:160px}.grow{flex:1}.panel{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:20px;margin:18px 0}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:18px}.kpi{margin:0}.kpi strong{display:block;font-size:1.9rem;font-variant-numeric:tabular-nums;margin:5px 0}.bars{display:grid;gap:12px;margin-top:18px}.bar-row{display:grid;grid-template-columns:minmax(100px,1fr) 2fr 40px;gap:12px;align-items:center;font-size:.85rem}.bar-track{height:10px;background:var(--track);border-radius:4px;overflow:hidden}.bar-track i{display:block;height:100%;background:var(--accent)}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:.85rem}th{text-align:left;color:var(--muted);font-size:.78rem;font-weight:500}td,th{padding:14px 10px;border-bottom:1px solid var(--line);vertical-align:top}table.inventory{min-width:1150px}.numeric{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.tag{display:inline-block;border:1px solid var(--line);border-radius:5px;padding:2px 6px;font-size:.75rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.state{display:inline-block;border:1px solid var(--line);border-radius:20px;padding:2px 8px;font-size:.78rem}.state.running{color:var(--accent)}.tag-stack{display:grid;gap:4px}.notice{margin:12px 0;color:var(--muted)}.error{color:var(--error)}.warning{color:var(--warning)}.empty{text-align:center;padding:35px;color:var(--muted)}.progress{border-color:var(--accent);background:var(--track)}.spinner{width:21px;height:21px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;flex-shrink:0}.progress-heading{justify-content:flex-start}.progress-heading strong{flex:1}.progress p{margin-top:8px}.progress.finished{padding:10px 16px;margin:10px 0}.progress.finished .progress-heading strong{font-size:.88rem}.progress.finished p{font-size:.78rem;margin-top:2px}.coverage-panel{padding:10px 16px!important;margin:12px 0}.coverage-panel details{margin:0}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:18px}.detail-grid strong{display:block;margin-top:4px}dl{display:grid;grid-template-columns:minmax(120px,1fr) 3fr;gap:10px 18px}dt,dd{margin:0;overflow-wrap:anywhere}details{margin-top:14px}summary{cursor:pointer;color:var(--muted)}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.8rem}.pagination{margin-top:16px}.scope-issues{display:grid;gap:8px;padding-left:20px}.selected-row{background:var(--track)}[hidden]{display:none!important}body.compact main{padding-top:18px}body.compact .panel{padding:16px}@keyframes spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.spinner{animation:none}}@media(max-width:850px){.kpis,.detail-grid{grid-template-columns:1fr 1fr}}@media(max-width:520px){main{padding:18px 12px}.kpis{grid-template-columns:1fr 1fr}.controls label{width:100%}.controls select{width:100%}.detail-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:90px 1fr 30px}}@media(pointer:coarse){input,select,button{min-height:44px}}
   .signal-row{margin-top:14px}.signal-heading{align-items:start}.signal-heading h3{overflow-wrap:anywhere}.rule-label{display:inline-block;padding:3px 8px;border:1px solid var(--line);border-radius:20px;color:var(--warning);font-size:.77rem;margin:4px 6px 4px 0}.signal-row ul{margin:10px 0;padding-left:22px}.signal-actions{margin-top:14px}.cpu-summary{margin-top:10px;font-variant-numeric:tabular-nums}.analysis-finding{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}.anomaly-stats{display:flex;flex-wrap:wrap;gap:8px 20px;margin:12px 0}.anomaly-stats strong{color:var(--text)}
+  .cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.cost-grid>.panel{margin:0}.cost-bars .bar-row{grid-template-columns:minmax(100px,1fr) 1.5fr minmax(110px,auto)}@media(max-width:700px){.cost-grid{grid-template-columns:1fr}}
   .tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin:16px 0}.tabs button{min-width:130px;background:transparent;border:0;border-bottom:3px solid transparent;border-radius:8px 8px 0 0;color:var(--muted)}.tabs button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent);background:var(--surface);font-weight:600}.pie-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.pie-grid>.panel{margin:0}.pie-chart{display:block;width:100%;max-width:210px;margin:16px auto}.pie-legend{list-style:none;margin:0;padding:0;display:grid;gap:10px}.pie-legend li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;align-items:baseline;font-size:.82rem}.pie-legend i{display:block;width:10px;height:10px;border-radius:2px}.pie-legend span{overflow-wrap:anywhere}.filter-panel{padding:8px 16px!important}.filter-panel .controls{margin:8px 0}.filter-panel label{min-width:150px}.filter-panel input[type=search]{min-width:220px}@media(max-width:1050px){.pie-grid{grid-template-columns:1fr 1fr}.pie-grid>.panel:last-child{grid-column:1/-1}}@media(max-width:600px){.pie-grid{grid-template-columns:1fr}.pie-grid>.panel:last-child{grid-column:auto}}
   </style></head><body class="${compact ? "compact" : ""}"><main>
   <header class="row"><div><h1>EC2 instances</h1><p class="subtitle">Explore instance size, OS, tags, and cost by AWS account and region.</p></div><div class="actions"><button id="copyLink">Copy link</button><button id="refresh" disabled>Refresh live data</button><button id="askAws">Ask AWS</button></div></header>
-  <section class="panel" aria-labelledby="scopeTitle"><h2 id="scopeTitle">AWS account scope</h2><form id="scopeForm" class="controls"><label class="grow">Account / profile<select id="profile" required></select></label><label class="grow">Region<select id="region" required></select></label><label>Search in<select id="searchIn" aria-describedby="searchHelp"><option value="all">All fields</option><option value="name">Name or instance ID</option><option value="tags">Tags</option></select></label><label class="grow">Find an instance<input aria-describedby="searchHelp" id="search" type="search" maxlength="256" placeholder="Name, instance ID, tag, or key=value" autocomplete="off" data-1p-ignore spellcheck="false"></label><button class="primary" id="load" type="submit">Search / load inventory</button><button id="searchAll" type="button">Search all accounts &amp; regions</button></form><p id="searchHelp" class="muted small">Search names and all tags, including tags outside the table preview. Use a tag key, value, or key=value, such as Owner=example-team. Case, spaces, hyphens, and underscores match consistently.</p><p class="muted small">Inventory uses the AWS SDK and follows every AWS page. Snapshots are cached for ${configuration.cacheTtlMs / 3_600_000} hours; Refresh live data bypasses the cache. Names and all tag keys/values are searchable. AWS resources are read-only.</p></section>
-  <nav class="tabs" role="tablist" aria-label="EC2 dashboard views"><button id="instancesTab" role="tab" aria-selected="true" aria-controls="instancesPanel" tabindex="0">Instances</button><button id="gpuTab" role="tab" aria-selected="false" aria-controls="instancesPanel" tabindex="-1">GPU instances</button><button id="overviewTab" role="tab" aria-selected="false" aria-controls="overviewPanel" tabindex="-1">Overview</button><button id="anomaliesTab" role="tab" aria-selected="false" aria-controls="anomaliesPanel" tabindex="-1">Anomalies</button></nav>
+  <section class="panel" aria-labelledby="scopeTitle"><h2 id="scopeTitle">AWS account scope</h2><form id="scopeForm" class="controls"><label class="grow">Account / profile<select id="profile" required></select></label><label class="grow">Region<select id="region" required></select></label><label>Search in<select id="searchIn" aria-describedby="searchHelp"><option value="all">All fields</option><option value="name">Name or instance ID</option><option value="tags">Tags</option></select></label><label class="grow">Find an instance<input aria-describedby="searchHelp" id="search" type="search" maxlength="256" placeholder="Name, instance ID, tag, or key=value" autocomplete="off" data-1p-ignore spellcheck="false"></label><button class="primary" id="load" type="submit">Reload cached view</button><button id="searchAll" type="button">Search all accounts &amp; regions</button></form><p id="searchHelp" class="muted small">Search names and all tags, including tags outside the table preview. Use a tag key, value, or key=value, such as Owner=example-team. Case, spaces, hyphens, and underscores match consistently.</p><p class="muted small">All configured accounts and regions load automatically from the shared cache. The background refresh runs every ${configuration.cacheTtlMs / 3_600_000} hours. Refresh live data bypasses the cache. AWS resources are read-only.</p></section>
+  <nav class="tabs" role="tablist" aria-label="EC2 dashboard views"><button id="instancesTab" role="tab" aria-selected="true" aria-controls="instancesPanel" tabindex="0">Instances</button><button id="gpuTab" role="tab" aria-selected="false" aria-controls="instancesPanel" tabindex="-1">GPU instances</button><button id="overviewTab" role="tab" aria-selected="false" aria-controls="overviewPanel" tabindex="-1">Overview</button><button id="costsTab" role="tab" aria-selected="false" aria-controls="costsPanel" tabindex="-1">Cost overview</button><button id="anomaliesTab" role="tab" aria-selected="false" aria-controls="anomaliesPanel" tabindex="-1">Anomalies</button></nav>
   <section id="progress" class="panel progress" hidden><div class="row progress-heading"><span id="spinner" class="spinner" aria-hidden="true"></span><strong id="progressTitle" role="status" aria-live="polite"></strong><time id="elapsed" class="small muted"></time><button id="cancel">Cancel</button></div><p id="progressDetail" class="small muted"></p></section>
-  <p id="status" class="notice small" role="status" aria-live="polite">Choose an account and load inventory.</p>
+  <p id="cacheStatus" class="notice small" role="status" aria-live="polite">Checking background cache status…</p>
+  <p id="status" class="notice small" role="status" aria-live="polite">Loading cached inventory from all configured accounts and regions…</p>
   <div id="content" hidden>
     <div class="kpis"><article class="panel kpi"><span class="muted small">Matching instances</span><strong id="instanceCount">—</strong><small id="coverageCount"></small></article><article class="panel kpi"><span class="muted small">Running / stopped</span><strong id="stateCount">—</strong><small>In the current filters</small></article><article class="panel kpi"><span class="muted small">On-demand equivalent / mo</span><strong id="monthlyCost">—</strong><small id="priceCoverage"></small></article><article class="panel kpi"><span class="muted small">Accounts / regions loaded</span><strong id="scopeCount">—</strong><small>Successful scopes only</small></article></div>
     <p class="notice small"><em>Cost is a USD reference estimate: current on-demand hourly rate × 730 hours for running instances. It is not billed cost. Storage, networking, licenses beyond the selected SKU, Spot discounts, Reserved Instances, and Savings Plans are excluded. Missing prices remain unknown.</em></p>
@@ -29,6 +31,10 @@ export function renderEc2Dashboard({ basePath, appPath, compact, configuration }
       <div class="pie-grid"><section class="panel"><h2>Instance types</h2><svg id="typePie" class="pie-chart" role="img" aria-label="Instance type distribution"></svg><ul id="typePieLegend" class="pie-legend" aria-label="Instance type counts and shares"></ul></section><section class="panel"><h2>x86 and Graviton</h2><svg id="cpuPie" class="pie-chart" role="img" aria-label="CPU architecture distribution"></svg><ul id="cpuPieLegend" class="pie-legend" aria-label="CPU architecture counts and shares"></ul></section><section class="panel"><h2>GPU instances</h2><svg id="gpuPie" class="pie-chart" role="img" aria-label="GPU instance distribution"></svg><ul id="gpuPieLegend" class="pie-legend" aria-label="GPU counts and shares"></ul></section></div>
       <p class="notice small">GPU presence is separate from CPU architecture: GPU hosts can also be x86 or Graviton. Graviton requires AWS processor metadata; other or unverified Arm systems remain separate. Unknown GPU metadata is not counted as no GPU.</p>
       <section class="panel"><h2>Operating systems</h2><div id="osBars" class="bars" role="list" aria-label="Loaded instances by operating system"></div></section>
+
+    </section>
+    <section id="costsPanel" role="tabpanel" aria-labelledby="costsTab" hidden>
+      <section class="panel" aria-labelledby="costTitle"><h2 id="costTitle">Cost overview</h2><p class="small muted">Current compute estimate at AWS on-demand reference rates. This is not actual billed spend. Amounts follow the same account, region, search, state, and hardware filters.</p><div class="kpis"><article class="panel kpi"><span class="muted small">Known compute / hour</span><strong id="costHourly">—</strong></article><article class="panel kpi"><span class="muted small">Known compute / day · 24 h</span><strong id="costDaily">—</strong></article><article class="panel kpi"><span class="muted small">Known compute / month · 730 h</span><strong id="costMonthly">—</strong></article><article class="panel kpi"><span class="muted small">Running instances priced</span><strong id="costPriced">—</strong><small id="costCoverage"></small></article></div><p id="costNote" class="notice small"></p><div class="cost-grid"><section class="panel"><h3>Cost by account · USD / month</h3><div id="accountCosts" class="bars cost-bars" role="list" aria-label="Monthly reference cost by account"></div></section><section class="panel"><h3>Cost by instance type · USD / month</h3><div id="typeCosts" class="bars cost-bars" role="list" aria-label="Monthly reference cost by instance type"></div></section></div><h3 class="notice">Highest estimated instance costs</h3><div class="table-wrap"><table><thead><tr><th>Instance name</th><th>Account / region</th><th>Size</th><th class="numeric">USD / hour</th><th class="numeric">USD / month · 730 h</th></tr></thead><tbody id="costInstances"></tbody></table></div></section>
     </section>
     <section id="anomaliesPanel" role="tabpanel" aria-labelledby="anomaliesTab" hidden>
       <section class="panel"><div class="row"><h2>EC2 review signals</h2><button id="anomalyLoadMore" type="button" hidden>Load next AWS pages</button></div><p class="muted small">Review current inventory and ask the AWS agent to check recent CPU evidence. These are snapshot rules, not measured billing spikes or proof of idle capacity.</p><form id="anomalyForm" class="controls"><label>Monthly reference cost ≥ USD<input id="minMonthly" type="number" min="0" max="1000000" step="any" value="500" required></label><label>Stopped instance launch age ≥ days<input id="stoppedDays" type="number" min="1" max="3650" step="1" value="60" required></label><label class="grow">Required tag keys<input id="requiredTags" value="Owner,Environment" maxlength="500" autocomplete="off" data-1p-ignore spellcheck="false"></label><button id="investigateAnomalies" class="primary" type="submit" disabled>Investigate with AWS agent</button></form><p id="anomalySummary" class="notice small" role="status" aria-live="polite"></p><p id="anomalyCoverage" class="small muted"></p><p class="small muted">Tag absence is flagged only when every reported tag is loaded. Launch age is measured from launch time, not time spent stopped. The agent reviews at most five highest-ranked instances across selected scopes; CPU history covers the last seven completed UTC days.</p></section>
@@ -49,7 +55,7 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
   const text = (id, value) => { byId(id).textContent = value; };
   const route = (path) => (basePath === "/" ? "" : basePath) + path;
   const money = (value) => value === null ? "Unknown" : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 3 }).format(value);
-  const monthly = (row) => row.state === "running" ? row.pricing ? row.pricing.hourlyUsd * 730 : null : ["stopped", "terminated"].includes(row.state) ? 0 : null;
+  const monthly = (row) => { const value = row.state === "running" ? row.pricing ? row.pricing.hourlyUsd * 730 : null : ["stopped", "terminated"].includes(row.state) ? 0 : null; return Number.isFinite(value) ? value : null; };
   const key = (row) => row.accountId + ":" + row.region + ":" + row.instanceId;
   function instanceName(row) {
     const tags = row?.tags || [];
@@ -62,16 +68,18 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     return url;
   }
   const state = { records: new Map(), scopes: new Map(), page: 1, selected: null, busy: false, hasSnapshot: false, mock: false, activeTab: "instances", anomalyReports: [], anomalyErrors: [], anomaliesRunning: false, anomalyTargets: 0, lookupInstanceId: "", cacheHits: 0 };
-  const tabNames = ["instances", "gpu", "overview", "anomalies"];
+  const tabNames = ["instances", "gpu", "overview", "costs", "anomalies"];
   let controller;
   let timer;
   let tagController;
   let anomalyController;
   let generation = 0;
+  let cachePollTimer;
+  let lastBackgroundRefresh = null;
+  let cachePollingStopped = false;
   const initial = new URLSearchParams(location.search);
   const addOption = (select, value, label) => { const option = document.createElement("option"); option.value = value; option.textContent = label; select.append(option); };
   if (configuration.accounts.length > 1) {
-    addOption(byId("profile"), "", "Choose an account");
     addOption(byId("profile"), "*", "All configured accounts");
   }
   for (const account of configuration.accounts) addOption(byId("profile"), account.profile || "@default", account.label || account.profile + (account.accountId ? " · " + account.accountId : ""));
@@ -148,9 +156,10 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
       for (const scope of scopes) state.scopes.set(scope.profile + ":" + scope.region, scope);
       byId("instanceDetail").hidden = true;
     }
+    for (const scope of scopes) scope.batches = 0;
     state.hasSnapshot = true;
     setBusy(true);
-    beginProgress("Reading AWS inventory…", "Following AWS pages for " + scopes.length + " account/region scope(s). Cached snapshots return immediately; fresh reads include all tags and metadata. No agent is used for inventory.");
+    beginProgress("Loading cached inventory…", "Loading shared snapshots for " + scopes.length + " account/region scope(s). Cached snapshots return immediately; fresh reads include all tags and metadata. No agent is used for inventory.");
     const queue = [...scopes];
     let completed = 0;
     const worker = async () => {
@@ -163,25 +172,30 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
           if (cursor) params.set("cursor", cursor);
           if (refresh) params.set("refresh", "1");
           if (state.lookupInstanceId) params.set("instanceId", state.lookupInstanceId);
-          text("progressDetail", "Reading AWS SDK inventory · " + (scope.profile || "Default credentials") + " / " + scope.region + " · " + completed + "/" + scopes.length + " scopes completed. All AWS pages are followed server-side.");
+          text("progressDetail", "Loading inventory · " + (scope.profile || "Default credentials") + " / " + scope.region + " · " + completed + "/" + scopes.length + " scopes completed. Loading every requested AWS page.");
           const response = await fetch(route(state.lookupInstanceId ? "/api/instance" : "/api/inventory") + "?" + params, { credentials: "same-origin", signal });
           const result = await readAgenticAppJsonResponse(response, "AWS inventory unavailable");
           if (signal.aborted || current !== generation) return;
           const configuredAccount = configuration.accounts.find((account) => account.profile === scope.profile);
-          const data = validateResponse(result.data, { scope: { ...scope, accountId: configuredAccount.accountId || null }, cacheTtlMs: configuration.cacheTtlMs });
+          const data = validateResponse(result.data, { scope: { ...scope, accountId: configuredAccount.accountId || null }, cacheTtlMs: configuration.cacheTtlMs, cacheMaxStaleMs: configuration.cacheMaxStaleMs });
           if (data.nextToken && (data.nextToken === cursor || scope.seenTokens?.has(data.nextToken))) throw new Error("AWS returned the same pagination token; remaining coverage is unknown.");
           scope.seenTokens ??= new Set();
           if (cursor) scope.seenTokens.add(cursor);
           for (const row of data.instances) state.records.set(key(row), row);
           scope.status = "ready"; scope.nextToken = data.nextToken; scope.pages += data.pages; scope.warnings = [...new Set([...scope.warnings, ...data.warnings])]; scope.evidence.push(...data.evidence); scope.accountId = data.accountId;
-          scope.updatedAt = data.retrievedAt;
-          scope.cache = data.cache; state.cacheHits = [...state.scopes.values()].filter((entry) => entry.cache?.hit).length;
+          scope.updatedAt = new Date(Math.min(Date.parse(scope.updatedAt || data.retrievedAt), Date.parse(data.retrievedAt))).toISOString();
+          const previousCache = scope.cache;
+          scope.batches += 1;
+          scope.cache = { ...data.cache, hit: (previousCache?.hit ?? true) && data.cache?.hit, stale: Boolean(previousCache?.stale || data.cache?.stale), refreshError: data.cache?.refreshError || previousCache?.refreshError || null, expiresAt: new Date(Math.min(Date.parse(previousCache?.expiresAt || data.cache.expiresAt), Date.parse(data.cache.expiresAt))).toISOString() };
+          state.cacheHits = [...state.scopes.values()].filter((entry) => entry.cache?.hit).length;
           state.mock ||= result.mock === true;
         } catch (error) {
           if (signal.aborted || current !== generation) return;
           scope.status = "error"; scope.error = error.message;
         }
-        completed += 1; render();
+        if (scope.status === "ready" && scope.nextToken && scope.batches < 200) queue.push(scope);
+        else completed += 1;
+        render();
       }
     };
     await Promise.all([worker(), worker()]);
@@ -229,6 +243,37 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     const values = sorted.length > 7 ? [...sorted.slice(0, 6), ["Other", sorted.slice(6).reduce((sum, entry) => sum + entry[1], 0)]] : sorted;
     const maximum = Math.max(1, ...values.map((entry) => entry[1]));
     byId(id).innerHTML = values.length ? values.map(([label, count]) => '<div class="bar-row" role="listitem"><span>' + escapeHtml(label) + '</span><div class="bar-track" aria-hidden="true"><i style="width:' + count / maximum * 100 + '%"></i></div><strong class="numeric">' + count + '</strong></div>').join("") : '<p class="muted small">No matching instances in this snapshot. Try Search all accounts & regions.</p>';
+  }
+  function renderCostOverview(rows) {
+    const known = rows.filter((row) => monthly(row) !== null);
+    const total = known.reduce((sum, row) => sum + monthly(row), 0);
+    const unknown = rows.length - known.length;
+    const running = rows.filter((row) => row.state === "running");
+    const priced = running.filter((row) => row.pricing);
+    const hasEstimate = known.length > 0 || rows.length === 0;
+    text("costHourly", money(hasEstimate ? total / 730 : null));
+    text("costDaily", money(hasEstimate ? total / 730 * 24 : null));
+    text("costMonthly", money(hasEstimate ? total : null));
+    text("costPriced", priced.length + " / " + running.length);
+    text("costCoverage", unknown + " instance(s) with unknown modeled compute cost");
+    text("costNote", (unknown ? "Partial known subtotal: unpriced running and transitional instances are excluded. " : "") + "Running compute is modeled continuously at the current reference rate; stopped/terminated compute is zero. Storage, networking, Spot discounts, reservations, Savings Plans, and additional licenses are excluded. Coverage and snapshot times above apply to these estimates.");
+    const bars = (id, labelFor) => {
+      const groups = new Map();
+      for (const row of rows) {
+        const label = labelFor(row); const group = groups.get(label) || { label, amount: 0, known: 0, unknown: 0 };
+        const value = monthly(row);
+        if (value === null) group.unknown += 1; else { group.amount += value; group.known += 1; }
+        groups.set(label, group);
+      }
+      const all = [...groups.values()].sort((a, b) => b.amount - a.amount || a.label.localeCompare(b.label));
+      const sorted = all.slice(0, 8);
+      if (all.length > 8) sorted.push(all.slice(8).reduce((group, row) => ({ label: "Other groups", amount: group.amount + row.amount, known: group.known + row.known, unknown: group.unknown + row.unknown }), { amount: 0, known: 0, unknown: 0 }));
+      const maximum = Math.max(1, ...sorted.map((group) => group.amount));
+      byId(id).innerHTML = sorted.map((group) => '<div class="bar-row" role="listitem"><span>' + escapeHtml(group.label) + '</span><div class="bar-track" aria-hidden="true"><i style="width:' + group.amount / maximum * 100 + '%"></i></div><span class="numeric"><strong>' + money(group.known ? group.amount : null) + '</strong>' + (group.unknown ? '<small><br>+' + group.unknown + ' unknown</small>' : '') + '</span></div>').join("") || '<p class="muted small">No matching inventory loaded.</p>';
+    };
+    bars("accountCosts", (row) => row.profile || row.accountId);
+    bars("typeCosts", (row) => row.instanceType);
+    byId("costInstances").innerHTML = [...priced].sort((a, b) => monthly(b) - monthly(a) || instanceName(a).localeCompare(instanceName(b))).slice(0, 10).map((row) => '<tr><td><a href="' + escapeHtml(instanceUrl(row).toString()) + '">' + escapeHtml(instanceName(row)) + '</a><div class="small muted">' + escapeHtml(row.instanceId) + '</div></td><td>' + escapeHtml((row.profile || row.accountId) + ' / ' + row.region) + '</td><td>' + escapeHtml(row.instanceType) + '</td><td class="numeric">' + money(row.pricing.hourlyUsd) + '</td><td class="numeric">' + money(monthly(row)) + '</td></tr>').join("") || '<tr><td colspan="5" class="empty">No priced running instances in this view.</td></tr>';
   }
   function renderOverview(rows) {
     const group = (labelFor) => {
@@ -283,6 +328,7 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     byId("instancesPanel").hidden = !inventory;
     byId("instancesPanel").setAttribute("aria-labelledby", inventory ? next + "Tab" : "instancesTab");
     byId("overviewPanel").hidden = next !== "overview";
+    byId("costsPanel").hidden = next !== "costs";
     byId("anomaliesPanel").hidden = next !== "anomalies";
     byId("sortControl").hidden = !inventory;
     byId("hardwareControl").hidden = next === "gpu";
@@ -295,7 +341,7 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     byId("content").hidden = !state.hasSnapshot;
     const scopes = [...state.scopes.values()];
     const loaded = scopes.filter((scope) => scope.pages > 0 || scope.status === "ready");
-    const issues = scopes.flatMap((scope) => [...(["error", "canceled", "loading", "pending"].includes(scope.status) ? [scope.status === "error" ? scope.error : scope.status + "; coverage is not complete."] : []), ...(scope.nextToken ? ["More AWS pages remain."] : []), ...scope.warnings].map((issue) => (scope.profile || "Default credentials") + " / " + scope.region + ": " + issue));
+    const issues = scopes.flatMap((scope) => [...(["error", "canceled", "loading", "pending"].includes(scope.status) ? [scope.status === "error" ? scope.error : scope.status + "; coverage is not complete."] : []), ...(scope.nextToken ? ["More AWS pages remain."] : []), ...(scope.cache?.stale ? ["Serving a stale cached snapshot while refresh is retried."] : []), ...(scope.cache?.refreshError ? ["Last refresh failed: " + scope.cache.refreshError] : []), ...scope.warnings].map((issue) => (scope.profile || "Default credentials") + " / " + scope.region + ": " + issue));
     byId("scopeProblems").hidden = !issues.length;
     const failed = scopes.filter((scope) => ["error", "canceled"].includes(scope.status)).length;
     text("coverageSummary", "Coverage: " + loaded.length + "/" + scopes.length + " account/region scopes loaded · " + scopes.filter((scope) => scope.nextToken).length + " with more AWS pages" + (failed ? " · " + failed + " unavailable" : "") + " · details");
@@ -313,11 +359,11 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     text("monthlyCost", known.length ? money(known.reduce((sum, row) => sum + monthly(row), 0)) : running.length ? "Unknown" : loaded.length ? money(0) : "Unknown");
     text("priceCoverage", known.length + "/" + running.length + " running instances priced" + (known.length < running.length ? " · partial estimate" : ""));
     text("scopeCount", new Set(loaded.map((scope) => scope.accountId)).size + " / " + new Set(loaded.map((scope) => scope.region)).size);
-    text("status", (state.mock ? "Mock data · local preview. " : "") + (loaded.length ? "Loaded " + state.records.size + " instances from " + loaded.length + " account/region scope(s). " + state.cacheHits + " scope(s) from cache (" + configuration.cacheTtlMs / 3_600_000 + " hours)." : "No successful inventory pages yet; AWS coverage is unknown."));
+    text("status", (state.mock ? "Mock data · local preview. " : "") + (loaded.length ? "Loaded " + state.records.size + " instances from " + loaded.length + " account/region scope(s). " + state.cacheHits + " scope(s) from cache (" + configuration.cacheTtlMs / 3_600_000 + " hours)." + (scopes.some((scope) => scope.cache?.stale) ? " Stale cached scopes are labeled in coverage details." : "") : "No successful inventory pages yet; AWS coverage is unknown."));
     const dates = loaded.map((scope) => Date.parse(scope.updatedAt)).filter(Number.isFinite);
     const expires = loaded.map((scope) => Date.parse(scope.cache?.expiresAt)).filter(Number.isFinite);
     text("freshness", dates.length ? "Oldest snapshot " + new Date(Math.min(...dates)).toLocaleString() + (expires.length ? " · Cache expires by " + new Date(Math.min(...expires)).toLocaleString() : "") + " · Refresh live data bypasses the cache." : "");
-    renderOverview(rows); renderAnomalies(rows); bars("osBars", rows, "platform");
+    renderOverview(rows); renderCostOverview(rows); renderAnomalies(rows); bars("osBars", rows, "platform");
     const size = Number(byId("pageSize").value); const pages = Math.max(1, Math.ceil(rows.length / size)); state.page = Math.max(1, Math.min(state.page, pages));
     let emptyMessage = "No matching instances in this snapshot. Try Search all accounts & regions.";
     if (!loaded.length) emptyMessage = "Inventory unavailable; review scope errors above.";
@@ -334,7 +380,7 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     tagController?.abort(); state.selected = id;
     const row = state.records.get(id); if (!row) return;
     byId("instanceDetail").hidden = false; text("detailTitle", instanceName(row));
-    const fields = [["Instance name", instanceName(row)], ["Instance ID", row.instanceId], ["Account / profile", row.accountId + " / " + (row.profile || "Default credentials")], ["Region", row.region], ["Size", row.instanceType + " · " + (row.vcpu ?? "?") + " vCPU · " + (row.memoryGiB ?? "?") + " GiB"], ["OS", row.osVersion || row.platform || "Unknown"], ["Architecture / tenancy", (row.architecture || "Unknown") + " / " + (row.tenancy || "Unknown")], ["CPU platform", cpuCategory(row) + (row.cpuManufacturer ? " · " + row.cpuManufacturer : "")], ["GPU", row.gpu === null ? "Unknown" : row.gpu ? "GPU enabled" : "No GPU"], ["State", row.state], ["Launched", row.launchTime ? new Date(row.launchTime).toLocaleString() : "Unknown"], ["Price evidence", row.pricing ? "AWS Price List SKU " + row.pricing.sku + " · " + money(row.pricing.hourlyUsd) + "/hour" : "AWS pricing unavailable"]];
+    const fields = [["Instance name", instanceName(row)], ["Instance ID", row.instanceId], ["Reference rate / hour", money(row.pricing?.hourlyUsd ?? null)], ["Modeled compute / day · 24 h", money(monthly(row) === null ? null : monthly(row) / 730 * 24)], ["Modeled compute / month · 730 h", money(monthly(row))], ["Account / profile", row.accountId + " / " + (row.profile || "Default credentials")], ["Region", row.region], ["Size", row.instanceType + " · " + (row.vcpu ?? "?") + " vCPU · " + (row.memoryGiB ?? "?") + " GiB"], ["OS", row.osVersion || row.platform || "Unknown"], ["Architecture / tenancy", (row.architecture || "Unknown") + " / " + (row.tenancy || "Unknown")], ["CPU platform", cpuCategory(row) + (row.cpuManufacturer ? " · " + row.cpuManufacturer : "")], ["GPU", row.gpu === null ? "Unknown" : row.gpu ? "GPU enabled" : "No GPU"], ["State", row.state], ["Launched", row.launchTime ? new Date(row.launchTime).toLocaleString() : "Unknown"], ["Price evidence", row.pricing ? "AWS Price List SKU " + row.pricing.sku + " · " + money(row.pricing.hourlyUsd) + "/hour" : "AWS pricing unavailable"]];
     byId("detailFields").innerHTML = fields.map(([label, value]) => '<div><span class="muted small">' + escapeHtml(label) + '</span><strong>' + escapeHtml(value) + '</strong></div>').join("");
     renderTags(row); render(); byId("instanceDetail").scrollIntoView({ block: "nearest" });
   }
@@ -462,7 +508,7 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
   });
   byId("scopeForm").addEventListener("submit", (event) => { event.preventDefault(); loadInventory(); });
   byId("searchAll").addEventListener("click", () => { if (configuration.accounts.length > 1) byId("profile").value = "*"; if (configuration.regions.length > 1) byId("region").value = "*"; loadInventory(); });
-  for (const id of ["profile", "region"]) byId(id).addEventListener("change", () => { if (state.busy) cancel(); resetAnomalyAnalysis(); state.records.clear(); state.scopes.clear(); state.selected = null; state.hasSnapshot = false; byId("content").hidden = true; byId("scopeProblems").hidden = true; byId("progress").hidden = true; byId("refresh").disabled = true; text("status", "Scope changed. Select Search / load inventory to retrieve AWS evidence."); publishContext(); });
+  for (const id of ["profile", "region"]) byId(id).addEventListener("change", () => { if (state.busy) cancel(); loadInventory(); });
   byId("refresh").addEventListener("click", () => loadInventory(false, true)); byId("loadMore").addEventListener("click", () => loadInventory(true)); byId("overviewLoadMore").addEventListener("click", () => loadInventory(true)); byId("anomalyLoadMore").addEventListener("click", () => loadInventory(true)); byId("cancel").addEventListener("click", cancel);
   byId("filterForm").addEventListener("submit", (event) => event.preventDefault());
   for (const id of ["search", "searchIn", "stateFilter", "hardwareFilter", "sort", "pageSize"]) byId(id).addEventListener(id === "search" ? "input" : "change", () => { resetAnomalyAnalysis(); state.page = 1; if (["search", "searchIn", "stateFilter", "hardwareFilter"].includes(id)) { state.selected = null; byId("instanceDetail").hidden = true; } render(); });
@@ -476,9 +522,26 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     else { for (const [name, id] of [["profile", "profile"], ["region", "region"], ["search", "search"], ["searchIn", "searchIn"], ["state", "stateFilter"], ["sort", "sort"], ["hardware", "hardwareFilter"]]) if (byId(id).value) url.searchParams.set(name, byId(id).value); url.searchParams.set("tab", state.activeTab); }
     try { await navigator.clipboard.writeText(url.toString()); text("status", (selected ? "Link copied for " + instanceName(selected) + "." : "View link copied.") + " The instance or search loads automatically; recipients need their own app access."); } catch { text("status", "Share this view: " + url.toString()); }
   });
+  async function pollCacheStatus() {
+    let delay = 60_000;
+    try {
+      const response = await fetch(route("/api/cache-status"), { credentials: "same-origin" });
+      const result = await readAgenticAppJsonResponse(response, "Cache status unavailable"); const cache = result.data;
+      const next = cache.nextRefreshAt ? new Date(cache.nextRefreshAt).toLocaleString() : "not scheduled";
+      const updated = cache.completedAt ? new Date(cache.completedAt).toLocaleString() : "warming for the first time";
+      text("cacheStatus", cache.enabled === false ? "Background refresh is disabled. Reload cached view retrieves the current snapshots." : cache.refreshing ? "Background cache refresh: " + cache.completedScopes + "/" + cache.totalScopes + " scopes completed. Existing snapshots remain available." : "Last background refresh: " + updated + " · Next refresh: " + next + (cache.failures.length ? " · " + cache.failures.length + " failed scope(s); last snapshots are retained where available." : ""));
+      if (cache.completedAt && lastBackgroundRefresh && cache.completedAt !== lastBackgroundRefresh && state.hasSnapshot && !state.busy && !state.selected && !state.anomalyReports.length) void loadInventory();
+      if (cache.completedAt) lastBackgroundRefresh = cache.completedAt;
+      delay = cache.refreshing ? 5000 : Math.min(300_000, Math.max(10_000, Date.parse(cache.nextRefreshAt) - Date.now() || 300_000));
+    } catch (error) { text("cacheStatus", "Background cache status unavailable: " + error.message); }
+    if (!cachePollingStopped) cachePollTimer = setTimeout(pollCacheStatus, delay);
+  }
+  window.addEventListener("pagehide", () => { cachePollingStopped = true; clearTimeout(cachePollTimer); });
+  window.addEventListener("pageshow", (event) => { if (event.persisted) { cachePollingStopped = false; void pollCacheStatus(); } });
   window.addEventListener("caipe:microfrontend-initialize", publishContext);
   activateTab(initial.get("tab"));
   publishContext();
   if (invalidLink) text("status", "This link has an invalid instance, account, region, or search mode. Choose a configured scope to search.");
-  else if (initial.has("profile") || linkedInstance || initial.get("search")) loadInventory();
+  else loadInventory();
+  void pollCacheStatus();
 }

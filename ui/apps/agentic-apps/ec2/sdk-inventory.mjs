@@ -4,7 +4,7 @@ import { SSMClient, DescribeInstanceInformationCommand } from "@aws-sdk/client-s
 import { PricingClient, GetProductsCommand } from "@aws-sdk/client-pricing";
 import { fromNodeProviderChain, fromTemporaryCredentials, fromTokenFile } from "@aws-sdk/credential-providers";
 
-const FOUR_HOURS = 4 * 60 * 60 * 1000;
+const EIGHT_HOURS = 8 * 60 * 60 * 1000;
 const errorSummary = (error) => String(error?.name || "AWS request failed").slice(0, 160);
 const gpuPresent = (type) => type ? Boolean(type.GpuInfo?.Gpus?.length || type.GpuInfo?.TotalGpuMemoryInMiB > 0) : null;
 
@@ -41,8 +41,14 @@ export function createAwsInventoryService(configuration, { clientsForScope = cre
   const waiters = [];
   let active = 0;
   let cacheBytes = 0;
-  const ttl = configuration.cacheTtlMs || FOUR_HOURS;
+  const ttl = configuration.cacheTtlMs || EIGHT_HOURS;
   const maxBytes = configuration.cacheMaxBytes || 64 * 1024 * 1024;
+  const maxStale = configuration.cacheMaxStaleMs || ttl * 3;
+  let refreshTask;
+  let backgroundTimer;
+  let backgroundStopped = true;
+  const refreshState = { refreshing: false, startedAt: null, completedAt: null, nextRefreshAt: null, totalScopes: configuration.accounts.length * configuration.regions.length, completedScopes: 0, failures: [] };
+
 
   async function withSlot(operation) {
     if (active >= 2) await new Promise((resolve) => waiters.push(resolve));
@@ -78,19 +84,110 @@ export function createAwsInventoryService(configuration, { clientsForScope = cre
   }
   async function read(scope, { cursor = "", instanceId = "", refresh = false } = {}) {
     const key = JSON.stringify([scope.profile, scope.region, cursor, instanceId]);
-    const cached = snapshots.get(key);
-    if (!refresh && cached && cached.expiresAt > now()) {
-      snapshots.delete(key); snapshots.set(key, cached);
-      return { ...cached.data, cache: { hit: true, expiresAt: new Date(cached.expiresAt).toISOString() } };
+    let cached = snapshots.get(key);
+    let cachedData = cached?.data;
+    let cachedKey = key;
+    let sourceCursor = cursor;
+    let sourceInstanceId = instanceId;
+    if (instanceId && !refresh) {
+      let token = ""; let oldest = Infinity; const seen = new Set();
+      do {
+        const fleetKey = JSON.stringify([scope.profile, scope.region, token, ""]);
+        const entry = snapshots.get(fleetKey);
+        if (!entry || Date.parse(entry.data.retrievedAt) + maxStale <= now()) break;
+        oldest = Math.min(oldest, Date.parse(entry.data.retrievedAt));
+        const matches = entry.data.instances.filter((row) => row.instanceId === instanceId);
+        if (matches.length || !entry.data.nextToken) {
+          const retrievedAt = matches.length ? entry.data.retrievedAt : new Date(oldest).toISOString();
+          if (!cached || Date.parse(retrievedAt) >= Date.parse(cached.data.retrievedAt)) {
+            cached = entry; cachedKey = fleetKey; sourceCursor = token; sourceInstanceId = "";
+            cachedData = { ...entry.data, retrievedAt, instances: matches, complete: true, nextToken: null, status: "ready" };
+          }
+          break;
+        }
+        token = entry.data.nextToken;
+        if (seen.has(token)) break;
+        seen.add(token);
+      } while (seen.size < 200);
+    }
+    if (!refresh && cached && Date.parse(cachedData.retrievedAt) + maxStale > now()) {
+      snapshots.delete(cachedKey); snapshots.set(cachedKey, cached);
+      const expiresAt = Date.parse(cachedData.retrievedAt) + ttl;
+      const stale = expiresAt <= now();
+      if (stale && !pending.has(cachedKey) && !refreshState.refreshing) void read(scope, { cursor: sourceCursor, instanceId: sourceInstanceId, refresh: true }).catch((error) => { cached.lastError = errorSummary(error); });
+      return { ...cachedData, cache: { hit: true, stale, refreshing: pending.has(cachedKey) || refreshState.refreshing, refreshError: cached.lastError || null, expiresAt: new Date(expiresAt).toISOString() } };
     }
     if (pending.has(key)) return pending.get(key);
     const task = withSlot(async () => {
-      const data = await fetchScope(scope, { cursor, instanceId, refresh });
-      remember(key, data);
-      return { ...data, cache: { hit: false, expiresAt: new Date(Date.parse(data.retrievedAt) + ttl).toISOString() } };
+      try {
+        const data = await fetchScope(scope, { cursor, instanceId, refresh });
+        remember(key, data);
+        return { ...data, cache: { hit: false, stale: false, refreshing: false, refreshError: null, expiresAt: new Date(Date.parse(data.retrievedAt) + ttl).toISOString() } };
+      } catch (error) {
+        if (cached) cached.lastError = errorSummary(error);
+        throw error;
+      }
     });
     pending.set(key, task);
     try { return await task; } finally { pending.delete(key); }
+  }
+  function cacheStatus() {
+    return { ...refreshState, enabled: !backgroundStopped, failures: refreshState.failures.map((failure) => ({ ...failure })), refreshIntervalMs: ttl, maxStaleMs: maxStale, entries: snapshots.size, bytes: cacheBytes };
+  }
+  async function refreshAll() {
+    if (refreshTask) return refreshTask;
+    refreshState.refreshing = true; refreshState.startedAt = new Date(now()).toISOString(); refreshState.completedScopes = 0; refreshState.failures = [];
+    refreshState.nextRefreshAt = new Date(now() + ttl).toISOString();
+    const queue = configuration.accounts.flatMap((account) => configuration.regions.map((region) => ({ profile: account.profile, accountId: account.accountId || null, region })));
+    refreshTask = (async () => {
+      const worker = async () => {
+        while (queue.length) {
+          const scope = queue.shift();
+          const belongsToScope = (key) => { const [profile, region, , instanceId] = JSON.parse(key); return profile === scope.profile && region === scope.region && !instanceId; };
+          const previous = new Map([...snapshots].filter(([key]) => belongsToScope(key)));
+          const written = new Map();
+          try {
+            let cursor = ""; let batches = 0; const seen = new Set();
+            do {
+              const data = await read(scope, { cursor, refresh: true });
+              const key = JSON.stringify([scope.profile, scope.region, cursor, ""]); written.set(key, snapshots.get(key));
+              cursor = data.nextToken || ""; batches += 1;
+              if (cursor && (seen.has(cursor) || batches >= 200)) throw new Error("InventoryPaginationIncomplete");
+              if (cursor) seen.add(cursor);
+            } while (cursor);
+          } catch (error) {
+            if (previous.size) {
+              for (const [key, entry] of written) {
+                if (!entry || snapshots.get(key) !== entry) continue;
+                snapshots.delete(key); cacheBytes -= entry.bytes;
+                const old = previous.get(key);
+                if (old) { remember(key, old.data); const restored = snapshots.get(key); if (restored) restored.lastError = errorSummary(error); }
+              }
+            }
+            refreshState.failures.push({ profile: scope.profile, region: scope.region, error: errorSummary(error) });
+          }
+          refreshState.completedScopes += 1;
+        }
+      };
+      try { await Promise.all([worker(), worker()]); }
+      finally { refreshState.refreshing = false; refreshState.completedAt = new Date(now()).toISOString(); refreshTask = null; }
+      return cacheStatus();
+    })();
+    return refreshTask;
+  }
+  function startBackgroundRefresh({ setTimer = setTimeout, clearTimer = clearTimeout, onRefresh = () => {} } = {}) {
+    if (!backgroundStopped) return () => {};
+    backgroundStopped = false;
+    const run = async () => {
+      if (backgroundStopped) return;
+      const result = await refreshAll(); onRefresh(result);
+      if (backgroundStopped) return;
+      const delay = refreshState.failures.length ? Math.min(ttl, 5 * 60_000) : Math.max(1000, Date.parse(refreshState.nextRefreshAt) - now());
+      refreshState.nextRefreshAt = new Date(now() + delay).toISOString();
+      backgroundTimer = setTimer(() => { void run(); }, delay); backgroundTimer?.unref?.();
+    };
+    void run();
+    return () => { backgroundStopped = true; clearTimer(backgroundTimer); refreshState.nextRefreshAt = null; };
   }
   async function fetchScope(scope, { cursor, instanceId, refresh }) {
     const clients = clientsForScope(scope);
@@ -218,5 +315,5 @@ export function createAwsInventoryService(configuration, { clientsForScope = cre
     });
     return { status: nextToken ? "partial" : "ready", source: "aws-sdk", profile: scope.profile, accountId: identity.Account, region: scope.region, retrievedAt, complete: !nextToken, nextToken: nextToken || null, pages, instances, warnings: [...warnings], evidence };
   }
-  return { read, clear: () => { snapshots.clear(); lookups.clear(); cacheBytes = 0; } };
+  return { read, refreshAll, cacheStatus, startBackgroundRefresh, clear: () => { snapshots.clear(); lookups.clear(); cacheBytes = 0; } };
 }

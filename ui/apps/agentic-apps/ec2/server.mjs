@@ -33,6 +33,8 @@ const server = createServer(async (request, response) => {
     sendJson(response, 200, { version: "1.0", appId: "ec2", route: configuredBasePath, title: "EC2 instances", agentId: configuration.agentId, mcpServerId: "mcp-aws", domainAnswersRequireMcp: true, suggestedPrompts: ["Which instances should I investigate for cost savings?", "Show the OS and tags for the selected instance.", "Compare instance sizes using current AWS pricing."] });
   } else if (url.pathname === "/api/config" && readRequest) {
     sendJson(response, 200, { success: true, data: configuration });
+  } else if (url.pathname === "/api/cache-status" && readRequest) {
+    sendJson(response, 200, { success: true, data: inventory.cacheStatus() });
   } else if (["/api/inventory", "/api/instance"].includes(url.pathname) && readRequest) {
     try {
       const scope = resolveEc2Scope({ profile: url.searchParams.get("profile") ?? "", region: url.searchParams.get("region") }, configuration);
@@ -71,7 +73,12 @@ const server = createServer(async (request, response) => {
   }
 });
 
-server.listen(Number(process.env.EC2_APP_PORT || "3043"), () => console.log(`EC2 Instances Dashboard listening on http://localhost:${server.address().port}`));
+let stopBackgroundRefresh;
+server.listen(Number(process.env.EC2_APP_PORT || "3043"), () => {
+  console.log(`EC2 Instances Dashboard listening on http://localhost:${server.address().port}`);
+  if (configuration.backgroundRefreshEnabled) stopBackgroundRefresh = inventory.startBackgroundRefresh({ onRefresh: (status) => console.log("[ec2] Background cache refresh", { completedScopes: status.completedScopes, totalScopes: status.totalScopes, failures: status.failures, nextRefreshAt: status.nextRefreshAt }) });
+});
+server.on("close", () => stopBackgroundRefresh?.());
 
 function sendJson(response, status, payload) {
   response.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
