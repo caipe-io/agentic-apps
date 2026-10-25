@@ -13,11 +13,20 @@ export function renderEc2Dashboard({ basePath, appPath, compact, configuration }
   *{box-sizing:border-box}body{margin:0}main{max-width:1440px;margin:auto;padding:28px 24px 44px}h1,h2,h3,p{margin:0}h1{font-size:1.85rem;letter-spacing:-.03em}h2{font-size:1.12rem}h3{font-size:1rem}.muted,small{color:var(--muted)}.small,small{font-size:.82rem}.subtitle{margin:6px 0 22px;color:var(--muted)}.row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.actions,.controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap}.controls{margin:18px 0 14px}label{display:grid;gap:5px;color:var(--muted);font-size:.82rem}input,select,button{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px}button{cursor:pointer;font-size:.88rem}button:disabled{opacity:.5;cursor:default}button.primary{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:600}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}a{color:var(--accent)}input[type=search]{width:100%;min-width:240px}select{min-width:160px}.grow{flex:1}.panel{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:20px;margin:18px 0}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:18px}.kpi{margin:0}.kpi strong{display:block;font-size:1.9rem;font-variant-numeric:tabular-nums;margin:5px 0}.bars{display:grid;gap:12px;margin-top:18px}.bar-row{display:grid;grid-template-columns:minmax(100px,1fr) 2fr 40px;gap:12px;align-items:center;font-size:.85rem}.bar-track{height:10px;background:var(--track);border-radius:4px;overflow:hidden}.bar-track i{display:block;height:100%;background:var(--accent)}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:.85rem}th{text-align:left;color:var(--muted);font-size:.78rem;font-weight:500}td,th{padding:14px 10px;border-bottom:1px solid var(--line);vertical-align:top}table.inventory{min-width:1150px}.numeric{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.tag{display:inline-block;border:1px solid var(--line);border-radius:5px;padding:2px 6px;font-size:.75rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.state{display:inline-block;border:1px solid var(--line);border-radius:20px;padding:2px 8px;font-size:.78rem}.state.running{color:var(--accent)}.tag-stack{display:grid;gap:4px}.notice{margin:12px 0;color:var(--muted)}.error{color:var(--error)}.warning{color:var(--warning)}.empty{text-align:center;padding:35px;color:var(--muted)}.progress{border-color:var(--accent);background:var(--track)}.spinner{width:21px;height:21px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;flex-shrink:0}.progress-heading{justify-content:flex-start}.progress-heading strong{flex:1}.progress p{margin-top:8px}.progress.finished{padding:10px 16px;margin:10px 0}.progress.finished .progress-heading strong{font-size:.88rem}.progress.finished p{font-size:.78rem;margin-top:2px}.coverage-panel{padding:10px 16px!important;margin:12px 0}.coverage-panel details{margin:0}.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:18px}.detail-grid strong{display:block;margin-top:4px}dl{display:grid;grid-template-columns:minmax(120px,1fr) 3fr;gap:10px 18px}dt,dd{margin:0;overflow-wrap:anywhere}details{margin-top:14px}summary{cursor:pointer;color:var(--muted)}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.8rem}.pagination{margin-top:16px}.scope-issues{display:grid;gap:8px;padding-left:20px}.selected-row{background:var(--track)}[hidden]{display:none!important}body.compact main{padding-top:18px}body.compact .panel{padding:16px}@keyframes spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.spinner{animation:none}}@media(max-width:850px){.kpis,.detail-grid{grid-template-columns:1fr 1fr}}@media(max-width:520px){main{padding:18px 12px}.kpis{grid-template-columns:1fr 1fr}.controls label{width:100%}.controls select{width:100%}.detail-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:90px 1fr 30px}}@media(pointer:coarse){input,select,button{min-height:44px}}
   .signal-row{margin-top:14px}.signal-heading{align-items:start}.signal-heading h3{overflow-wrap:anywhere}.rule-label{display:inline-block;padding:3px 8px;border:1px solid var(--line);border-radius:20px;color:var(--warning);font-size:.77rem;margin:4px 6px 4px 0}.signal-row ul{margin:10px 0;padding-left:22px}.signal-actions{margin-top:14px}.cpu-summary{margin-top:10px;font-variant-numeric:tabular-nums}.analysis-finding{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}.anomaly-stats{display:flex;flex-wrap:wrap;gap:8px 20px;margin:12px 0}.anomaly-stats strong{color:var(--text)}
   .cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.cost-grid>.panel{margin:0}.cost-bars .bar-row{grid-template-columns:minmax(100px,1fr) 1.5fr minmax(110px,auto)}@media(max-width:700px){.cost-grid{grid-template-columns:1fr}}
-  .tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin:16px 0}.tabs button{min-width:130px;background:transparent;border:0;border-bottom:3px solid transparent;border-radius:8px 8px 0 0;color:var(--muted)}.tabs button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent);background:var(--surface);font-weight:600}.pie-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.pie-grid>.panel{margin:0}.pie-chart{display:block;width:100%;max-width:210px;margin:16px auto}.pie-legend{list-style:none;margin:0;padding:0;display:grid;gap:10px}.pie-legend li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;align-items:baseline;font-size:.82rem}.pie-legend i{display:block;width:10px;height:10px;border-radius:2px}.pie-legend span{overflow-wrap:anywhere}.filter-panel{padding:8px 16px!important}.filter-panel .controls{margin:8px 0}.filter-panel details{flex-basis:100%;width:100%;min-width:0}.filter-panel label{min-width:150px}.filter-panel input[type=search]{min-width:220px}@media(max-width:1050px){.pie-grid{grid-template-columns:1fr 1fr}.pie-grid>.panel:last-child{grid-column:1/-1}}@media(max-width:600px){.pie-grid{grid-template-columns:1fr}.pie-grid>.panel:last-child{grid-column:auto}}
+  .tabs{position:sticky;top:0;z-index:10;background:var(--bg);display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin:16px 0}[role=tabpanel]{scroll-margin-top:74px}.tabs button{min-width:130px;background:transparent;border:0;border-bottom:3px solid transparent;border-radius:8px 8px 0 0;color:var(--muted)}.tabs button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent);background:var(--surface);font-weight:600}.pie-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.pie-grid>.panel{margin:0}.pie-chart{display:block;width:100%;max-width:210px;margin:16px auto}.pie-legend{list-style:none;margin:0;padding:0;display:grid;gap:10px}.pie-legend li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;align-items:baseline;font-size:.82rem}.pie-legend i{display:block;width:10px;height:10px;border-radius:2px}.pie-legend span{overflow-wrap:anywhere}.filter-panel{padding:8px 16px!important}.filter-panel .controls{margin:8px 0}.filter-panel details{flex-basis:100%;width:100%;min-width:0}.filter-panel label{min-width:150px}.filter-panel input[type=search]{min-width:220px}@media(max-width:1050px){.pie-grid{grid-template-columns:1fr 1fr}.pie-grid>.panel:last-child{grid-column:1/-1}}@media(max-width:600px){.pie-grid{grid-template-columns:1fr}.pie-grid>.panel:last-child{grid-column:auto}}
+
+  .search-landing{max-width:860px;margin:64px auto 32px}.search-landing h2{font-size:1.7rem;margin-bottom:8px}.search-landing form{margin:24px 0 12px}.search-landing input[type=search]{font-size:1.15rem;padding:18px 20px;border-radius:12px}.search-landing input[type=search]:focus{border-color:var(--accent)}.quick-results{list-style:none;padding:0;margin:24px 0;display:grid;gap:10px}.quick-results a{display:block;padding:16px 20px;background:var(--surface);border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--text)}.quick-results a:hover{border-color:var(--accent)}.quick-results strong,.quick-results span{display:block}.quick-results span{margin-top:5px;color:var(--muted);font-size:.82rem;overflow-wrap:anywhere}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}@media(max-width:600px){.search-landing{margin-top:32px}}
   </style></head><body class="${compact ? "compact" : ""}"><main>
-  <header class="row"><div><h1>EC2 instances</h1><p class="subtitle">Explore instance size, OS, tags, and cost by AWS account and region.</p></div><div class="actions"><button id="copyLink">Copy link</button><button id="refresh" disabled>Refresh live data</button><button id="askAws">Ask AWS</button></div></header>
-  <section class="panel" aria-labelledby="scopeTitle"><h2 id="scopeTitle">AWS account scope</h2><form id="scopeForm" class="controls"><label class="grow">Account / profile<select id="profile" required></select></label><label class="grow">Region<select id="region" required></select></label><label>Search in<select id="searchIn" aria-describedby="searchHelp"><option value="all">All fields</option><option value="name">Name or instance ID</option><option value="tags">Tags</option></select></label><label class="grow">Find an instance<input aria-describedby="searchHelp" id="search" type="search" maxlength="256" placeholder="Name, instance ID, tag, or key=value" autocomplete="off" data-1p-ignore spellcheck="false"></label><button class="primary" id="load" type="submit">Reload cached view</button><button id="searchAll" type="button">Search all accounts &amp; regions</button></form><p id="searchHelp" class="muted small">Search names and all tags, including tags outside the table preview. Use a tag key, value, or key=value, such as Owner=example-team. Case, spaces, hyphens, and underscores match consistently.</p><p class="muted small">All configured accounts and regions load automatically from the shared cache. The background refresh runs every ${configuration.cacheTtlMs / 3_600_000} hours. Refresh live data bypasses the cache. AWS resources are read-only.</p></section>
-  <nav class="tabs" role="tablist" aria-label="EC2 dashboard views"><button id="instancesTab" role="tab" aria-selected="true" aria-controls="instancesPanel" tabindex="0">Instances</button><button id="gpuTab" role="tab" aria-selected="false" aria-controls="instancesPanel" tabindex="-1">GPU instances</button><button id="overviewTab" role="tab" aria-selected="false" aria-controls="overviewPanel" tabindex="-1">Overview</button><button id="costsTab" role="tab" aria-selected="false" aria-controls="costsPanel" tabindex="-1">Cost overview</button><button id="anomaliesTab" role="tab" aria-selected="false" aria-controls="anomaliesPanel" tabindex="-1">Anomalies</button></nav>
+  <header class="row"><div><h1>EC2 instances</h1><p class="subtitle">Explore instance size, OS, tags, and cost by AWS account and region.</p></div><div class="actions" id="headerActions"><button id="copyLink">Copy link</button><button id="refresh" disabled>Refresh live data</button><button id="askAws">Ask AWS</button></div></header>
+  <nav class="tabs" role="tablist" aria-label="EC2 dashboard views"><button id="searchTab" role="tab" aria-selected="true" aria-controls="searchPanel" tabindex="0">Search</button><button id="instancesTab" role="tab" aria-selected="false" aria-controls="instancesPanel" tabindex="-1">Instances</button><button id="gpuTab" role="tab" aria-selected="false" aria-controls="instancesPanel" tabindex="-1">GPU instances</button><button id="overviewTab" role="tab" aria-selected="false" aria-controls="overviewPanel" tabindex="-1">Analytics</button><button id="costsTab" role="tab" aria-selected="false" aria-controls="costsPanel" tabindex="-1">Cost overview</button><button id="anomaliesTab" role="tab" aria-selected="false" aria-controls="anomaliesPanel" tabindex="-1">Anomalies</button></nav>
+  <section id="searchPanel" role="tabpanel" aria-labelledby="searchTab" class="search-landing">
+    <h2>Find an instance</h2><p class="muted">Search by name, instance ID, owner, or tag.</p>
+    <form id="quickSearchForm" role="search" autocomplete="off"><label class="sr-only" for="quickSearch">Search instances</label><input id="quickSearch" type="search" maxlength="256" placeholder="Search instances…" autocomplete="off" data-1p-ignore spellcheck="false" aria-describedby="quickSearchStatus"></form>
+    <p id="quickSearchStatus" class="small muted" role="status" aria-live="polite">Search across all configured accounts and regions.</p>
+    <ul id="quickResults" class="quick-results" aria-label="Matching instances"></ul><button id="allSearchResults" hidden>View all results</button>
+  </section>
+  <section id="scopePanel" class="panel" aria-labelledby="scopeTitle"><h2 id="scopeTitle">AWS account scope</h2><form id="scopeForm" class="controls"><label class="grow">Account / profile<select id="profile" required></select></label><label class="grow">Region<select id="region" required></select></label><label>Search in<select id="searchIn" aria-describedby="searchHelp"><option value="all">All fields</option><option value="name">Name or instance ID</option><option value="tags">Tags</option></select></label><label class="grow">Find an instance<input aria-describedby="searchHelp" id="search" type="search" maxlength="256" placeholder="Name, instance ID, tag, or key=value" autocomplete="off" data-1p-ignore spellcheck="false"></label><button class="primary" id="load" type="submit">Reload cached view</button><button id="searchAll" type="button">Search all accounts &amp; regions</button></form><p id="searchHelp" class="muted small">Search names and all tags, including tags outside the table preview. Use a tag key, value, or key=value, such as Owner=example-team. Case, spaces, hyphens, and underscores match consistently.</p><p class="muted small">All configured accounts and regions load automatically from the shared cache. The background refresh runs every ${configuration.cacheTtlMs / 3_600_000} hours. Refresh live data bypasses the cache. AWS resources are read-only.</p></section>
+
   <section id="progress" class="panel progress" hidden><div class="row progress-heading"><span id="spinner" class="spinner" aria-hidden="true"></span><strong id="progressTitle" role="status" aria-live="polite"></strong><time id="elapsed" class="small muted"></time><button id="cancel">Cancel</button></div><p id="progressDetail" class="small muted"></p></section>
   <p id="cacheStatus" class="notice small" role="status" aria-live="polite">Checking background cache status…</p>
   <p id="status" class="notice small" role="status" aria-live="polite">Loading cached inventory from all configured accounts and regions…</p>
@@ -45,7 +54,7 @@ export function renderEc2Dashboard({ basePath, appPath, compact, configuration }
     <section id="instanceDetail" class="panel" hidden aria-labelledby="detailTitle"><div class="row"><h2 id="detailTitle">Instance details</h2><div class="actions"><button id="askInstance">Ask AWS about this instance</button><button id="closeDetail">Close</button></div></div><div id="detailFields" class="detail-grid"></div><div class="row controls"><h3>Tags</h3><button id="allTags">Load all tags</button></div><p id="tagStatus" class="notice small" role="status"></p><dl id="tags"></dl></section>
     </div>
     <section class="panel"><details><summary>AWS API evidence and limitations</summary><div id="evidence"></div></details></section>
-  </div><p id="assistantStatus" class="notice small" role="status"></p><footer class="small muted">Inventory access follows the app read permission, configured accounts, and read-only AWS role. Questions and investigations use the caller-authorized MCP agent. OS version is shown only when reported by Systems Manager.</footer>
+  </div><p id="assistantStatus" class="notice small" role="status"></p><footer id="accessNote" class="small muted">Inventory access follows the app read permission, configured accounts, and read-only AWS role. Questions and investigations use the caller-authorized MCP agent. OS version is shown only when reported by Systems Manager.</footer>
   </main>${renderMicrofrontendClient("ec2")}${renderAgenticAppConversationClient()}<script>(${initializeEc2Dashboard.toString()})(${config},${validateEc2Response.toString()},${renderDonutSvg.toString()},${ec2CpuCategory.toString()},${buildEc2AnomalySignals.toString()},${validateEc2AnomalyResponse.toString()},${normalizeEc2Search.toString()});</script></body></html>`;
 }
 
@@ -67,8 +76,8 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     url.search = new URLSearchParams({ profile: row.profile || "@default", region: row.region, instanceId: row.instanceId, tab }).toString();
     return url;
   }
-  const state = { records: new Map(), scopes: new Map(), page: 1, selected: null, busy: false, hasSnapshot: false, mock: false, activeTab: "instances", anomalyReports: [], anomalyErrors: [], anomaliesRunning: false, anomalyTargets: 0, lookupInstanceId: "", cacheHits: 0 };
-  const tabNames = ["instances", "gpu", "overview", "costs", "anomalies"];
+  const state = { records: new Map(), scopes: new Map(), page: 1, selected: null, busy: false, hasSnapshot: false, mock: false, activeTab: "search", anomalyReports: [], anomalyErrors: [], anomaliesRunning: false, anomalyTargets: 0, lookupInstanceId: "", cacheHits: 0 };
+  const tabNames = ["search", "instances", "gpu", "overview", "costs", "anomalies"];
   let controller;
   let timer;
   let tagController;
@@ -89,6 +98,7 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
   if ([...byId("region").options].some((option) => option.value === initial.get("region"))) byId("region").value = initial.get("region");
   const linkedInstance = initial.get("instanceId") || initial.get("instance") || "";
   byId("search").value = linkedInstance || initial.get("search") || "";
+  byId("quickSearch").value = initial.get("search") || "";
   let invalidLink = byId("search").value.length > 256 || Boolean(linkedInstance && !/^i-[a-f0-9]{8}(?:[a-f0-9]{9})?$/.test(linkedInstance));
   if (initial.has("profile") && ![...byId("profile").options].some((option) => option.value === initial.get("profile"))) invalidLink = true;
   if (initial.has("region") && ![...byId("region").options].some((option) => option.value === initial.get("region"))) invalidLink = true;
@@ -142,6 +152,7 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
   function finishProgress(title, detail) { clearInterval(timer); byId("progress").classList.add("finished"); byId("spinner").hidden = true; byId("cancel").hidden = true; text("progressTitle", title); text("progressDetail", detail); }
   function setBusy(value) {
     state.busy = value;
+    for (const id of ["searchPanel", "instancesPanel", "overviewPanel", "costsPanel", "anomaliesPanel"]) byId(id).setAttribute("aria-busy", String(value));
     for (const id of ["load", "refresh", "loadMore", "overviewLoadMore", "anomalyLoadMore", "investigateAnomalies", "searchAll"]) byId(id).disabled = value;
     byId("allTags").disabled = value;
     byId("refresh").disabled = value || !state.hasSnapshot;
@@ -154,11 +165,11 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     text("tagStatus", "Tag loading canceled; select Load all tags to retry.");
     render();
   }
-  async function loadInventory(more = false, refresh = false) {
+  async function loadInventory(more = false, refresh = false, openInstance = ["instances", "gpu"].includes(state.activeTab)) {
     const scopes = more ? [...state.scopes.values()].filter((scope) => scope.nextToken || ["error", "canceled"].includes(scope.status)) : selectedScopes();
     if (!scopes.length) return;
     resetAnomalyAnalysis();
-    if (!more) state.lookupInstanceId = /^i-[a-f0-9]{8}(?:[a-f0-9]{9})?$/.test(byId("search").value.trim()) ? byId("search").value.trim() : "";
+    if (!more) state.lookupInstanceId = state.activeTab !== "search" && /^i-[a-f0-9]{8}(?:[a-f0-9]{9})?$/.test(byId("search").value.trim()) ? byId("search").value.trim() : "";
     controller?.abort(); tagController?.abort();
     controller = new AbortController();
     const signal = controller.signal;
@@ -215,7 +226,7 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     setBusy(false); render();
     const errors = [...state.scopes.values()].filter((scope) => scope.status === "error").length;
     finishProgress(errors ? "Inventory loaded with unavailable scopes" : "Inventory loaded", "Completed " + completed + " scope(s). " + (hasMore() ? "More AWS pages or failed scopes remain; use Load next AWS pages." : "All requested AWS pages are loaded.") + " " + state.cacheHits + " scope(s) served from cache (" + configuration.cacheTtlMs / 3_600_000 + " hours).");
-    if (state.lookupInstanceId) { const row = [...state.records.values()].find((entry) => entry.instanceId === state.lookupInstanceId); if (row) { activateTab(state.activeTab === "gpu" && row.gpu === true ? "gpu" : "instances"); showDetail(key(row)); } }
+    if (openInstance && state.lookupInstanceId) { const row = [...state.records.values()].find((entry) => entry.instanceId === state.lookupInstanceId); if (row) { activateTab(state.activeTab === "gpu" && row.gpu === true ? "gpu" : "instances"); showDetail(key(row)); } }
   }
   function hasMore() { return [...state.scopes.values()].some((scope) => scope.nextToken || ["error", "canceled"].includes(scope.status)); }
   function hardwareMatches(row) {
@@ -245,15 +256,15 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     }
     return row.tags.some((tag) => [tag.key, tag.value, tag.key + "=" + tag.value].some((value) => normalizeSearch(value).includes(search)));
   }
-  function searchMatches(row) {
-    const query = byId("search").value.trim(); if (!query) return true;
+  function rowMatchesQuery(row, input, mode = "all") {
+    const query = input.trim(); if (!query) return true;
     const search = normalizeSearch(query); if (!search) return false;
-    const mode = byId("searchIn").value;
     if (mode === "tags" || (mode !== "name" && query.includes("="))) return tagMatches(row, query);
     const names = [row.instanceId, instanceName(row)];
     const fields = mode === "name" ? names : [...names, ...row.tags.flatMap((tag) => [tag.key, tag.value, tag.key + "=" + tag.value]), ...ownerValues(row), row.instanceType, row.platform, row.osVersion, row.cpuManufacturer, cpuCategory(row), row.profile, row.accountId, row.region];
     return fields.some((value) => normalizeSearch(value).includes(search));
   }
+  function searchMatches(row) { return rowMatchesQuery(row, byId("search").value, byId("searchIn").value); }
   function populateFilters() {
     const rows = [...state.records.values()];
     const update = (id, first, values) => {
@@ -377,9 +388,16 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     text("overviewFreshness", byId("freshness").textContent);
     text("overviewScope", rows.length + " matching loaded instances · " + byId("profile").selectedOptions[0].textContent + " · " + byId("region").selectedOptions[0].textContent + ". Counts and shares use the same search, state, and hardware filters as the Instances tab.");
   }
-  function activateTab(name, focus = false) {
-    const next = tabNames.includes(name) ? name : "instances";
-    if (state.activeTab !== next && [state.activeTab, next].includes("gpu")) {
+  function activateTab(name, focus = false, reloadCached = false) {
+    if (name === "analytics") name = "overview";
+    const next = tabNames.includes(name) ? name : "search";
+    const search = next === "search";
+    const expandSearchScope = search && state.hasSnapshot && (state.lookupInstanceId || (configuration.accounts.length > 1 && byId("profile").value !== "*") || (configuration.regions.length > 1 && byId("region").value !== "*"));
+    if (search) {
+      if (configuration.accounts.length > 1) byId("profile").value = "*";
+      if (configuration.regions.length > 1) byId("region").value = "*";
+    }
+    if (reloadCached || (state.activeTab !== next && ([state.activeTab, next].includes("gpu") || search))) {
       resetAnomalyAnalysis(); state.page = 1;
       state.selected = null;
     }
@@ -390,6 +408,8 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
       byId(tab + "Tab").tabIndex = active ? 0 : -1;
       if (active && focus) byId(tab + "Tab").focus();
     }
+    byId("searchPanel").hidden = !search;
+    for (const id of ["scopePanel", "headerActions", "cacheStatus", "status", "accessNote"]) byId(id).hidden = search;
     const inventory = ["instances", "gpu"].includes(next);
     byId("instancesPanel").hidden = !inventory;
     byId("instancesPanel").setAttribute("aria-labelledby", inventory ? next + "Tab" : "instancesTab");
@@ -402,10 +422,35 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     text("inventoryTitle", next === "gpu" ? "GPU instances" : "Instance inventory");
     byId("instanceDetail").hidden = !inventory || !state.selected;
     render();
+    if (reloadCached) {
+      const url = new URL(location.href);
+      url.searchParams.set("tab", next === "overview" ? "analytics" : next);
+      history.replaceState(null, "", url);
+    }
+    if (reloadCached || expandSearchScope) {
+      if (state.busy) cancel();
+      if (search) byId("search").value = "";
+      void loadInventory(false, false, false).then(() => {
+        if (reloadCached && state.activeTab === next && !state.busy) {
+          const panel = next === "gpu" ? "instancesPanel" : next + "Panel";
+          byId(panel).scrollIntoView({ block: "start" });
+        }
+      });
+    }
+  }
+  function renderQuickSearch(scopes) {
+    const query = byId("quickSearch").value.trim();
+    const rows = query ? [...state.records.values()].filter((row) => rowMatchesQuery(row, query)).sort((a, b) => instanceName(a).localeCompare(instanceName(b)) || key(a).localeCompare(key(b))) : [];
+    const partial = scopes.some((scope) => scope.status !== "ready" || scope.nextToken);
+    text("quickSearchStatus", query ? rows.length + " matching instance(s)" + (rows.length > 12 ? " · showing the first 12" : "") + (state.busy ? " · loading inventory…" : partial ? " · some AWS scopes are unavailable or incomplete" : " · all configured accounts and regions") : "Search across all configured accounts and regions." + (state.busy ? " Loading cached inventory…" : partial ? " Some AWS scopes are unavailable or incomplete." : ""));
+    byId("quickResults").innerHTML = rows.slice(0, 12).map((row) => '<li><a data-quick-instance="' + escapeHtml(key(row)) + '" href="' + escapeHtml(instanceUrl(row).toString()) + '"><strong>' + escapeHtml(instanceName(row)) + '</strong><span>' + escapeHtml((row.profile || "Default credentials") + " · " + row.region + " · " + row.instanceType + " · " + row.state) + '</span><span>' + escapeHtml(row.instanceId) + '</span></a></li>').join("");
+    byId("allSearchResults").hidden = rows.length <= 12;
   }
   function render() {
-    byId("content").hidden = !state.hasSnapshot;
+    byId("content").hidden = !state.hasSnapshot || state.activeTab === "search";
+    if (state.activeTab === "search" && !state.busy) byId("progress").hidden = true;
     const scopes = [...state.scopes.values()];
+    renderQuickSearch(scopes);
     const loaded = scopes.filter((scope) => scope.pages > 0 || scope.status === "ready");
     const issues = scopes.flatMap((scope) => [...(["error", "canceled", "loading", "pending"].includes(scope.status) ? [scope.status === "error" ? scope.error : scope.status + "; coverage is not complete."] : []), ...(scope.nextToken ? ["More AWS pages remain."] : []), ...(scope.cache?.stale ? ["Serving a stale cached snapshot while refresh is retried."] : []), ...(scope.cache?.refreshError ? ["Last refresh failed: " + scope.cache.refreshError] : []), ...scope.warnings].map((issue) => (scope.profile || "Default credentials") + " / " + scope.region + ": " + issue));
     byId("scopeProblems").hidden = !issues.length;
@@ -550,17 +595,17 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
   }
   function publishContext() {
     const selected = state.records.get(state.selected);
-    const selection = { requestedScope: { profile: byId("profile").value === "@default" ? "" : byId("profile").value, region: byId("region").value }, configuredAccounts: configuration.accounts.slice(0, 12), configuredRegions: configuration.regions.slice(0, 12), scopeCount: state.scopes.size, scopes: [...state.scopes.values()].slice(0, 12).map((scope) => ({ profile: scope.profile, accountId: scope.accountId, region: scope.region, status: scope.status, morePages: Boolean(scope.nextToken) })), activeTab: state.activeTab, reviewSignalSettings: anomalyThresholds(), selectedReviewSignal: state.selectedSignal || null, filters: { instanceType: byId("typeFilter").value, size: byId("sizeFilter").value, owner: byId("ownerFilter").value, tags: byId("tagQuery").value, tagStatus: byId("tagStatusFilter").value, minMonthlyCost: byId("minCost").value, maxMonthlyCost: byId("maxCost").value, anomalyRule: byId("anomalyRule").value, hardware: state.activeTab === "gpu" ? "gpu" : byId("hardwareFilter").value, searchIn: byId("searchIn").value, search: byId("search").value.slice(0, 256), state: byId("stateFilter").value }, loadedInstances: state.records.size, selectedInstance: selected ? { name: instanceName(selected), instanceId: selected.instanceId, profile: selected.profile, accountId: selected.accountId, region: selected.region, instanceType: selected.instanceType, architecture: selected.architecture, cpuManufacturer: selected.cpuManufacturer, gpu: selected.gpu, state: selected.state } : null, mock: state.mock };
+    const selection = { requestedScope: { profile: byId("profile").value === "@default" ? "" : byId("profile").value, region: byId("region").value }, configuredAccounts: configuration.accounts.slice(0, 12), configuredRegions: configuration.regions.slice(0, 12), scopeCount: state.scopes.size, scopes: [...state.scopes.values()].slice(0, 12).map((scope) => ({ profile: scope.profile, accountId: scope.accountId, region: scope.region, status: scope.status, morePages: Boolean(scope.nextToken) })), activeTab: state.activeTab, reviewSignalSettings: anomalyThresholds(), selectedReviewSignal: state.selectedSignal || null, filters: state.activeTab === "search" ? { search: byId("quickSearch").value.slice(0, 256), searchIn: "all" } : { instanceType: byId("typeFilter").value, size: byId("sizeFilter").value, owner: byId("ownerFilter").value, tags: byId("tagQuery").value, tagStatus: byId("tagStatusFilter").value, minMonthlyCost: byId("minCost").value, maxMonthlyCost: byId("maxCost").value, anomalyRule: byId("anomalyRule").value, hardware: state.activeTab === "gpu" ? "gpu" : byId("hardwareFilter").value, searchIn: byId("searchIn").value, search: byId("search").value.slice(0, 256), state: byId("stateFilter").value }, loadedInstances: state.records.size, selectedInstance: selected ? { name: instanceName(selected), instanceId: selected.instanceId, profile: selected.profile, accountId: selected.accountId, region: selected.region, instanceType: selected.instanceType, architecture: selected.architecture, cpuManufacturer: selected.cpuManufacturer, gpu: selected.gpu, state: selected.state } : null, mock: state.mock };
     window.parent?.postMessage({ type: "caipe.agenticApp.context.v1", version: "1.0", appId: "ec2", context: { route: appPath, title: "EC2 instances", agentId: configuration.agentId, mcpServerId: "mcp-aws", domainAnswersRequireMcp: true, summary: "AWS SDK EC2 inventory for the selected AWS profiles and regions. " + state.records.size + " instances fetched. Pricing is an on-demand reference estimate, not billed cost.", selection: JSON.stringify(selection), resourceRefs: [{ kind: "agent", id: configuration.agentId }, { kind: "mcp-server", id: "mcp-aws" }], suggestedPrompts: selected ? ["Use AWS MCP to show all tags and OS details for the selected instance in this dashboard.", "Compare current pricing and actual billing evidence for this instance, stating unavailable data."] : ["Which instances in the selected account scope should I investigate for cost savings?", "Compare instance sizes and OS versions using current AWS evidence."] } }, window.location.origin);
   }
   function openAssistant() { publishContext(); if (window.parent === window) { text("assistantStatus", "Ask AWS is available inside the platform host, using the dedicated EC2 agent and AWS MCP."); return; } window.parent?.postMessage({ type: "caipe.agenticApp.assistant.open.v1", version: "1.0", appId: "ec2" }, window.location.origin); text("assistantStatus", "Opened Ask AWS with the selected account, region, and instance context."); }
   for (const name of tabNames) {
-    byId(name + "Tab").addEventListener("click", () => activateTab(name));
+    byId(name + "Tab").addEventListener("click", () => activateTab(name, false, true));
     byId(name + "Tab").addEventListener("keydown", (event) => {
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
       event.preventDefault();
       const index = tabNames.indexOf(name);
-      activateTab(event.key === "Home" ? tabNames[0] : event.key === "End" ? tabNames.at(-1) : tabNames[(index + (event.key === "ArrowRight" ? 1 : -1) + tabNames.length) % tabNames.length], true);
+      activateTab(event.key === "Home" ? tabNames[0] : event.key === "End" ? tabNames.at(-1) : tabNames[(index + (event.key === "ArrowRight" ? 1 : -1) + tabNames.length) % tabNames.length], true, true);
     });
   }
   byId("anomalyForm").addEventListener("submit", (event) => { event.preventDefault(); investigateAnomalies(); });
@@ -575,18 +620,28 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     state.selected = id; state.selectedSignal = { name: instanceName(state.records.get(id) || finding), instanceId: finding.instanceId, profile: finding.profile, region: finding.region, rules: finding.rules, referenceMonthlyUsd: finding.monthlyUsd, launchAgeDays: finding.launchAgeDays, missingTags: finding.missingTags };
     if (view) { activateTab("instances"); showDetail(id); } else openAssistant();
   });
+  byId("quickSearchForm").addEventListener("submit", (event) => { event.preventDefault(); render(); });
+  byId("quickSearch").addEventListener("input", () => { renderQuickSearch([...state.scopes.values()]); publishContext(); });
+  byId("quickResults").addEventListener("click", (event) => {
+    const link = event.target.closest("a[data-quick-instance]");
+    if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button) return;
+    event.preventDefault(); const row = state.records.get(link.dataset.quickInstance); if (!row) return;
+    clearInventoryFilters(); byId("search").value = row.instanceId; activateTab("instances"); showDetail(link.dataset.quickInstance);
+  });
+  byId("allSearchResults").addEventListener("click", () => { clearInventoryFilters(); byId("search").value = byId("quickSearch").value; activateTab("instances"); });
   byId("scopeForm").addEventListener("submit", (event) => { event.preventDefault(); loadInventory(); });
   byId("searchAll").addEventListener("click", () => { if (configuration.accounts.length > 1) byId("profile").value = "*"; if (configuration.regions.length > 1) byId("region").value = "*"; loadInventory(); });
   for (const id of ["profile", "region"]) byId(id).addEventListener("change", () => { if (state.busy) cancel(); loadInventory(); });
   byId("refresh").addEventListener("click", () => loadInventory(false, true)); byId("loadMore").addEventListener("click", () => loadInventory(true)); byId("overviewLoadMore").addEventListener("click", () => loadInventory(true)); byId("anomalyLoadMore").addEventListener("click", () => loadInventory(true)); byId("cancel").addEventListener("click", cancel);
   byId("filterForm").addEventListener("submit", (event) => event.preventDefault());
   for (const id of ["search", "searchIn", "stateFilter", "hardwareFilter", "typeFilter", "sizeFilter", "ownerFilter", "tagStatusFilter", "tagQuery", "minCost", "maxCost", "sort", "pageSize"]) byId(id).addEventListener(["search", "tagQuery", "minCost", "maxCost"].includes(id) ? "input" : "change", () => { resetAnomalyAnalysis(); state.page = 1; if (!["sort", "pageSize"].includes(id)) { state.selected = null; byId("instanceDetail").hidden = true; } render(); });
-  byId("clearFilters").addEventListener("click", () => {
+  function clearInventoryFilters() {
     resetAnomalyAnalysis(); state.page = 1; state.selected = null; byId("instanceDetail").hidden = true;
     for (const id of ["search", "tagQuery", "typeFilter", "sizeFilter", "ownerFilter", "minCost", "maxCost"]) byId(id).value = "";
     for (const id of ["searchIn", "stateFilter", "hardwareFilter", "tagStatusFilter", "anomalyRule"]) byId(id).value = "all";
     byId("sort").value = "cost"; byId("maxCost").setCustomValidity(""); render();
-  });
+  }
+  byId("clearFilters").addEventListener("click", clearInventoryFilters);
   byId("previous").addEventListener("click", () => { state.page -= 1; render(); }); byId("next").addEventListener("click", () => { state.page += 1; render(); });
   byId("instanceRows").addEventListener("click", (event) => { const button = event.target.closest("button[data-instance]"); if (button) showDetail(button.dataset.instance); });
   byId("allTags").addEventListener("click", loadTags); byId("closeDetail").addEventListener("click", () => { if (state.busy && tagController && !tagController.signal.aborted) cancel(); tagController?.abort(); byId("instanceDetail").hidden = true; state.selected = null; publishContext(); });
@@ -594,7 +649,8 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
   byId("copyLink").addEventListener("click", async () => {
     const url = new URL(appPath, location.origin); const selected = state.records.get(state.selected);
     if (selected) url.search = instanceUrl(selected, state.activeTab === "gpu" && selected.gpu === true ? "gpu" : "instances").search;
-    else { for (const [name, id] of [["profile", "profile"], ["region", "region"], ["search", "search"], ["searchIn", "searchIn"], ["state", "stateFilter"], ["sort", "sort"], ["hardware", "hardwareFilter"], ...filterParams]) if (byId(id).value) url.searchParams.set(name, byId(id).value); url.searchParams.set("tab", state.activeTab); }
+    else if (state.activeTab === "search") { url.searchParams.set("tab", "search"); url.searchParams.set("search", byId("quickSearch").value); }
+    else { for (const [name, id] of [["profile", "profile"], ["region", "region"], ["search", "search"], ["searchIn", "searchIn"], ["state", "stateFilter"], ["sort", "sort"], ["hardware", "hardwareFilter"], ...filterParams]) if (byId(id).value) url.searchParams.set(name, byId(id).value); url.searchParams.set("tab", state.activeTab === "overview" ? "analytics" : state.activeTab); }
     try { await navigator.clipboard.writeText(url.toString()); text("status", (selected ? "Link copied for " + instanceName(selected) + "." : "View link copied.") + " The instance or search loads automatically; recipients need their own app access."); } catch { text("status", "Share this view: " + url.toString()); }
   });
   async function pollCacheStatus() {
@@ -614,9 +670,10 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
   window.addEventListener("pagehide", () => { cachePollingStopped = true; clearTimeout(cachePollTimer); });
   window.addEventListener("pageshow", (event) => { if (event.persisted) { cachePollingStopped = false; void pollCacheStatus(); } });
   window.addEventListener("caipe:microfrontend-initialize", publishContext);
-  activateTab(initial.get("tab"));
+  const initialTab = initial.get("tab") || (linkedInstance || filterParams.some(([param]) => initial.has(param)) || initial.has("hardware") || initial.has("state") || initial.has("sort") ? "instances" : "search");
+  activateTab(initialTab);
   publishContext();
-  if (invalidLink) text("status", "This link has an invalid instance, scope, or filter setting. Choose a configured scope to search.");
+  if (invalidLink) { text("status", "This link has an invalid instance, scope, or filter setting. Choose a configured scope to search."); text("quickSearchStatus", "This link has an invalid setting. Open Instances to choose a configured scope and search."); }
   else loadInventory();
   void pollCacheStatus();
 }
