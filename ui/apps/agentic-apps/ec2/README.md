@@ -78,14 +78,26 @@
 
 ## Views
 
-- **Instances** is the first tab and automatically loads all configured account/region
+- **Search** is the first/default tab: one search box for names, instance IDs, owners,
+  and tags across all configured accounts and regions. Cached inventory loads in the
+  background; no instance is selected automatically. Search shows up to 12 named
+  results, with a link to view all matches in inventory. Selecting a result opens its
+  details. Search ignores inventory filters; returning to Search restores the fleet
+  scope. Share a search with `tab=search&search=example`.
+- Clicking a tab, or navigating with arrow keys, reloads its account/region snapshot
+  from the shared cache and shows loading status. It does not force a fresh AWS scan
+  or automatically start an agent investigation. The URL reflects the active tab.
+  The selected panel scrolls into view after loading, with the tab bar kept visible.
+  Instance-ID searches stay in the requested view when its cached data reloads.
+- **Instances** is the second tab and uses all configured account/region
   snapshots. Account/region changes apply immediately; search/filter the cached fleet
   and inspect its instances without a manual initial load.
-- **GPU instances** is the second tab, using the same cached inventory, search, state,
+- **GPU instances** is the third tab, using the same cached inventory, search, state,
   sort, pagination, details, and account/region scope. Only verified GPU hosts appear;
   unknown GPU metadata is excluded with a visible count. The general hardware filter
   is preserved when returning to other tabs. Share the GPU view with `tab=gpu`.
-- **Overview** is the third tab. Instance-type, CPU-platform, and GPU-presence pie
+- **Analytics** is the fourth tab (`tab=analytics`; existing `tab=overview` links
+  remain supported). Instance-type, CPU-platform, and GPU-presence pie
   charts share the selected account/region scope and visible search/state/hardware filters.
 - CPU groups distinguish x86, verified Graviton, other Arm, unverified Arm, and
   other/unknown architecture. Arm alone does not prove Graviton (for example, Arm Mac).
@@ -97,12 +109,12 @@
   no-GPU, or unknown-hardware records. Shared links preserve the active tab and filters.
 - Type pies show the six largest types plus Other types; all records remain in the table.
 
-- **Cost overview** is the fourth tab, showing state-aware reference cost estimates,
+- **Cost overview** is the fifth tab, showing state-aware reference cost estimates,
   pricing coverage, account/type breakdowns, and the highest-cost named instances.
 
 ## Anomalies
 
-- The fifth tab shows configurable snapshot review signals: high monthly on-demand
+- The sixth tab shows configurable snapshot review signals: high monthly on-demand
   reference cost, stopped instances with older launch dates, and missing required tags.
 - Untagged instances have an explicit signal even when no required tag keys are set.
   The complete tag list must be empty; truncated/unknown tags do not prove absence.
