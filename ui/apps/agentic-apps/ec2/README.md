@@ -16,13 +16,15 @@
 | `EC2_AWS_ACCOUNT_LIST` | `AWS_ACCOUNT_LIST` | Canonical `profile:account_id` pairs matching AWS MCP |
 | `EC2_AWS_REGIONS` | `AWS_REGION`, `AWS_DEFAULT_REGION`, then `us-east-1` | Comma-separated permitted regions |
 | `EC2_CROSS_ACCOUNT_ROLE_NAME` | `CROSS_ACCOUNT_ROLE_NAME`, then `read-only` | Role assumed in each configured account |
+| `EC2_OWNER_TAG_KEYS` | `Owner,ResourceOwner,User,Username,CreatedBy,Email` | Tag keys used for owner/user filtering and display; up to 16 keys |
 | `EC2_AWS_PARTITION` | `aws` | AWS ARN partition |
-| `EC2_CACHE_TTL_SECONDS` | `14400` | Server snapshot lifetime; 60–86400 seconds |
+| `EC2_CACHE_TTL_SECONDS` | `28800` | Fresh snapshot lifetime and background refresh interval; 60–86400 seconds |
+| `EC2_BACKGROUND_REFRESH_ENABLED` | `true` | Warm all configured scopes at startup and refresh on schedule; disable only for isolated previews |
 | `AWS_ROLE_ARN`, `AWS_WEB_IDENTITY_TOKEN_FILE` | AWS provider chain | Configure both for IRSA |
 | `AGENTIC_APP_TOKEN_SECRET` | Required by shared verifier | Host-issued app JWT verification |
 
-- Multiple accounts require an explicit selection. “All configured” stays within the
-  account/region allowlists. Each configured account is reached through its read-only
+- The landing page automatically loads all configured accounts and regions. Account
+  and region filters immediately apply cached views within these allowlists. Each configured account is reached through its read-only
   role using server credentials. Profile names are labels, never local AWS profile selectors.
 - Without an account list, the server uses its default AWS credential provider chain
   and verifies the resulting identity through STS. Local development can use `AWS_PROFILE`.
@@ -41,19 +43,49 @@
 
 - Search names, instance IDs, profile/account/region, size, OS, and every tag key/value.
   Case, spaces, hyphens, and underscores match consistently. Filtering loaded records
-  does not call AWS. “Search all accounts & regions” searches every configured scope.
+  does not call AWS. Choose All fields, Name or instance ID, or Tags. Tag expressions
+  such as `Owner=example-team` match the complete normalized key and a partial value;
+  `Owner=` finds instances with that key. “Search all accounts & regions” searches
+  every configured scope. Search mode is preserved with `searchIn=name` or `searchIn=tags`.
 - `?profile=primary&region=us-east-1&search=simulation` loads that search automatically.
 - `?profile=primary&region=us-east-1&instanceId=i-0123456789abcdef0` directly describes
   the instance and opens its details without loading earlier service pages.
 - Search or instance links without a scope use all configured accounts/regions.
   Invalid IDs or unconfigured scopes show an error. Recipients need their own app access.
+- Instance labels prefer the AWS `Name` tag, then `ApplicationName`; absent names
+  display as “Unnamed instance”. Names lead the inventory, GPU list, details, and
+  review/investigation headings. IDs remain secondary for disambiguation. Named
+  investigation links use the verified account/region/ID to open the correct instance;
+  shared links keep stable IDs because names can repeat or change.
 - “Copy link” shares the selected instance, or the active search/view when none is selected.
+
+## Filters and sorting
+
+- Combine hardware/state, exact instance type, AWS size suffix, owner/user, tag presence,
+  independent tag key/value expressions, and minimum/maximum modeled monthly USD cost.
+- Owner/user values come from configurable tags, not verified AWS creator identities.
+  Key aliases ignore case/separators; owner values preserve punctuation and ignore case.
+  “No owner tag” requires a complete tag list. Ownership is shown in inventory/details.
+- Cost ranges exclude unknown estimates. Invalid or inverted ranges show no results
+  and an error. Type/size/owner choices come from the full cached population, remain
+  selected during partial loads, and do not silently broaden unavailable URL selections.
+- Sort by type, vCPU/RAM size (largest/smallest), memory, estimated cost (high/low),
+  owner/user, tag count (fewest/most), tag keys/values, name, or launch date. Unknown
+  hardware/cost/owner values sort after known values. Filters apply across all tabs.
+- Copy link preserves `type`, `size`, `owner`, `tags`, `tagStatus`, `minCost`, `maxCost`,
+  `sort`, and anomaly `signal`/`highCost` settings. “Clear filters” keeps the account/region
+  scope and anomaly thresholds while clearing inventory filters and the signal category.
 
 ## Views
 
-- **Instances** is the first tab. Select an account/profile and region, load inventory,
-  then search/filter and inspect its instances.
-- **Overview** is the second tab. Instance-type, CPU-platform, and GPU-presence pie
+- **Instances** is the first tab and automatically loads all configured account/region
+  snapshots. Account/region changes apply immediately; search/filter the cached fleet
+  and inspect its instances without a manual initial load.
+- **GPU instances** is the second tab, using the same cached inventory, search, state,
+  sort, pagination, details, and account/region scope. Only verified GPU hosts appear;
+  unknown GPU metadata is excluded with a visible count. The general hardware filter
+  is preserved when returning to other tabs. Share the GPU view with `tab=gpu`.
+- **Overview** is the third tab. Instance-type, CPU-platform, and GPU-presence pie
   charts share the selected account/region scope and visible search/state/hardware filters.
 - CPU groups distinguish x86, verified Graviton, other Arm, unverified Arm, and
   other/unknown architecture. Arm alone does not prove Graviton (for example, Arm Mac).
@@ -65,10 +97,18 @@
   no-GPU, or unknown-hardware records. Shared links preserve the active tab and filters.
 - Type pies show the six largest types plus Other types; all records remain in the table.
 
+- **Cost overview** is the fourth tab, showing state-aware reference cost estimates,
+  pricing coverage, account/type breakdowns, and the highest-cost named instances.
+
 ## Anomalies
 
-- The third tab shows configurable snapshot review signals: high monthly on-demand
+- The fifth tab shows configurable snapshot review signals: high monthly on-demand
   reference cost, stopped instances with older launch dates, and missing required tags.
+- Untagged instances have an explicit signal even when no required tag keys are set.
+  The complete tag list must be empty; truncated/unknown tags do not prove absence.
+  Nonempty lists missing required keys are a separate category. Select High estimated
+  cost, Without tags, Missing required tags, Older stopped, or All signals; the agent
+  investigates the visible category. Cost remains a configurable reference threshold.
 - Signals use the same loaded account/region population and filters as the other views.
   Incomplete pricing, dates, tags, and AWS pages remain visible coverage gaps. Missing
   tags are flagged only from a complete reported tag list; tag key matching is exact.
@@ -107,14 +147,31 @@
   running instance. Missing running-instance prices are excluded with visible coverage.
   Stopped/terminated instances have zero modeled compute runtime; their storage and
   other charges continue to be excluded. Other transitional states remain unknown.
+- The Cost overview tab includes known compute subtotals per hour, 24-hour day, and 730-hour
+  modeled month, priced-running coverage, account/type cost breakdowns, and the ten
+  highest modeled running-instance costs with named links. Unknown rates are excluded
+  and counted; partially priced groups are never presented as complete spend.
+- Instance details show the reference hourly rate and state-aware daily/monthly compute
+  estimates. Stopped/terminated compute is modeled as zero; storage remains excluded.
 - These are reference prices, **not actual billed costs**. Spot, RI/Savings Plans,
   EBS, networking, tax, and additional license charges are not modeled. Ask AWS can
   investigate billing separately when billing data and permissions are available.
-- Server snapshots expire after four hours by default, including complete tags and
+- Server snapshots are refreshed every eight hours by default, including complete tags and
   metadata. Cache keys include scope, continuation token, and direct instance ID.
   Concurrent identical reads share one job; canceling a browser does not cancel it
   for other readers. Snapshot storage is bounded to 64 MiB with oldest-use eviction;
-  metadata has a separate 2,048-entry bound. Process restarts clear the cache.
+  metadata has a separate 2,048-entry bound. A startup job warms every configured
+  account/region scope with at most two concurrent reads and follows continuation
+  batches automatically. Process restarts clear the in-memory cache and start a new warm-up.
+- Background refreshes do not overlap. Failed cycles retry after five minutes (or the
+  configured interval if shorter). Existing snapshots remain readable during refresh
+  until a maximum source age of three refresh intervals (24 hours by default), explicitly marked
+  stale. Failures preserve prior snapshots; unavailable/partial scopes remain visible.
+  `/api/cache-status` exposes progress and scheduling behind normal app read authorization.
+- Direct instance lookups reuse a matching cached fleet snapshot when available,
+  including verified absence from complete cached coverage. Forced refresh bypasses it.
+- Upgrade deployments that explicitly set the old four-hour value to
+  `EC2_CACHE_TTL_SECONDS=28800` to use the requested eight-hour schedule.
 - Cache age uses the oldest source lookup. “Refresh live data” bypasses both snapshot
   and metadata caches. Snapshot times, cache hits, expiry, and partial coverage are visible.
   Shared links contain scope/filters, never inventory or credentials.
