@@ -4,6 +4,7 @@ import { ec2CpuCategory } from "./overview.mjs";
 import { renderAgenticAppConversationClient } from "../../_lib/conversation-client.mjs";
 import { renderMicrofrontendClient } from "../../_lib/microfrontend-client.mjs";
 import { normalizeEc2Search, validateEc2Response } from "./inventory.mjs";
+import { validateEc2StopResponse } from "./stop.mjs";
 
 export function renderEc2Dashboard({ basePath, appPath, compact, configuration }) {
   const config = JSON.stringify({ basePath, appPath, configuration }).replaceAll("<", "\\u003c");
@@ -16,6 +17,7 @@ export function renderEc2Dashboard({ basePath, appPath, compact, configuration }
   .tabs{position:sticky;top:0;z-index:10;background:var(--bg);display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin:16px 0}[role=tabpanel]{scroll-margin-top:74px}.tabs button{min-width:130px;background:transparent;border:0;border-bottom:3px solid transparent;border-radius:8px 8px 0 0;color:var(--muted)}.tabs button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent);background:var(--surface);font-weight:600}.pie-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.pie-grid>.panel{margin:0}.pie-chart{display:block;width:100%;max-width:210px;margin:16px auto}.pie-legend{list-style:none;margin:0;padding:0;display:grid;gap:10px}.pie-legend li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;align-items:baseline;font-size:.82rem}.pie-legend i{display:block;width:10px;height:10px;border-radius:2px}.pie-legend span{overflow-wrap:anywhere}.filter-panel{padding:8px 16px!important}.filter-panel .controls{margin:8px 0}.filter-panel details{flex-basis:100%;width:100%;min-width:0}.filter-panel label{min-width:150px}.filter-panel input[type=search]{min-width:220px}@media(max-width:1050px){.pie-grid{grid-template-columns:1fr 1fr}.pie-grid>.panel:last-child{grid-column:1/-1}}@media(max-width:600px){.pie-grid{grid-template-columns:1fr}.pie-grid>.panel:last-child{grid-column:auto}}
 
   .search-landing{max-width:860px;margin:64px auto 32px}.search-landing h2{font-size:1.7rem;margin-bottom:8px}.search-landing form{margin:24px 0 12px}.search-landing input[type=search]{font-size:1.15rem;padding:18px 20px;border-radius:12px}.search-landing input[type=search]:focus{border-color:var(--accent)}.quick-results{list-style:none;padding:0;margin:24px 0;display:grid;gap:10px}.quick-results a{display:block;padding:16px 20px;background:var(--surface);border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--text)}.quick-results a:hover{border-color:var(--accent)}.quick-results strong,.quick-results span{display:block}.quick-results span{margin-top:5px;color:var(--muted);font-size:.82rem;overflow-wrap:anywhere}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}@media(max-width:600px){.search-landing{margin-top:32px}}
+  .stop-button{border-color:var(--warning);color:var(--warning)}dialog{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:24px;width:min(560px,calc(100% - 24px));max-height:90vh;overflow:auto}dialog::backdrop{background:rgb(0 0 0 / .65)}dialog input{width:100%}.stop-target{padding:14px;background:var(--bg);border-radius:8px;overflow-wrap:anywhere}.stop-target strong,.stop-target span{display:block;margin:4px 0}
   </style></head><body class="${compact ? "compact" : ""}"><main>
   <header class="row"><div><h1>EC2 instances</h1><p class="subtitle">Explore instance size, OS, tags, and cost by AWS account and region.</p></div><div class="actions" id="headerActions"><button id="copyLink">Copy link</button><button id="refresh" disabled>Refresh live data</button><button id="askAws">Ask AWS</button></div></header>
   <nav class="tabs" role="tablist" aria-label="EC2 dashboard views"><button id="searchTab" role="tab" aria-selected="true" aria-controls="searchPanel" tabindex="0">Search</button><button id="instancesTab" role="tab" aria-selected="false" aria-controls="instancesPanel" tabindex="-1">Instances</button><button id="gpuTab" role="tab" aria-selected="false" aria-controls="instancesPanel" tabindex="-1">GPU instances</button><button id="overviewTab" role="tab" aria-selected="false" aria-controls="overviewPanel" tabindex="-1">Analytics</button><button id="costsTab" role="tab" aria-selected="false" aria-controls="costsPanel" tabindex="-1">Cost overview</button><button id="anomaliesTab" role="tab" aria-selected="false" aria-controls="anomaliesPanel" tabindex="-1">Anomalies</button></nav>
@@ -25,7 +27,7 @@ export function renderEc2Dashboard({ basePath, appPath, compact, configuration }
     <p id="quickSearchStatus" class="small muted" role="status" aria-live="polite">Search across all configured accounts and regions.</p>
     <ul id="quickResults" class="quick-results" aria-label="Matching instances"></ul><button id="allSearchResults" hidden>View all results</button>
   </section>
-  <section id="scopePanel" class="panel" aria-labelledby="scopeTitle"><h2 id="scopeTitle">AWS account scope</h2><form id="scopeForm" class="controls"><label class="grow">Account / profile<select id="profile" required></select></label><label class="grow">Region<select id="region" required></select></label><label>Search in<select id="searchIn" aria-describedby="searchHelp"><option value="all">All fields</option><option value="name">Name or instance ID</option><option value="tags">Tags</option></select></label><label class="grow">Find an instance<input aria-describedby="searchHelp" id="search" type="search" maxlength="256" placeholder="Name, instance ID, tag, or key=value" autocomplete="off" data-1p-ignore spellcheck="false"></label><button class="primary" id="load" type="submit">Reload cached view</button><button id="searchAll" type="button">Search all accounts &amp; regions</button></form><p id="searchHelp" class="muted small">Search names and all tags, including tags outside the table preview. Use a tag key, value, or key=value, such as Owner=example-team. Case, spaces, hyphens, and underscores match consistently.</p><p class="muted small">All configured accounts and regions load automatically from the shared cache. The background refresh runs every ${configuration.cacheTtlMs / 3_600_000} hours. Refresh live data bypasses the cache. AWS resources are read-only.</p></section>
+  <section id="scopePanel" class="panel" aria-labelledby="scopeTitle"><h2 id="scopeTitle">AWS account scope</h2><form id="scopeForm" class="controls"><label class="grow">Account / profile<select id="profile" required></select></label><label class="grow">Region<select id="region" required></select></label><label>Search in<select id="searchIn" aria-describedby="searchHelp"><option value="all">All fields</option><option value="name">Name or instance ID</option><option value="tags">Tags</option></select></label><label class="grow">Find an instance<input aria-describedby="searchHelp" id="search" type="search" maxlength="256" placeholder="Name, instance ID, tag, or key=value" autocomplete="off" data-1p-ignore spellcheck="false"></label><button class="primary" id="load" type="submit">Reload cached view</button><button id="searchAll" type="button">Search all accounts &amp; regions</button></form><p id="searchHelp" class="muted small">Search names and all tags, including tags outside the table preview. Use a tag key, value, or key=value, such as Owner=example-team. Case, spaces, hyphens, and underscores match consistently.</p><p class="muted small">All configured accounts and regions load automatically from the shared cache. The background refresh runs every ${configuration.cacheTtlMs / 3_600_000} hours. Refresh live data bypasses the cache. Inventory reads are read-only. Instance stop is a separate, permission-gated action.</p></section>
 
   <section id="progress" class="panel progress" hidden><div class="row progress-heading"><span id="spinner" class="spinner" aria-hidden="true"></span><strong id="progressTitle" role="status" aria-live="polite"></strong><time id="elapsed" class="small muted"></time><button id="cancel">Cancel</button></div><p id="progressDetail" class="small muted"></p></section>
   <p id="cacheStatus" class="notice small" role="status" aria-live="polite">Checking background cache status…</p>
@@ -51,14 +53,15 @@ export function renderEc2Dashboard({ basePath, appPath, compact, configuration }
     </section>
     <div id="instancesPanel" role="tabpanel" aria-labelledby="instancesTab">
     <section class="panel" aria-labelledby="inventoryTitle"><div class="row"><h2 id="inventoryTitle">Instance inventory</h2><span id="freshness" class="muted small"></span></div><p id="gpuNotice" class="notice small" hidden></p><p class="small muted">Search, charts, and totals share the fetched AWS inventory, including all returned tags. Complete coverage means all AWS pages in the requested account/region scopes have been fetched. Incomplete scopes remain explicit.</p><div class="table-wrap"><table class="inventory"><thead><tr><th scope="col">Instance name</th><th scope="col">Account / profile</th><th scope="col">Owner / user (tags)</th><th scope="col">Region</th><th scope="col">Size</th><th scope="col">OS</th><th scope="col">State</th><th scope="col" class="numeric">USD / hour</th><th scope="col" class="numeric">Est. USD / mo</th><th scope="col">Tags</th><th scope="col">Details</th></tr></thead><tbody id="instanceRows"></tbody></table></div><nav class="row pagination" aria-label="Inventory pages"><span id="pageInfo" class="muted small"></span><div class="actions"><label>Rows<select id="pageSize"><option>10</option><option selected>25</option><option>50</option></select></label><button id="previous" disabled>Previous</button><button id="next" disabled>Next</button><button id="loadMore" hidden>Load next AWS pages</button></div></nav></section>
-    <section id="instanceDetail" class="panel" hidden aria-labelledby="detailTitle"><div class="row"><h2 id="detailTitle">Instance details</h2><div class="actions"><button id="askInstance">Ask AWS about this instance</button><button id="closeDetail">Close</button></div></div><div id="detailFields" class="detail-grid"></div><div class="row controls"><h3>Tags</h3><button id="allTags">Load all tags</button></div><p id="tagStatus" class="notice small" role="status"></p><dl id="tags"></dl></section>
+    <section id="instanceDetail" class="panel" hidden aria-labelledby="detailTitle"><div class="row"><h2 id="detailTitle">Instance details</h2><div class="actions"><button id="stopInstance" class="stop-button" hidden>Stop instance</button><button id="askInstance">Ask AWS about this instance</button><button id="closeDetail">Close</button></div></div><div id="detailFields" class="detail-grid"></div><div class="row controls"><h3>Tags</h3><button id="allTags">Load all tags</button></div><p id="tagStatus" class="notice small" role="status"></p><dl id="tags"></dl></section>
     </div>
     <section class="panel"><details><summary>AWS API evidence and limitations</summary><div id="evidence"></div></details></section>
   </div><p id="assistantStatus" class="notice small" role="status"></p><footer id="accessNote" class="small muted">Inventory access follows the app read permission, configured accounts, and read-only AWS role. Questions and investigations use the caller-authorized MCP agent. OS version is shown only when reported by Systems Manager.</footer>
-  </main>${renderMicrofrontendClient("ec2")}${renderAgenticAppConversationClient()}<script>(${initializeEc2Dashboard.toString()})(${config},${validateEc2Response.toString()},${renderDonutSvg.toString()},${ec2CpuCategory.toString()},${buildEc2AnomalySignals.toString()},${validateEc2AnomalyResponse.toString()},${normalizeEc2Search.toString()});</script></body></html>`;
+  <dialog id="stopDialog" aria-labelledby="stopDialogTitle"><h2 id="stopDialogTitle">Stop instance?</h2><p class="notice">This shuts down the selected instance. It does not terminate it. Attached EBS volumes remain, and storage charges can continue.</p><div id="stopTarget" class="stop-target"></div><label class="notice">Type the instance ID to confirm<input id="stopConfirmation" autocomplete="off" data-1p-ignore spellcheck="false"></label><p class="small muted">The confirmation expires after two minutes. AWS IAM checks your signed-in identity and instance permissions.</p><p id="stopStatus" role="status" aria-live="polite" class="notice"></p><div class="actions"><span id="stopSpinner" class="spinner" aria-hidden="true" hidden></span><button id="cancelStop" type="button">Cancel</button><button id="checkStopStatus" type="button" hidden>Check live status</button><button id="confirmStop" class="stop-button" type="button" disabled>Confirm stop</button></div></dialog>
+  </main>${renderMicrofrontendClient("ec2")}${renderAgenticAppConversationClient()}<script>(${initializeEc2Dashboard.toString()})(${config},${validateEc2Response.toString()},${renderDonutSvg.toString()},${ec2CpuCategory.toString()},${buildEc2AnomalySignals.toString()},${validateEc2AnomalyResponse.toString()},${normalizeEc2Search.toString()},${validateEc2StopResponse.toString()});</script></body></html>`;
 }
 
-function initializeEc2Dashboard({ basePath, appPath, configuration }, validateResponse, renderDonutSvg, cpuCategory, buildSignals, validateInvestigation, normalizeSearch) {
+function initializeEc2Dashboard({ basePath, appPath, configuration }, validateResponse, renderDonutSvg, cpuCategory, buildSignals, validateInvestigation, normalizeSearch, validateStopResponse) {
   const byId = (id) => document.getElementById(id);
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
   const text = (id, value) => { byId(id).textContent = value; };
@@ -78,6 +81,11 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
   }
   const state = { records: new Map(), scopes: new Map(), page: 1, selected: null, busy: false, hasSnapshot: false, mock: false, activeTab: "search", anomalyReports: [], anomalyErrors: [], anomaliesRunning: false, anomalyTargets: 0, lookupInstanceId: "", cacheHits: 0 };
   const tabNames = ["search", "instances", "gpu", "overview", "costs", "anomalies"];
+  let stopCapability = { allowed: false, profiles: [] };
+  let stopApproval;
+  let stopOutcome = "";
+  let stopExecuting = false;
+  let stopDialogVersion = 0;
   let controller;
   let timer;
   let tagController;
@@ -485,7 +493,7 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     text("pageInfo", rows.length ? "Showing " + ((state.page - 1) * size + 1) + "–" + Math.min(state.page * size, rows.length) + " of " + rows.length + " · Page " + state.page + " of " + pages : "0 matching loaded instances");
     byId("previous").disabled = state.page <= 1; byId("next").disabled = state.page >= pages; byId("loadMore").hidden = !hasMore(); byId("overviewLoadMore").hidden = !hasMore(); byId("anomalyLoadMore").hidden = !hasMore(); text("overviewLoadMore", byId("loadMore").textContent); text("anomalyLoadMore", byId("loadMore").textContent);
     byId("evidence").innerHTML = loaded.map((scope) => '<h3>' + escapeHtml((scope.profile || "Default credentials") + " / " + scope.region) + '</h3><p class="muted small">' + scope.pages + ' AWS page(s) · ' + escapeHtml(scope.updatedAt) + '</p>' + scope.evidence.map((entry) => '<pre>' + escapeHtml(entry.service + '.' + entry.operation + ' · ' + entry.region + (entry.requestId ? ' · request ' + entry.requestId : '')) + '</pre>').join('')).join("");
-    publishContext();
+    renderStopControl(); publishContext();
   }
   function showDetail(id) {
     if (state.busy) cancel();
@@ -593,6 +601,94 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
     state.anomaliesRunning = false; setBusy(false); render();
     finishProgress(state.anomalyErrors.length ? "Investigation completed with unavailable evidence" : "Agent investigation complete", "Reviewed " + state.anomalyReports.reduce((sum, result) => sum + result.findings.length, 0) + " of " + candidates.length + " requested instances. Review observations, CPU coverage, and limitations below.");
   }
+  async function stopRequest(input) {
+    const response = await fetch(route("/api/stop-request"), { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify(input) });
+    return (await readAgenticAppJsonResponse(response, "Instance stop request failed")).data;
+  }
+  function renderStopControl() {
+    const row = state.records.get(state.selected);
+    byId("stopInstance").hidden = !stopCapability.allowed || !row || !stopCapability.profiles.includes(row.profile) || row.state !== "running";
+    byId("stopInstance").disabled = state.busy || stopExecuting;
+  }
+  async function loadStopCapability() {
+    try {
+      const response = await fetch(route("/api/stop-capability"), { credentials: "same-origin" });
+      const result = await readAgenticAppJsonResponse(response, "Stop capability unavailable");
+      if (result.data?.allowed === true && Array.isArray(result.data.profiles)) stopCapability = result.data;
+    } catch { stopCapability = { allowed: false, profiles: [] }; console.warn("[ec2] Stop capability unavailable; action remains disabled."); }
+    renderStopControl();
+  }
+  async function openStopConfirmation() {
+    const row = state.records.get(state.selected);
+    if (!row || !stopCapability.allowed || stopExecuting) return;
+    const version = ++stopDialogVersion;
+    stopApproval = null; stopOutcome = ""; byId("stopConfirmation").value = ""; byId("stopConfirmation").disabled = false;
+    byId("confirmStop").disabled = true; byId("confirmStop").hidden = false;
+    byId("checkStopStatus").hidden = true; byId("cancelStop").disabled = false; text("cancelStop", "Cancel");
+    text("stopTarget", instanceName(row) + " · " + row.instanceId + " · " + row.profile + " / " + row.accountId + " / " + row.region);
+    text("stopStatus", "Verifying the live instance before confirmation…"); byId("stopSpinner").hidden = false; byId("stopDialog").showModal();
+    try {
+      const approval = await stopRequest({ kind: "prepare", profile: row.profile, region: row.region, instanceId: row.instanceId });
+      if (version !== stopDialogVersion || !byId("stopDialog").open) return;
+      if (approval.target?.instanceId !== row.instanceId || approval.target.accountId !== row.accountId || approval.target.region !== row.region || approval.target.profile !== row.profile) throw new Error("The confirmation target changed. Close and review the instance again.");
+      stopApproval = approval;
+      byId("stopTarget").innerHTML = '<strong>' + escapeHtml(approval.target.name) + '</strong><span>' + escapeHtml(row.instanceId) + '</span><span>' + escapeHtml(row.profile + " · " + row.accountId + " · " + row.region) + '</span><span>' + escapeHtml(approval.target.instanceType + " · " + approval.target.state) + '</span>';
+      text("stopStatus", "Review this instance, then type its exact ID to enable Confirm stop.");
+    } catch (error) { if (version === stopDialogVersion) text("stopStatus", error.message); }
+    finally { if (version === stopDialogVersion) byId("stopSpinner").hidden = true; }
+  }
+  async function checkLiveStopStatus() {
+    if (!stopApproval) return null;
+    const target = stopApproval.target; const version = stopDialogVersion;
+    const data = await stopRequest({ kind: "status", profile: target.profile, region: target.region, instanceId: target.instanceId });
+    validateResponse(data, { scope: target, cacheTtlMs: configuration.cacheTtlMs, cacheMaxStaleMs: configuration.cacheMaxStaleMs });
+    const row = data.instances.find((r) => r.instanceId === target.instanceId);
+    if (!row) throw new Error("Live instance state is unavailable.");
+    state.records.set(key(row), row); render();
+    if (version !== stopDialogVersion) return row.state;
+    text("stopStatus", stopOutcome + (row.state === "stopped" ? "Stopped. Confirmed from live AWS inventory." : "Live instance state: " + row.state + ". A stop request is not a stopped-state confirmation."));
+    return row.state;
+  }
+  async function executeConfirmedStop() {
+    if (!stopApproval || stopExecuting || byId("stopConfirmation").value !== stopApproval.target.instanceId) return;
+    if (Date.parse(stopApproval.expiresAt) <= Date.now()) { text("stopStatus", "Confirmation expired. Close and review the instance again."); byId("confirmStop").disabled = true; return; }
+    stopExecuting = true; byId("confirmStop").disabled = true; byId("stopConfirmation").disabled = true; byId("cancelStop").disabled = true; byId("stopSpinner").hidden = false;
+    let accepted = false; let dispatched = false;
+    text("stopStatus", "Rechecking the confirmed instance before submitting the stop…");
+    try {
+      const plan = await stopRequest({ kind: "confirm", requestId: stopApproval.requestId, confirmation: byId("stopConfirmation").value });
+      dispatched = true;
+      const result = await invokeAgenticApp({ agentId: plan.agentId, appId: "ec2", title: "Confirmed EC2 instance stop", message: plan.prompt, clientContext: { dashboardKind: "ec2-stop", scope: plan.scope, requestId: plan.requestId, command: plan.command, describeCommand: plan.describeCommand, response_format: plan.responseFormat }, onProgress: () => text("stopStatus", "Submitting the confirmed normal stop through the AWS agent. IAM authorization is required…") });
+      if (result.structured_output_schema_id && result.structured_output_schema_id !== plan.responseFormat.schema_id) throw new Error("Stop response format is unverified. Check live status.");
+      const response = validateStopResponse(result.structured_output ?? result.content, plan);
+      accepted = response.status === "accepted";
+      stopOutcome = accepted ? "Stop request accepted. " : (response.status === "denied" ? "Stop denied: " : "Stop outcome unverified: ") + response.message + " ";
+      text("stopStatus", stopOutcome + "Checking live state…");
+    } catch (error) { stopOutcome = (dispatched ? "Stop response unverified: " : "Stop request was not submitted: ") + error.message + " "; text("stopStatus", stopOutcome + "Check live status before requesting another stop."); }
+    finally {
+      byId("confirmStop").hidden = true; byId("checkStopStatus").hidden = false;
+      try {
+        let current = await checkLiveStopStatus();
+        for (let attempt = 0; accepted && current === "stopping" && attempt < 11; attempt++) {
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+          current = await checkLiveStopStatus();
+        }
+      } catch (error) { text("stopStatus", "Live status could not be verified: " + error.message + " Use Check live status; the stop will not be retried automatically."); }
+      stopExecuting = false; byId("stopSpinner").hidden = true; byId("cancelStop").disabled = false; text("cancelStop", "Close"); renderStopControl();
+    }
+  }
+  byId("stopInstance").addEventListener("click", openStopConfirmation);
+  byId("stopConfirmation").addEventListener("input", () => { byId("confirmStop").disabled = !stopApproval || stopExecuting || byId("stopConfirmation").value !== stopApproval.target.instanceId || Date.parse(stopApproval.expiresAt) <= Date.now(); });
+  byId("confirmStop").addEventListener("click", executeConfirmedStop);
+  byId("cancelStop").addEventListener("click", () => { if (!stopExecuting) byId("stopDialog").close(); });
+  byId("stopDialog").addEventListener("cancel", (event) => { if (stopExecuting) event.preventDefault(); });
+  byId("stopDialog").addEventListener("close", () => { stopDialogVersion++; stopApproval = null; });
+  byId("checkStopStatus").addEventListener("click", async () => {
+    if (stopExecuting) return;
+    byId("checkStopStatus").disabled = true;
+    try { await checkLiveStopStatus(); } catch (error) { text("stopStatus", "Live status could not be verified: " + error.message); }
+    finally { byId("checkStopStatus").disabled = false; }
+  });
   function publishContext() {
     const selected = state.records.get(state.selected);
     const selection = { requestedScope: { profile: byId("profile").value === "@default" ? "" : byId("profile").value, region: byId("region").value }, configuredAccounts: configuration.accounts.slice(0, 12), configuredRegions: configuration.regions.slice(0, 12), scopeCount: state.scopes.size, scopes: [...state.scopes.values()].slice(0, 12).map((scope) => ({ profile: scope.profile, accountId: scope.accountId, region: scope.region, status: scope.status, morePages: Boolean(scope.nextToken) })), activeTab: state.activeTab, reviewSignalSettings: anomalyThresholds(), selectedReviewSignal: state.selectedSignal || null, filters: state.activeTab === "search" ? { search: byId("quickSearch").value.slice(0, 256), searchIn: "all" } : { instanceType: byId("typeFilter").value, size: byId("sizeFilter").value, owner: byId("ownerFilter").value, tags: byId("tagQuery").value, tagStatus: byId("tagStatusFilter").value, minMonthlyCost: byId("minCost").value, maxMonthlyCost: byId("maxCost").value, anomalyRule: byId("anomalyRule").value, hardware: state.activeTab === "gpu" ? "gpu" : byId("hardwareFilter").value, searchIn: byId("searchIn").value, search: byId("search").value.slice(0, 256), state: byId("stateFilter").value }, loadedInstances: state.records.size, selectedInstance: selected ? { name: instanceName(selected), instanceId: selected.instanceId, profile: selected.profile, accountId: selected.accountId, region: selected.region, instanceType: selected.instanceType, architecture: selected.architecture, cpuManufacturer: selected.cpuManufacturer, gpu: selected.gpu, state: selected.state } : null, mock: state.mock };
@@ -676,4 +772,5 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
   if (invalidLink) { text("status", "This link has an invalid instance, scope, or filter setting. Choose a configured scope to search."); text("quickSearchStatus", "This link has an invalid setting. Open Instances to choose a configured scope and search."); }
   else loadInventory();
   void pollCacheStatus();
+  if (configuration.stopEnabled) void loadStopCapability();
 }

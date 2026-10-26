@@ -36,6 +36,7 @@ export function createAwsScopeClients(configuration) {
 export function createAwsInventoryService(configuration, { clientsForScope = createAwsScopeClients(configuration), now = Date.now } = {}) {
   const snapshots = new Map();
   const pending = new Map();
+  const scopeVersions = new Map();
   const lookups = new Map();
   const lookupPending = new Map();
   const waiters = [];
@@ -83,7 +84,10 @@ export function createAwsInventoryService(configuration, { clientsForScope = cre
     try { return await task; } finally { lookupPending.delete(key); }
   }
   async function read(scope, { cursor = "", instanceId = "", refresh = false } = {}) {
+    const scopeKey = scope.profile + ":" + scope.region;
+    const version = scopeVersions.get(scopeKey) || 0;
     const key = JSON.stringify([scope.profile, scope.region, cursor, instanceId]);
+    const pendingKey = key + ":" + version;
     let cached = snapshots.get(key);
     let cachedData = cached?.data;
     let cachedKey = key;
@@ -114,22 +118,30 @@ export function createAwsInventoryService(configuration, { clientsForScope = cre
       snapshots.delete(cachedKey); snapshots.set(cachedKey, cached);
       const expiresAt = Date.parse(cachedData.retrievedAt) + ttl;
       const stale = expiresAt <= now();
-      if (stale && !pending.has(cachedKey) && !refreshState.refreshing) void read(scope, { cursor: sourceCursor, instanceId: sourceInstanceId, refresh: true }).catch((error) => { cached.lastError = errorSummary(error); });
-      return { ...cachedData, cache: { hit: true, stale, refreshing: pending.has(cachedKey) || refreshState.refreshing, refreshError: cached.lastError || null, expiresAt: new Date(expiresAt).toISOString() } };
+      if (stale && !pending.has(cachedKey + ":" + version) && !refreshState.refreshing) void read(scope, { cursor: sourceCursor, instanceId: sourceInstanceId, refresh: true }).catch((error) => { cached.lastError = errorSummary(error); });
+      return { ...cachedData, cache: { hit: true, stale, refreshing: pending.has(cachedKey + ":" + version) || refreshState.refreshing, refreshError: cached.lastError || null, expiresAt: new Date(expiresAt).toISOString() } };
     }
-    if (pending.has(key)) return pending.get(key);
+    if (pending.has(pendingKey)) return pending.get(pendingKey);
     const task = withSlot(async () => {
       try {
         const data = await fetchScope(scope, { cursor, instanceId, refresh });
-        remember(key, data);
+        if ((scopeVersions.get(scopeKey) || 0) === version) remember(key, data);
         return { ...data, cache: { hit: false, stale: false, refreshing: false, refreshError: null, expiresAt: new Date(Date.parse(data.retrievedAt) + ttl).toISOString() } };
       } catch (error) {
         if (cached) cached.lastError = errorSummary(error);
         throw error;
       }
     });
-    pending.set(key, task);
-    try { return await task; } finally { pending.delete(key); }
+    pending.set(pendingKey, task);
+    try { return await task; } finally { pending.delete(pendingKey); }
+  }
+  function invalidateScope(scope) {
+    const scopeKey = scope.profile + ":" + scope.region;
+    scopeVersions.set(scopeKey, (scopeVersions.get(scopeKey) || 0) + 1);
+    for (const [key, entry] of snapshots) {
+      const [profile, region] = JSON.parse(key);
+      if (profile === scope.profile && region === scope.region) { snapshots.delete(key); cacheBytes -= entry.bytes; }
+    }
   }
   function cacheStatus() {
     return { ...refreshState, enabled: !backgroundStopped, failures: refreshState.failures.map((failure) => ({ ...failure })), refreshIntervalMs: ttl, maxStaleMs: maxStale, entries: snapshots.size, bytes: cacheBytes };
@@ -143,6 +155,7 @@ export function createAwsInventoryService(configuration, { clientsForScope = cre
       const worker = async () => {
         while (queue.length) {
           const scope = queue.shift();
+          const scopeVersion = scopeVersions.get(scope.profile + ":" + scope.region) || 0;
           const belongsToScope = (key) => { const [profile, region, , instanceId] = JSON.parse(key); return profile === scope.profile && region === scope.region && !instanceId; };
           const previous = new Map([...snapshots].filter(([key]) => belongsToScope(key)));
           const written = new Map();
@@ -150,13 +163,14 @@ export function createAwsInventoryService(configuration, { clientsForScope = cre
             let cursor = ""; let batches = 0; const seen = new Set();
             do {
               const data = await read(scope, { cursor, refresh: true });
+              if ((scopeVersions.get(scope.profile + ":" + scope.region) || 0) !== scopeVersion) throw new Error("InventoryChangedDuringRefresh");
               const key = JSON.stringify([scope.profile, scope.region, cursor, ""]); written.set(key, snapshots.get(key));
               cursor = data.nextToken || ""; batches += 1;
               if (cursor && (seen.has(cursor) || batches >= 200)) throw new Error("InventoryPaginationIncomplete");
               if (cursor) seen.add(cursor);
             } while (cursor);
           } catch (error) {
-            if (previous.size) {
+            if (previous.size && (scopeVersions.get(scope.profile + ":" + scope.region) || 0) === scopeVersion) {
               for (const [key, entry] of written) {
                 if (!entry || snapshots.get(key) !== entry) continue;
                 snapshots.delete(key); cacheBytes -= entry.bytes;
@@ -315,5 +329,5 @@ export function createAwsInventoryService(configuration, { clientsForScope = cre
     });
     return { status: nextToken ? "partial" : "ready", source: "aws-sdk", profile: scope.profile, accountId: identity.Account, region: scope.region, retrievedAt, complete: !nextToken, nextToken: nextToken || null, pages, instances, warnings: [...warnings], evidence };
   }
-  return { read, refreshAll, cacheStatus, startBackgroundRefresh, clear: () => { snapshots.clear(); lookups.clear(); cacheBytes = 0; } };
+  return { read, invalidateScope, refreshAll, cacheStatus, startBackgroundRefresh, clear: () => { snapshots.clear(); lookups.clear(); cacheBytes = 0; } };
 }
