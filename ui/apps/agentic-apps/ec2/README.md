@@ -57,7 +57,16 @@
   review/investigation headings. IDs remain secondary for disambiguation. Named
   investigation links use the verified account/region/ID to open the correct instance;
   shared links keep stable IDs because names can repeat or change.
-- “Copy link” shares the selected instance, or the active search/view when none is selected.
+- The address bar follows tabs, search, filters, sort order, page/row count, and selected
+  instance. Search edits are grouped into one history entry per editing session.
+  Browser Back/Forward restores the previous view; details provide “Back to results”.
+  A direct instance link returns to its scoped inventory when no earlier results exist.
+- Embedded query navigation uses the canonical `caipe.agenticApp` bridge with the host's
+  `queryNavigation` capability. The host owns history and keeps the iframe mounted;
+  runtime URLs stay inside the iframe. Older hosts retain local iframe navigation and
+  “Copy link”; address-bar synchronization requires a host with this capability.
+- “Copy link” shares the same public view URL. Stop approvals and actions are never
+  encoded in URLs or restored by navigation.
 
 ## Filters and sorting
 
