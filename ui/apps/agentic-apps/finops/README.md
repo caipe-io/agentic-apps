@@ -76,3 +76,10 @@ allowlist label, not an AWS profile selector.
 AWS references: [GetCostAndUsage](https://docs.aws.amazon.com/aws-cost-management/latest/APIReference/API_GetCostAndUsage.html)
 for metric, pagination, grouping, and exclusive end dates;
 [Cost Explorer data freshness](https://docs.aws.amazon.com/cost-management/latest/userguide/ce-what-is.html).
+
+## Terraform / GitOps source links
+
+Configure repository URLs and source tag names with `INFRA_SOURCE_CONFIG` or
+`INFRA_SOURCE_CONFIG_FILE`. See the [shared source-correlation guide](../../_lib/infrastructure-sources.md)
+for configuration, tagging examples, cache behavior, permissions, and coverage limits.
+Associations are tag-provided; they are not Terraform state verification.

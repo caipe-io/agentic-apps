@@ -3,9 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@aws-sdk/client-cost-explorer": "3.1156.0",
+    "@aws-sdk/client-resource-groups-tagging-api": "3.1156.0",
     "@aws-sdk/client-sts": "3.1156.0",
     "@aws-sdk/credential-providers": "3.1156.0"
   }
