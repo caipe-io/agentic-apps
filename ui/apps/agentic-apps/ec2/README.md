@@ -208,3 +208,45 @@
   mismatched scope, identity, evidence, metric windows, and malformed findings.
 - Agent-reported evidence is not a signed attestation. The dedicated agent and MCP
   policies must be installed. Missing agent/MCP access produces an unavailable state.
+
+
+## Optional confirmed instance stop
+
+Stop is disabled by default. It depends on
+[caipe-io/ai-platform-engineering#3039](https://github.com/caipe-io/ai-platform-engineering/pull/3039)
+or a compatible AWS MCP release with identity-tagged, IAM-scoped writes.
+
+- Set EC2_STOP_ENABLED=true, EC2_STOP_PROFILES to explicit configured profiles,
+  and EC2_STOP_ALLOWED_SUBJECTS to explicit stable authenticated subject IDs.
+  Do not use display names or browser-supplied identities.
+- Enable the manifest's exact POST /api/stop-request policy only for the intended
+  deployment. Its default effect is deny; it requires a signed ec2:stop scope.
+  The runtime additionally enforces its subject/profile allowlists for every phase.
+  Keep the two review-request POST routes declared when applying route policies.
+- EC2_STOP_AGENT_ID defaults to the existing EC2 agent. Install the updated agent
+  instructions before enabling the action. Inventory/anomaly investigations stay
+  read-only; the permitted write is an explicitly confirmed, normal one-instance stop.
+- AWS MCP must validate the caller's OAuth2 token, enable only
+  AWS_ALLOWED_WRITE_COMMANDS=ec2.stop-instances, and pass a verified configured
+  identity claim as an STS session tag. IAM must allow the intended role assumption,
+  session tag, and ec2:StopInstances resources/ownership conditions.
+  App scopes and UI visibility do not replace IAM authorization. Do not broaden the
+  dashboard inventory credentials or enable generic writes for this feature.
+- The Stop button appears in running-instance details only for eligible callers and
+  profiles. The runtime reads live instance state before displaying confirmation,
+  then checks it again before issuing the caller-bound execution plan.
+- Confirmation displays the verified name, instance ID, account/profile, region, and
+  type. The user types the exact instance ID. Approvals expire after two minutes and
+  can be consumed once, including concurrent confirmations.
+- Execution uses the existing caller-authorized agent/MCP bridge; the dashboard's
+  SDK role does not stop instances. The plan contains one exact normal stop command.
+  Force, skip-OS-shutdown, termination, restart, multi-instance actions, and automatic
+  stop retries are excluded. The agent response must match the approved scope and
+  cite identity, inventory, and the exact stop command.
+- Acceptance and final stopped state are separate. Live SDK reads verify state;
+  polling is bounded to about one minute, with a read-only Check live status action
+  afterward. Errors and ambiguous outcomes remain visible without resubmitting a stop.
+- Live status checks invalidate the affected fleet/direct snapshot scope. Older
+  in-flight reads cannot put pre-stop state back into the shared cache.
+- Validate mutations using mocked inventory/MCP responses. Do not stop a live
+  instance as a smoke test; that requires an explicit operation request.

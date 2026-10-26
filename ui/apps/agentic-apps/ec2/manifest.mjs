@@ -16,11 +16,13 @@ export const EC2_MANIFEST = {
   authorization: { resourceType: "agentic_app", launchAction: "use" },
   surfaces: { showInHub: true, showInTopNav: false, navOrder: 26, homeEligible: false, overlays: ["chat", "generative-ui"] },
   access: {
-    requiredRoles: ["user"], tokenScopes: ["ec2:read", "ec2:agent:invoke", "agents:invoke"], canUseCustomAgents: true,
+    requiredRoles: ["user"], tokenScopes: ["ec2:stop", "ec2:read", "ec2:agent:invoke", "agents:invoke"], canUseCustomAgents: true,
     policyActions: [
       { action: "proxy:GET", description: "Read EC2 dashboard pages and configured scope", defaultEffect: "allow", requiredScopes: ["ec2:read"] },
       { action: "proxy:HEAD", description: "Probe EC2 dashboard pages", defaultEffect: "allow", requiredScopes: ["ec2:read"] },
-      { action: "proxy:POST", description: "Prepare EC2 agent requests for configured AWS profiles", defaultEffect: "allow", requiredScopes: ["ec2:agent:invoke"] },
+      { action: "ec2.anomalies.prepare", method: "POST", path: "/api/anomaly-request", description: "Prepare EC2 review requests", defaultEffect: "allow", requiredScopes: ["ec2:agent:invoke"] },
+      { action: "ec2.inventory.prepare", method: "POST", path: "/api/inventory-request", description: "Prepare EC2 review requests", defaultEffect: "allow", requiredScopes: ["ec2:agent:invoke"] },
+      { action: "ec2.stop", method: "POST", path: "/api/stop-request", description: "Confirm a single caller-authorized normal instance stop", defaultEffect: "deny", requiredScopes: ["ec2:stop"] },
       { action: "agent.invoke.ec2", description: "Ask the EC2 agent for read-only AWS MCP evidence", defaultEffect: "allow", requiredScopes: ["ec2:agent:invoke", "agents:invoke"] },
     ],
   },

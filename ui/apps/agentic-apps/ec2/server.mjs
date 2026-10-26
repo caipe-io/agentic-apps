@@ -8,9 +8,12 @@ import { renderEc2Dashboard } from "./dashboard.mjs";
 import { ec2Configuration, resolveEc2Scope } from "./inventory.mjs";
 import { buildEc2AnomalyRequest } from "./anomalies.mjs";
 import { createAwsInventoryService } from "./sdk-inventory.mjs";
+import { canRequestEc2Stop, createEc2StopRequests, ec2StopConfiguration, EC2_STOP_SCOPE } from "./stop.mjs";
 
 const configuration = ec2Configuration();
 const inventory = createAwsInventoryService(configuration);
+const stopSettings = ec2StopConfiguration(process.env, configuration);
+const stops = createEc2StopRequests({ configuration, settings: stopSettings, inventory });
 const configuredBasePath = String(process.env.EC2_APP_BASE_PATH || "/apps/ec2").replace(/\/+$/, "");
 const verifier = createRequiredAgenticAppJwtVerifier({ appId: "ec2", disabled: process.env.AGENTIC_APP_EC2_JWT_DISABLED === "true" });
 
@@ -25,12 +28,26 @@ const server = createServer(async (request, response) => {
     if (!verified.ok) { sendJson(response, verified.status, { error: "unauthorized" }); return; }
     request.caipeIdentity = verified.identity;
   }
-  const authorization = authorizeAgenticAppRuntimeRequest({ identity: request.caipeIdentity, appId: "ec2", method: request.method, readScope: "ec2:read", invokeScope: "ec2:agent:invoke", allowDevelopmentBypass: verifier === null });
+  const authorization = authorizeAgenticAppRuntimeRequest({ identity: request.caipeIdentity, appId: "ec2", method: request.method, readScope: "ec2:read", invokeScope: url.pathname === "/api/stop-request" ? EC2_STOP_SCOPE : "ec2:agent:invoke", allowDevelopmentBypass: verifier === null });
   if (!authorization.ok) { sendJson(response, authorization.status, { error: authorization.error, requiredScope: authorization.requiredScope }); return; }
 
   const readRequest = ["GET", "HEAD"].includes(request.method);
   if (url.pathname === "/api/context" && readRequest) {
     sendJson(response, 200, { version: "1.0", appId: "ec2", route: configuredBasePath, title: "EC2 instances", agentId: configuration.agentId, mcpServerId: "mcp-aws", domainAnswersRequireMcp: true, suggestedPrompts: ["Which instances should I investigate for cost savings?", "Show the OS and tags for the selected instance.", "Compare instance sizes using current AWS pricing."] });
+  } else if (url.pathname === "/api/stop-capability" && readRequest) {
+    const allowed = canRequestEc2Stop(request.caipeIdentity, stopSettings);
+    sendJson(response, 200, { success: true, data: { allowed, profiles: allowed ? stopSettings.profiles : [] } });
+  } else if (url.pathname === "/api/stop-request" && request.method === "POST") {
+    if (!canRequestEc2Stop(request.caipeIdentity, stopSettings)) { sendJson(response, 403, { success: false, error: "Instance stop is not enabled for this caller." }); return; }
+    try {
+      const input = await readJsonBody(request, 4096);
+      let data;
+      if (input.kind === "prepare") data = await stops.prepare(input, request.caipeIdentity);
+      else if (input.kind === "confirm") data = await stops.confirm(input, request.caipeIdentity);
+      else if (input.kind === "status") data = await stops.status(input, request.caipeIdentity);
+      else throw new Error("Unknown instance stop request.");
+      sendJson(response, 200, { success: true, data });
+    } catch (error) { sendJson(response, 400, { success: false, error: error instanceof Error ? error.message : "Instance stop request failed." }); }
   } else if (url.pathname === "/api/config" && readRequest) {
     sendJson(response, 200, { success: true, data: configuration });
   } else if (url.pathname === "/api/cache-status" && readRequest) {
@@ -67,7 +84,7 @@ const server = createServer(async (request, response) => {
   } else if ((url.pathname === "/" || url.pathname === "/dashboard") && readRequest) {
     const basePath = resolveAgenticAppRuntimeBasePath(request.headers, configuredBasePath, "ec2");
     response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
-    response.end(renderEc2Dashboard({ basePath, appPath: configuredBasePath, compact: resolveAgenticAppSurface(request.headers) === "hosted", configuration }));
+    response.end(renderEc2Dashboard({ basePath, appPath: configuredBasePath, compact: resolveAgenticAppSurface(request.headers) === "hosted", configuration: { ...configuration, stopEnabled: stopSettings.enabled } }));
   } else {
     sendJson(response, 404, { error: "not_found" });
   }
@@ -83,4 +100,12 @@ server.on("close", () => stopBackgroundRefresh?.());
 function sendJson(response, status, payload) {
   response.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
   response.end(JSON.stringify(payload));
+}
+
+async function readJsonBody(request, limit) {
+  let bytes = 0; const chunks = [];
+  for await (const chunk of request) { bytes += chunk.length; if (bytes > limit) throw new Error("Request too large."); chunks.push(chunk); }
+  const value = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Expected a request object.");
+  return value;
 }
