@@ -7,7 +7,8 @@
       "sourcePath": "ui/apps/agentic-apps/finops",
       "serverPath": "ui/apps/agentic-apps/finops/server.mjs",
       "image": "agentic-apps-finops",
-      "port": 3010
+      "port": 3010,
+      "dockerfile": "build/Dockerfile.finops"
     },
     {
       "id": "weather",

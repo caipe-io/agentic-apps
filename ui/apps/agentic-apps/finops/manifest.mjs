@@ -1,12 +1,10 @@
-// assisted-by Codex Codex-sonnet-4-6
-
 export const FINOPS_APP_ID = "finops";
 
 export const FINOPS_MANIFEST = {
   id: FINOPS_APP_ID,
   displayName: "FinOps Command Center",
   description:
-    "An AWS Cost Explorer dashboard that launches analysis through a dedicated FinOps agent and shares cost context with the CAIPE Assistant Overlay.",
+    "Cached AWS Cost Explorer analytics across accounts and services, with explicit FinOps agent investigations.",
   apiVersion: "1.0",
   runtime: {
     kind: "proxied-next-zone",
@@ -46,11 +44,13 @@ export const FINOPS_MANIFEST = {
           key: "defaultRange",
           label: "Default cost range",
           type: "enum",
-          default: "30d",
+          default: "month",
           options: [
-            { label: "7 days", value: "7d" },
-            { label: "30 days", value: "30d" },
-            { label: "90 days", value: "90d" },
+            { label: "Current month", value: "month" },
+            { label: "Previous month", value: "previous-month" },
+            { label: "Last 3 calendar months", value: "3m" },
+            { label: "Last 6 calendar months", value: "6m" },
+            { label: "Last 12 calendar months", value: "12m" },
           ],
         },
       ],

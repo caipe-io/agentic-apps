@@ -4,7 +4,7 @@ import { ec2CpuCategory } from "./overview.mjs";
 import { renderAgenticAppConversationClient } from "../../_lib/conversation-client.mjs";
 import { renderMicrofrontendClient } from "../../_lib/microfrontend-client.mjs";
 import { normalizeEc2Search, validateEc2Response } from "./inventory.mjs";
-import { createEc2Navigation } from "./navigation.mjs";
+import { createQueryNavigation as createEc2Navigation } from "../../_lib/query-navigation.mjs";
 import { validateEc2StopResponse } from "./stop.mjs";
 
 export function renderEc2Dashboard({ basePath, appPath, compact, configuration }) {
@@ -831,7 +831,7 @@ function initializeEc2Dashboard({ basePath, appPath, configuration }, validateRe
   window.addEventListener("pageshow", (event) => { if (event.persisted) { cachePollingStopped = false; void pollCacheStatus(); } });
   window.addEventListener("caipe:microfrontend-initialize", publishContext);
   applyQuery(location.search);
-  navigation = createNavigation({ appPath, restore: restoreView });
+  navigation = createNavigation({ appId: "ec2", appPath, restore: restoreView });
   publishContext();
   if (invalidLink) { text("status", "This link has an invalid instance, scope, or filter setting. Choose a configured scope to search."); text("quickSearchStatus", "This link has an invalid setting. Open Instances to choose a configured scope and search."); }
   else loadInventory(false, false, Boolean(requestedInstance), true);

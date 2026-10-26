@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createEc2Navigation } from "./navigation.mjs";
+import { createQueryNavigation as createEc2Navigation } from "../../_lib/query-navigation.mjs";
 
 function windowFixture(embedded = false) {
   const listeners = new Map(); const entries = []; const messages = []; const restored = [];
@@ -11,7 +11,7 @@ function windowFixture(embedded = false) {
     removeEventListener(type) { listeners.delete(type); },
   };
   host.parent = embedded ? { postMessage: (message, origin) => messages.push({ message, origin }) } : host;
-  const navigation = createEc2Navigation({ host, appPath: "/apps/ec2", restore: (query) => restored.push(query) });
+  const navigation = createEc2Navigation({ host, appId: "ec2", appPath: "/apps/ec2", restore: (query) => restored.push(query) });
   const receive = (message, options = {}) => listeners.get("message")?.({ source: host.parent, origin: host.location.origin, data: { appId: "ec2", version: "1.0", ...message }, ...options });
   return { host, entries, messages, restored, navigation, receive, listeners };
 }

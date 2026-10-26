@@ -4,28 +4,20 @@ import { SSMClient, DescribeInstanceInformationCommand } from "@aws-sdk/client-s
 import { PricingClient, GetProductsCommand } from "@aws-sdk/client-pricing";
 import { fromNodeProviderChain, fromTemporaryCredentials, fromTokenFile } from "@aws-sdk/credential-providers";
 
+import { createAwsScopeCredentials } from "../../_lib/aws-scope-credentials.mjs";
+
 const EIGHT_HOURS = 8 * 60 * 60 * 1000;
 const errorSummary = (error) => String(error?.name || "AWS request failed").slice(0, 160);
 const gpuPresent = (type) => type ? Boolean(type.GpuInfo?.Gpus?.length || type.GpuInfo?.TotalGpuMemoryInMiB > 0) : null;
 
 /** Only configured account IDs become role ARNs; browser profile names never select local credentials. */
 export function createAwsScopeClients(configuration) {
-  const roleArn = process.env.AWS_ROLE_ARN;
-  const tokenFile = process.env.AWS_WEB_IDENTITY_TOKEN_FILE;
-  if (Boolean(roleArn) !== Boolean(tokenFile)) throw new Error("Configure both the IRSA role ARN and web-identity token file.");
-  const baseCredentials = roleArn ? fromTokenFile({ roleArn, webIdentityTokenFile: tokenFile, clientConfig: { region: process.env.AWS_REGION || configuration.regions[0] } }) : fromNodeProviderChain();
-  const roleName = configuration.crossAccountRoleName;
-  const credentials = new Map();
+  const credentials = createAwsScopeCredentials(configuration, { fromNodeProviderChain, fromTemporaryCredentials, fromTokenFile }, { sessionName: "ec2-dashboard", region: process.env.AWS_REGION || configuration.regions[0] });
   const clients = new Map();
   return (scope) => {
     const key = scope.profile + ":" + scope.region;
     if (clients.has(key)) return clients.get(key);
-    if (!credentials.has(scope.profile)) credentials.set(scope.profile, scope.accountId ? fromTemporaryCredentials({
-      masterCredentials: baseCredentials,
-      clientConfig: { region: scope.region },
-      params: { RoleArn: "arn:" + configuration.partition + ":iam::" + scope.accountId + ":role/" + roleName, RoleSessionName: "ec2-dashboard" },
-    }) : baseCredentials);
-    const options = { region: scope.region, credentials: credentials.get(scope.profile), maxAttempts: 3 };
+    const options = { region: scope.region, credentials: credentials(scope), maxAttempts: 3 };
     const value = { ec2: new EC2Client(options), sts: new STSClient(options), ssm: new SSMClient(options), pricing: new PricingClient({ ...options, region: "us-east-1" }) };
     clients.set(key, value);
     return value;
