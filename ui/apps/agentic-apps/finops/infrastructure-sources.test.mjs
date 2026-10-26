@@ -23,10 +23,10 @@ test("discovery follows all AWS pages, verifies STS identity, and reuses filtere
   const configuration = { accounts: [scope], region: "us-east-1", cacheTtlMs: 28800000, crossAccountRoleName: "read-only", partition: "aws" };
   const service = createFinopsInfrastructureSources(configuration, sources, { env: { FINOPS_SOURCE_REGIONS: "us-east-1" }, clientsForScope: () => ({
     sts: { async send() { identities++; return { Account: scope.accountId }; } },
-    tagging: { async send(command) { pages++; return { ResourceTagMappingList: [mapping(command.input.PaginationToken ? "second" : "first")], ...(command.input.PaginationToken ? {} : { PaginationToken: "next" }) }; } },
+    tagging: { async send(command) { pages++; assert.equal(command.input.TagFilters.length, 1); assert.ok(sources.tagKeys.repository.includes(command.input.TagFilters[0].Key)); return { ResourceTagMappingList: [mapping(command.input.PaginationToken ? "second" : "first")], ...(command.input.PaginationToken ? {} : { PaginationToken: "next" }) }; } },
   }) });
-  const first = await service.view(); assert.equal(first.total, 2); assert.equal(first.associated, 2); assert.equal(pages, 2); assert.equal(identities, 1);
-  assert.equal((await service.view({ service: "Amazon Neptune", search: "second" })).total, 1); assert.equal(pages, 2);
+  const first = await service.view(); assert.equal(first.total, 2); assert.equal(first.associated, 2); assert.equal(pages, sources.tagKeys.repository.length * 2); assert.equal(identities, 1);
+  assert.equal((await service.view({ service: "Amazon Neptune", search: "second" })).total, 1); assert.equal(pages, sources.tagKeys.repository.length * 2);
   const denied = createFinopsInfrastructureSources(configuration, sources, { env: {}, clientsForScope: () => ({ sts: { async send() { return { Account: "222222222222" }; } }, tagging: { async send() { assert.fail("Wrong account must not be queried"); } } }) });
   assert.equal((await denied.view()).status, "unavailable");
 });
@@ -35,4 +35,25 @@ test("repeated pagination cannot publish partial source associations", async () 
   let page = 0;
   const service = createFinopsInfrastructureSources({ accounts: [scope], region: scope.region, cacheTtlMs: 28800000, crossAccountRoleName: "read-only", partition: "aws" }, sources, { env: {}, clientsForScope: () => ({ sts: { async send() { return { Account: scope.accountId }; } }, tagging: { async send() { return { ResourceTagMappingList: [mapping(String(++page))], PaginationToken: "repeated" }; } } }) });
   const result = await service.view(); assert.equal(result.total, 0); assert.equal(result.status, "unavailable"); assert.equal(page, 2);
+});
+
+test("large unrelated inventories are filtered at AWS and source tag aliases use OR semantics", async () => {
+  const records = [
+    { ...mapping("first"), Tags: [{ Key: "Repository", Value: "example-infra" }] },
+    { ...mapping("second"), Tags: [{ Key: "GitRepository", Value: "example-infra" }] },
+    { ...mapping("both"), Tags: [{ Key: "Repository", Value: "example-infra" }, { Key: "GitRepository", Value: "example-infra" }] },
+  ];
+  const keys = [];
+  const service = createFinopsInfrastructureSources({ accounts: [scope], region: scope.region, cacheTtlMs: 28800000, crossAccountRoleName: "read-only", partition: "aws" }, sources, { env: {}, clientsForScope: () => ({
+    sts: { async send() { return { Account: scope.accountId }; } },
+    tagging: { async send(command) {
+      assert.equal(command.input.TagFilters?.length, 1, "Do not scan the account's unrelated tagged inventory");
+      const filter = command.input.TagFilters[0]; assert.equal(filter.Values, undefined); keys.push(filter.Key);
+      return { ResourceTagMappingList: records.filter((record) => record.Tags.some((tag) => tag.Key === filter.Key)) };
+    } },
+  }) });
+  const result = await service.view();
+  assert.equal(result.status, "ready"); assert.equal(result.total, 3); assert.equal(result.associated, 3);
+  assert.deepEqual(keys, sources.tagKeys.repository);
+  await service.view({ search: "first" }); assert.equal(keys.length, sources.tagKeys.repository.length);
 });
