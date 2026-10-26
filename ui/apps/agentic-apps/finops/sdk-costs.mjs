@@ -18,7 +18,7 @@ export function createFinopsCostClients(configuration) {
 
 /** Complete account snapshots, bounded memory/concurrency, and single-flight refreshes. */
 export function createFinopsCostService(configuration, { clientsForScope = createFinopsCostClients(configuration), now = Date.now } = {}) {
-  const cache = new Map(), pending = new Map(), waiters = [];
+  const cache = new Map(), pending = new Map(), unavailable = new Map(), waiters = [];
   let active = 0, bytes = 0, task, timer, stopped = true;
   const state = { refreshing: false, startedAt: null, completedAt: null, nextRefreshAt: null, completedAccounts: 0, totalAccounts: configuration.accounts.length, failures: [] };
   const summarize = (error) => String(error?.name && error.name !== "Error" ? error.name : error?.message || "CostExplorerUnavailable").slice(0, 160);
@@ -36,6 +36,8 @@ export function createFinopsCostService(configuration, { clientsForScope = creat
     if (!refresh && staleUsable && previous.retryAfter > now()) return describe(previous, true);
     if (!refresh && covers(previous) && previous.expiresAt > now() && !previous.refreshError) return describe(previous, true);
     if (pending.has(scope.profile)) return pending.get(scope.profile);
+    const failure = unavailable.get(scope.profile);
+    if (!refresh && failure?.retryAfter > now()) throw new Error(failure.error);
     const operation = withSlot(async () => {
       try {
         const { ce, sts } = clientsForScope(scope);
@@ -71,9 +73,10 @@ export function createFinopsCostService(configuration, { clientsForScope = creat
         if (replaced) { bytes -= replaced.bytes; cache.delete(scope.profile); }
         while (cache.size && bytes + size > configuration.cacheMaxBytes) { const key = cache.keys().next().value; bytes -= cache.get(key).bytes; cache.delete(key); }
         const entry = { data, bytes: size, expiresAt: now() + configuration.cacheTtlMs };
-        cache.set(scope.profile, entry); bytes += size;
+        cache.set(scope.profile, entry); bytes += size; unavailable.delete(scope.profile);
         return describe(entry, false);
       } catch (error) {
+        unavailable.set(scope.profile, { error: summarize(error), retryAfter: now() + Math.min(300000, configuration.cacheTtlMs) });
         if (previous && Date.parse(previous.data.retrievedAt) + configuration.cacheMaxStaleMs > now() && previous.data.range.Start <= range.Start) {
           previous.refreshError = summarize(error); previous.retryAfter = now() + Math.min(300000, configuration.cacheTtlMs);
           return describe(previous, true);

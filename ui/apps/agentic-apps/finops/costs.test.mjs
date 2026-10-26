@@ -76,6 +76,8 @@ test("one account failure remains visible and cannot silently become a fleet tot
   const f = fixture(); f.fail.add("secondary"); const data = await f.service.view();
   assert.equal(data.status, "partial"); assert.equal(data.totalCost, 25 * 9.75); assert.equal(data.accounts[1].status, "unavailable");
   assert.equal(data.accounts[1].accountId, "222222222222");
+  const calls = f.calls(); await f.service.view({ period: "3m" }); assert.equal(f.calls(), calls, "uncached account failures should have a retry cooldown");
+  f.fail.delete("secondary"); assert.equal((await f.service.view({ profile: "secondary", refresh: true })).status, "ready");
 });
 
 test("identity mismatches and repeated AWS pagination tokens never enter the cache", async () => {

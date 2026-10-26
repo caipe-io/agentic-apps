@@ -25,7 +25,8 @@
   in-memory cache is bounded to 64 MiB and warms again after a restart.
 - Failed refreshes retain the last good snapshot for at most three TTLs, label it
   stale, retain the original timestamp, and retry background refresh after five
-  minutes. Unavailable accounts and missing daily coverage remain explicit. Totals
+  minutes. Cold-cache failures also have a five-minute cooldown; manual refresh
+  bypasses it. Unavailable accounts and missing daily coverage remain explicit. Totals
   with incomplete coverage are labeled known subtotals.
 - Tab/service/search changes do not call AWS. Account and period changes read shared
   snapshots. Refresh live data explicitly bypasses the cache. Cost Explorer API
