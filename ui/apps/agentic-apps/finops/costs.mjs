@@ -53,7 +53,7 @@ export function costAnomalySignals(snapshots, end, { minImpact = 25, minIncrease
     for (const row of groups.values()) {
       const expected = row.baseline / 4, impact = row.actual - expected;
       const increase = expected > 0 ? impact / expected * 100 : null;
-      if (impact < minImpact || row.actual <= 0 || (increase !== null && increase < minIncrease)) continue;
+      if (impact < minImpact || impact <= 0 || (increase !== null && increase < minIncrease)) continue;
       findings.push({ profile: snapshot.profile, accountId: snapshot.accountId, service: row.service, start, end, baselineStart, expected, actual: row.actual, impact, increase, estimated: snapshot.days.some((day) => day.date >= baselineStart && day.date < end && day.estimated), stale: snapshot.cache.stale });
     }
   }

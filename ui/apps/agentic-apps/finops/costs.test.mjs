@@ -124,3 +124,9 @@ test("cache capacity cannot publish an oversized snapshot or exceed the configur
   const f = fixture(); const service = createFinopsCostService({ ...f.config, cacheMaxBytes: 1000 }, { clientsForScope: f.clientsForScope });
   const data = await service.view(); assert.equal(data.status, "unavailable"); assert.equal(service.cacheStatus().entries, 0); assert.equal(service.cacheStatus().bytes, 0);
 });
+
+test("reduced credits are a net cost increase even when both periods remain negative", () => {
+  const end = "2026-10-26", days = Array.from({ length: 35 }, (_, i) => ({ date: new Date(Date.parse(end) - (i + 1) * 86400000).toISOString().slice(0, 10), estimated: false }));
+  const snapshot = { profile: "primary", accountId: "111111111111", days, cache: { stale: false }, rows: days.map((day, i) => ({ ...day, service: "Credits", amount: i < 7 ? -1 : -10 })) };
+  const [signal] = costAnomalySignals([snapshot], end); assert.equal(signal.expected, -70); assert.equal(signal.actual, -7); assert.equal(signal.impact, 63); assert.equal(signal.increase, null);
+});
