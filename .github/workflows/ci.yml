@@ -34,6 +34,12 @@ jobs:
       - name: Install EC2 SDK dependencies
         run: npm ci --ignore-scripts
         working-directory: ui/apps/agentic-apps/ec2
+      - name: Install FinOps SDK dependencies
+        run: npm ci --ignore-scripts
+        working-directory: ui/apps/agentic-apps/finops
+      - name: Audit FinOps SDK dependencies
+        run: npm audit --omit=dev --audit-level=high
+        working-directory: ui/apps/agentic-apps/finops
       - name: Audit EC2 SDK dependencies
         run: npm audit --omit=dev --audit-level=high
         working-directory: ui/apps/agentic-apps/ec2

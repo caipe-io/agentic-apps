@@ -1,5 +1,5 @@
 /** One history owner: the platform address bar when embedded, this window otherwise. */
-export function createEc2Navigation({ host = window, appPath, restore }) {
+export function createQueryNavigation({ host = window, appId, appPath, restore }) {
   const publicPath = new URL(appPath, host.location.origin).pathname;
   let bridged = false;
   let current = publicPath + host.location.search;
@@ -7,12 +7,12 @@ export function createEc2Navigation({ host = window, appPath, restore }) {
     const url = new URL(href, host.location.origin);
     host.history.replaceState(null, "", host.location.pathname + url.search + url.hash);
   };
-  const send = (type, extra = {}) => host.parent.postMessage({ type, version: "1.0", appId: "ec2", ...extra }, host.location.origin);
+  const send = (type, extra = {}) => host.parent.postMessage({ type, version: "1.0", appId, ...extra }, host.location.origin);
   const connect = () => { if (host.parent !== host) send("caipe.agenticApp.bridge.connect.v1"); };
   const receive = (event) => {
     if (host.parent === host || event.source !== host.parent || event.origin !== host.location.origin) return;
     const message = event.data;
-    if (!message || message.version !== "1.0" || message.appId !== "ec2") return;
+    if (!message || message.version !== "1.0" || message.appId !== appId) return;
     if (message.type === "caipe.agenticApp.bridge.capabilities.v1") bridged = message.capabilities?.queryNavigation === true;
     if (!bridged || message.type !== "caipe.agenticApp.navigation.v1" || typeof message.href !== "string") return;
     let url;

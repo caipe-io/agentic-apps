@@ -15,7 +15,7 @@ const failures = [];
 try {
   for (const [name, port, command, portVariable, jwtVariable] of apps) {
     const child = spawn(process.execPath, [command], {
-      env: { ...process.env, NODE_ENV: "test", [portVariable]: String(port), [jwtVariable]: "true" },
+      env: { ...process.env, NODE_ENV: "test", FINOPS_BACKGROUND_REFRESH_ENABLED: "false", [portVariable]: String(port), [jwtVariable]: "true" },
       stdio: ["ignore", "pipe", "pipe"],
     });
     let output = "";

@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1.7
+FROM node:22-alpine AS dependencies
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts
+WORKDIR /app/apps/agentic-apps/finops
+COPY ui/apps/agentic-apps/finops/package.json ui/apps/agentic-apps/finops/package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts
+
+FROM node:22-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+RUN apk upgrade --no-cache \
+  && addgroup --system --gid 1001 appgroup \
+  && adduser --system --uid 1001 --ingroup appgroup appuser
+COPY --from=dependencies --chown=appuser:appgroup /app/node_modules ./node_modules
+COPY --from=dependencies --chown=appuser:appgroup /app/apps/agentic-apps/finops/node_modules ./apps/agentic-apps/finops/node_modules
+COPY --chown=appuser:appgroup ui/apps/_lib ./apps/_lib
+COPY --chown=appuser:appgroup ui/apps/agentic-apps/finops ./apps/agentic-apps/finops
+USER appuser
+EXPOSE 3010
+CMD ["node", "apps/agentic-apps/finops/server.mjs"]

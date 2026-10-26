@@ -19,7 +19,7 @@ remains in the separate `platform-apps-deployment` repository.
 
 | Application | Mount path | Port | Dedicated agent | Purpose |
 | --- | --- | ---: | --- | --- |
-| FinOps Command Center | `/apps/finops` | 3010 | `agent-finops` | AWS Cost Explorer workflows |
+| FinOps Command Center | `/apps/finops` | 3010 | `agent-finops` | Cached AWS cost analytics · [configuration](ui/apps/agentic-apps/finops/README.md) |
 | Weather Lab | `/apps/weather` | 3020 | `agent-weather-agent` | Open-Meteo forecast and air-quality data |
 | Agentic SDLC | `/apps/agentic-sdlc` | 3030 | `agent-agentic-sdlc` | Repository delivery and ship-loop workflows |
 | EC2 Instances Dashboard | `/apps/ec2` | 3043 | `agent-ec2` | Account/region EC2 inventory, sizing, OS, tags, and on-demand estimates via AWS SDK; MCP agent investigations |

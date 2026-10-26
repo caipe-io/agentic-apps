@@ -65,6 +65,8 @@ for (const [appId, expectedName, expectedMountPath] of apps) {
   const server = await readFile(join(appRoot, "server.mjs"), "utf8");
   const contractSource = appId === "ec2"
     ? server + (await import(pathToFileURL(join(appRoot, "dashboard.mjs")))).renderEc2Dashboard({ compact: true, basePath: expectedMountPath, appPath: expectedMountPath, configuration: { accounts: [{ profile: "primary", accountId: "111111111111" }], regions: ["us-east-1"], agentId: manifest.assistant.agentId } })
+    : appId === "finops"
+    ? server + (await import(pathToFileURL(join(appRoot, "dashboard.mjs")))).renderFinopsDashboard({ compact: true, basePath: expectedMountPath, appPath: expectedMountPath, configuration: { accounts: [{ profile: "primary", accountId: "111111111111" }], cacheTtlMs: 28800000 }, agentId: manifest.assistant.agentId })
     : appId === "litellm"
     ? server + (await import(pathToFileURL(join(appRoot, "dashboard.mjs")))).renderLiteLlmDashboard({
         compact: true,
