@@ -59,3 +59,8 @@ export function costAnomalySignals(snapshots, end, { minImpact = 25, minIncrease
   }
   return findings.sort((a, b) => b.impact - a.impact).slice(0, 100);
 }
+
+/** A failed or entirely unreported snapshot is unknown, never a zero-cost observation. */
+export function hasReportedCosts(data) {
+  return Boolean(data && data.accounts?.some((account) => account.status === "ready") && (data.dates?.length || data.period?.start === data.period?.end));
+}

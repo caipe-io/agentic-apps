@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { costAnomalySignals, costPeriod, finopsCostConfiguration, rollupCostRows } from "./costs.mjs";
+import { costAnomalySignals, costPeriod, finopsCostConfiguration, hasReportedCosts, rollupCostRows } from "./costs.mjs";
 import { createFinopsCostService } from "./sdk-costs.mjs";
 
 function fixture(overrides = {}) {
@@ -131,4 +131,12 @@ test("reduced credits are a net cost increase even when both periods remain nega
   const end = "2026-10-26", days = Array.from({ length: 35 }, (_, i) => ({ date: new Date(Date.parse(end) - (i + 1) * 86400000).toISOString().slice(0, 10), estimated: false }));
   const snapshot = { profile: "primary", accountId: "111111111111", days, cache: { stale: false }, rows: days.map((day, i) => ({ ...day, service: "Credits", amount: i < 7 ? -1 : -10 })) };
   const [signal] = costAnomalySignals([snapshot], end); assert.equal(signal.expected, -70); assert.equal(signal.actual, -7); assert.equal(signal.impact, 63); assert.equal(signal.increase, null);
+});
+
+test("missing cost evidence remains unknown in both the dashboard and assistant context", () => {
+  const period = { start: "2026-10-01", end: "2026-10-26" };
+  assert.equal(hasReportedCosts({ period, accounts: [{ status: "unavailable" }], dates: [] }), false);
+  assert.equal(hasReportedCosts({ period, accounts: [{ status: "ready" }], dates: [] }), false);
+  assert.equal(hasReportedCosts({ period, accounts: [{ status: "ready" }], dates: ["2026-10-01"] }), true);
+  assert.equal(hasReportedCosts({ period: { start: "2026-10-01", end: "2026-10-01" }, accounts: [{ status: "ready" }], dates: [] }), true);
 });
