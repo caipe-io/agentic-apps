@@ -3,7 +3,7 @@ import test from "node:test";
 import { infrastructureSourceConfiguration } from "../../_lib/infrastructure-sources.mjs";
 import { createFinopsInfrastructureSources, infrastructureResource } from "./sdk-infrastructure-sources.mjs";
 
-const sources = infrastructureSourceConfiguration({ repositories: [{ id: "example-infra", url: "https://github.com/example/infrastructure" }] });
+const sources = infrastructureSourceConfiguration({ repositories: [{ id: "example-infra", url: "https://git.example.com/example/infrastructure" }] });
 const scope = { profile: "primary", accountId: "111111111111", region: "us-east-1" };
 const mapping = (id = "example") => ({ ResourceARN: "arn:aws:neptune-graph:us-east-1:111111111111:graph/" + id, Tags: [{ Key: "Repository", Value: "example-infra" }, { Key: "Name", Value: id }] });
 

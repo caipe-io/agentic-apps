@@ -3,18 +3,18 @@ import test from "node:test";
 import { infrastructureSourceConfiguration, correlateInfrastructureSource, renderInfrastructureSource } from "./infrastructure-sources.mjs";
 import { createInfrastructureSourceCache } from "./infrastructure-source-cache.mjs";
 
-const config = infrastructureSourceConfiguration({ repositories: [{ id: "example-infra", url: "https://github.com/example/infrastructure", ref: "main" }] });
+const config = infrastructureSourceConfiguration({ repositories: [{ id: "example-infra", url: "https://git.example.com/example/infrastructure", ref: "main" }] });
 const tags = (values) => Object.entries(values).map(([key, value]) => ({ key, value }));
 const resource = (values) => ({ tags: tags(values), retrievedAt: "2026-10-26T00:00:00Z" });
 
 test("repository allowlist resolves exact tags, optional path/ref/workspace, and visible evidence", () => {
   const match = correlateInfrastructureSource(resource({ Repository: "example/infrastructure", TerraformPath: "environments/dev/main.tf", GitRef: "release/v1", TerraformWorkspace: "dev", TerraformResource: "module.worker.aws_instance.main", Owner: "example-team" }), config);
   assert.equal(match.status, "tag-provided");
-  assert.equal(match.sourceUrl, "https://github.com/example/infrastructure/blob/release%2Fv1/environments/dev/main.tf");
+  assert.equal(match.sourceUrl, "https://git.example.com/example/infrastructure/blob/release%2Fv1/environments/dev/main.tf");
   assert.equal(match.workspace, "dev"); assert.equal(match.owner, "example-team");
   assert.equal(match.evidence.length, 6); assert.equal(match.observedAt, "2026-10-26T00:00:00Z");
   assert.match(match.reason, /not been verified/);
-  assert.equal(correlateInfrastructureSource(resource({ Repository: "https://github.com/example/infrastructure.git" }), config).status, "tag-provided");
+  assert.equal(correlateInfrastructureSource(resource({ Repository: "https://git.example.com/example/infrastructure.git" }), config).status, "tag-provided");
 });
 
 test("untrusted, ambiguous, or traversing tag values cannot generate source links", () => {
@@ -33,7 +33,7 @@ test("untrusted, ambiguous, or traversing tag values cannot generate source link
 test("configuration supports custom tag names and rejects unsafe repositories and refs", () => {
   const custom = infrastructureSourceConfiguration({ repositories: config.repositories, tagKeys: { repository: ["source_repo"] } });
   assert.equal(correlateInfrastructureSource(resource({ source_repo: "example-infra" }), custom).status, "tag-provided");
-  for (const url of ["http://github.com/example/repo", "https://user:secret@github.com/example/repo", "https://github.com/example/repo?token=example", "https://github.com/example/repo/extra"]) assert.throws(() => infrastructureSourceConfiguration({ repositories: [{ id: "example", url }] }));
+  for (const url of ["http://git.example.com/example/repo", "https://user:secret@git.example.com/example/repo", "https://git.example.com/example/repo?token=example", "https://git.example.com/example/repo/extra"]) assert.throws(() => infrastructureSourceConfiguration({ repositories: [{ id: "example", url }] }));
   assert.throws(() => infrastructureSourceConfiguration({ repositories: [...config.repositories, ...config.repositories] }));
   assert.throws(() => infrastructureSourceConfiguration({ repositories: [{ ...config.repositories[0], ref: "../main" }] }));
 });

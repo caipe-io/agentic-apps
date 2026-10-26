@@ -15,7 +15,7 @@ Set `INFRA_SOURCE_CONFIG` to JSON, or mount a read-only JSON file and set
   "repositories": [
     {
       "id": "example-infra",
-      "url": "https://github.com/example/infrastructure",
+      "url": "https://git.example.com/example/infrastructure",
       "ref": "main"
     }
   ],
