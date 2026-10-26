@@ -259,3 +259,10 @@ or a compatible AWS MCP release with identity-tagged, IAM-scoped writes.
   in-flight reads cannot put pre-stop state back into the shared cache.
 - Validate mutations using mocked inventory/MCP responses. Do not stop a live
   instance as a smoke test; that requires an explicit operation request.
+
+## Terraform / GitOps source links
+
+Configure repository URLs and source tag names with `INFRA_SOURCE_CONFIG` or
+`INFRA_SOURCE_CONFIG_FILE`. See the [shared source-correlation guide](../../_lib/infrastructure-sources.md)
+for configuration, tagging examples, cache behavior, permissions, and coverage limits.
+Associations are tag-provided; they are not Terraform state verification.

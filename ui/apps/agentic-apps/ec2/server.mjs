@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createServer } from "node:http";
+import { readInfrastructureSourceConfiguration } from "../../_lib/infrastructure-source-config.mjs";
 import { createRequiredAgenticAppJwtVerifier } from "../../_lib/jwt-verify.mjs";
 import { authorizeAgenticAppRuntimeRequest } from "../../_lib/runtime-authorization.mjs";
 import { resolveAgenticAppRuntimeBasePath, resolveAgenticAppSurface } from "../../_lib/runtime-base-path.mjs";
@@ -10,7 +11,7 @@ import { buildEc2AnomalyRequest } from "./anomalies.mjs";
 import { createAwsInventoryService } from "./sdk-inventory.mjs";
 import { canRequestEc2Stop, createEc2StopRequests, ec2StopConfiguration, EC2_STOP_SCOPE } from "./stop.mjs";
 
-const configuration = ec2Configuration();
+const configuration = { ...ec2Configuration(), infrastructureSources: readInfrastructureSourceConfiguration() };
 const inventory = createAwsInventoryService(configuration);
 const stopSettings = ec2StopConfiguration(process.env, configuration);
 const stops = createEc2StopRequests({ configuration, settings: stopSettings, inventory });

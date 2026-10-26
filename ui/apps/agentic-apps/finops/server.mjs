@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import { createServer } from "node:http";
+import { readInfrastructureSourceConfiguration } from "../../_lib/infrastructure-source-config.mjs";
+import { createFinopsInfrastructureSources } from "./sdk-infrastructure-sources.mjs";
 
 import { handleAppMcpRequest } from "../../_lib/app-mcp-server.mjs";
 import { createRequiredAgenticAppJwtVerifier } from "../../_lib/jwt-verify.mjs";
@@ -46,7 +48,8 @@ const verifier = createRequiredAgenticAppJwtVerifier({
 
 const costConfiguration = finopsCostConfiguration();
 const costs = createFinopsCostService(costConfiguration);
-let stopBackgroundRefresh;
+const infrastructureSources = createFinopsInfrastructureSources(costConfiguration, readInfrastructureSourceConfiguration());
+let stopBackgroundRefresh, stopInfrastructureRefresh;
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
@@ -99,6 +102,18 @@ const server = createServer(async (request, response) => {
       error: authorization.error,
       requiredScope: authorization.requiredScope,
     });
+    return;
+  }
+
+  if (url.pathname === "/api/infrastructure-sources") {
+    if (!["GET", "HEAD"].includes(request.method)) { sendJson(response, 405, { success: false, error: "method_not_allowed" }); return; }
+    try {
+      const profile = url.searchParams.get("profile") || "*";
+      const selected = profile === "*" ? costConfiguration.accounts : costConfiguration.accounts.filter((account) => (account.profile || "@default") === profile);
+      if (!selected.length) throw new Error("Choose a configured AWS account.");
+      const data = await infrastructureSources.view({ profiles: selected.map((account) => account.profile), service: url.searchParams.get("service") || "", search: url.searchParams.get("search") || "", page: Number(url.searchParams.get("page") || 1), force: url.searchParams.get("refresh") === "1" });
+      sendJson(response, 200, { success: true, data });
+    } catch (error) { sendJson(response, 400, { success: false, error: error instanceof Error ? error.message : "Infrastructure sources unavailable." }); }
     return;
   }
 
@@ -181,13 +196,14 @@ const server = createServer(async (request, response) => {
 });
 
 server.listen(port, () => {
+  if (costConfiguration.backgroundRefreshEnabled) stopInfrastructureRefresh = infrastructureSources.startBackgroundRefresh();
   if (costConfiguration.backgroundRefreshEnabled) stopBackgroundRefresh = costs.startBackgroundRefresh({ onRefresh: (status) => console.log("[finops] Background cost refresh", { completedAccounts: status.completedAccounts, totalAccounts: status.totalAccounts, failures: status.failures, nextRefreshAt: status.nextRefreshAt }) });
   console.log(`FinOps Command Center listening on http://localhost:${server.address().port}`);
   console.log(`Configure CAIPE with AGENTIC_APP_FINOPS_ORIGIN=http://localhost:${server.address().port}`);
   console.log(`Configure FINOPS_AGENT_ID=${defaultAgentId} if your AWS agent uses a different id`);
 });
 
-server.on("close", () => stopBackgroundRefresh?.());
+server.on("close", () => { stopBackgroundRefresh?.(); stopInfrastructureRefresh?.(); });
 
 function buildFinOpsAgentPlan() {
   return {
