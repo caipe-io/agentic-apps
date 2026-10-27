@@ -45,11 +45,12 @@ connected-user GitHub access and separate autonomous-review execution.
 
 ## Local development
 
-Requirements: Node.js 22 or newer and Docker for container checks.
+Requirements: a patched Node.js release (22.23.4+, 24.22.1+, or 26.12.1+) and Docker for container checks. The root `.nvmrc` selects Node.js 22.23.4 for local development.
 
 ```bash
 npm ci
 npm ci --prefix ui/apps/agentic-apps/ec2 --ignore-scripts
+npm ci --prefix ui/apps/agentic-apps/finops --ignore-scripts
 npm run check
 npm test
 npm run smoke
