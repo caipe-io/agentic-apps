@@ -83,7 +83,9 @@ of an individual instance to an `aws_instance` resource.
 - Set `FINOPS_SOURCE_REGIONS` to a comma-separated list (up to eight). The default is
   `AWS_REGION`, or `us-east-1`. The current role needs `tag:GetResources` and
   `sts:GetCallerIdentity` in addition to its existing assume-role permissions.
-- Resource Groups Tagging API reads follow every page, verify account identity,
+- Resource Groups Tagging API queries each configured repository tag key separately,
+  matching any key (OR semantics), and deduplicates resources across keys. Reads follow
+  every matching page, verify account identity,
   validate resource ARNs, and cache sanitized records. At most two scopes run at once.
   The cache is bounded to 64 MiB and 50,000 resources/500 pages per scope. A failed or
   truncated read never publishes a partial replacement snapshot.
@@ -93,8 +95,10 @@ of an individual instance to an `aws_instance` resource.
   Process restarts warm the in-memory cache again. Refresh source tags bypasses cache.
 - Account, service, resource search, and local pagination reuse the same index.
   Disabled correlation makes no discovery calls. Coverage shows unavailable/stale scopes.
-- The index contains supported tagged or previously tagged resources returned by AWS.
-  It cannot establish that untagged/unsupported resources are absent or unmanaged.
+- The index contains supported resources carrying at least one configured repository
+  tag key. This avoids scanning unrelated tagged infrastructure in large accounts.
+  It cannot establish that resources without source tags, untagged resources, or
+  unsupported resources are absent or unmanaged.
 - Service filters use known ARN service-family mappings. Unknown AWS services appear
   under All services; mappings are not exhaustive. `rds` ARNs cannot establish the
   database engine, so Neptune Database resources may require the unfiltered view.
