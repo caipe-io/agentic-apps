@@ -5,7 +5,7 @@
   "type": "module",
   "description": "CAIPE embedded agentic application runtimes.",
   "engines": {
-    "node": ">=22"
+    "node": "^22.23.4 || ^24.22.1 || >=26.12.1"
   },
   "scripts": {
     "check": "node scripts/check-syntax.mjs && node scripts/check-agentic-app-contract.mjs && node scripts/check-app-image-manifest.mjs",
