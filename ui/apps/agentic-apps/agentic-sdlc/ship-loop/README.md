@@ -10,6 +10,9 @@ Epic views. It adds a source-backed PR review dashboard.
 This is an embedded **CAIPE application**, not a second CAIPE host. It owns its
 Next.js UI/API runtime and MongoDB collections. CAIPE supplies app launch,
 policy enforcement, navigation, connected credentials and the assistant.
+The app publishes page context through `RuntimeBridge`; CAIPE owns the single
+assistant launcher and chat panel. Do not render a second floating launcher in
+the embedded app.
 No TOME code, organization data, shared GitHub token or deployment secrets are
 included. The previous Node reference server remains for compatibility with
 existing contract fixtures; the published app image now builds this runtime.
