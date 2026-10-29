@@ -24,24 +24,6 @@ export function RuntimeBridge({ prOnly = false }: { prOnly?: boolean }) {
       window.location.origin,
     );
   }, [pathname, prOnly]);
-  return (
-    <button
-      className="fixed bottom-5 right-5 z-50 rounded-full bg-primary px-5 py-3 font-semibold text-primary-foreground shadow-lg"
-      onClick={() =>
-        window.parent?.postMessage(
-          {
-            type: "caipe.agenticApp.assistant.open.v1",
-            version: "1.0",
-            appId: "agentic-sdlc",
-            prompt: prOnly
-              ? "Summarize current-head PR reviews, actionable inline findings and CI evidence for the selected repository. Identify missing evidence."
-              : "Summarize delivery risk from this repository or PR view.",
-          },
-          window.location.origin,
-        )
-      }
-    >
-      Ask Agentic SDLC
-    </button>
-  );
+  // CAIPE owns the assistant launcher; the app only publishes page context.
+  return null;
 }
