@@ -1,7 +1,7 @@
 export function renderMicrofrontendClient(appId, env = process.env) {
   const version = env.APP_BUILD_VERSION !== "unknown" && /^[A-Za-z0-9][A-Za-z0-9_.+-]{0,127}$/.test(env.APP_BUILD_VERSION || "") ? env.APP_BUILD_VERSION : null;
   const revision = /^[a-f0-9]{7,64}$/i.test(env.APP_BUILD_REVISION || "") ? env.APP_BUILD_REVISION : null;
-  const display = version && revision ? `${version} · ${revision.slice(0, 12)}` : version || revision?.slice(0, 12) || "unavailable";
+  const display = version && version === revision ? revision.slice(0, 12) : version && revision ? `${version} · ${revision.slice(0, 12)}` : version || revision?.slice(0, 12) || "unavailable";
   const safeAppId = JSON.stringify(appId);
   return `<div aria-label="Application build version" title="${revision || "Build revision unavailable"}" style="padding:10px 24px;text-align:right;color:var(--muted,#64748b);font:12px/1.4 system-ui,sans-serif">Build ${display}</div><script>
     (() => {
