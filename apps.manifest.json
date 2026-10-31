@@ -59,6 +59,15 @@
       "image": "agentic-apps-ec2-instances-dashboard",
       "port": 3043,
       "dockerfile": "build/Dockerfile.ec2"
+    },
+    {
+      "id": "secops",
+      "displayName": "SecOps Review",
+      "sourcePath": "ui/apps/agentic-apps/secops",
+      "serverPath": "ui/apps/agentic-apps/secops/server.mjs",
+      "image": "agentic-apps-secops",
+      "port": 3045,
+      "dockerfile": "build/Dockerfile.secops"
     }
   ]
 }

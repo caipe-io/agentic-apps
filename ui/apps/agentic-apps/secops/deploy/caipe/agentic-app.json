@@ -1,0 +1,11 @@
+{
+  "id": "secops",
+  "name": "SecOps Review",
+  "description": "Read-only AWS and GitHub security review.",
+  "runtime": { "type": "remote", "target": "http://agentic-app-secops:3045", "mountPath": "/apps/secops" },
+  "visibility": "private",
+  "createdBy": "deployment-owner",
+  "requiredScopes": ["secops:read", "secops:agent:invoke", "agents:invoke"],
+  "assistant": { "agentId": "agent-secops", "name": "SecOps Assistant", "label": "Ask SecOps", "contextEndpoint": "/api/context" },
+  "healthEndpoint": "/health/ready"
+}

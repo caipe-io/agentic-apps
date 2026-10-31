@@ -9,6 +9,7 @@ const apps = [
   ["weather", "Weather Lab", "/apps/weather"],
   ["litellm", "LiteLLM Usage Dashboard", "/apps/litellm"],
   ["ec2", "EC2 Instances Dashboard", "/apps/ec2"],
+  ["secops", "SecOps Review", "/apps/secops"],
   ["oss-repo-management", "OSS Repo Report Card", "/apps/oss-repo-management"],
   ["jira-project-dashboard", "Jira Project Dashboard", "/apps/jira-project-dashboard"],
 ];
@@ -65,6 +66,8 @@ for (const [appId, expectedName, expectedMountPath] of apps) {
   const server = await readFile(join(appRoot, "server.mjs"), "utf8");
   const contractSource = appId === "ec2"
     ? server + (await import(pathToFileURL(join(appRoot, "dashboard.mjs")))).renderEc2Dashboard({ compact: true, basePath: expectedMountPath, appPath: expectedMountPath, configuration: { accounts: [{ profile: "primary", accountId: "111111111111" }], regions: ["us-east-1"], agentId: manifest.assistant.agentId } })
+    : appId === "secops"
+    ? server + (await import(pathToFileURL(join(appRoot, "dashboard.mjs")))).renderSecopsDashboard({ basePath: expectedMountPath, appPath: expectedMountPath, configuration: { accounts: [], regions: [], repos: [], assistantId: manifest.assistant.agentId } })
     : appId === "finops"
     ? server + (await import(pathToFileURL(join(appRoot, "dashboard.mjs")))).renderFinopsDashboard({ compact: true, basePath: expectedMountPath, appPath: expectedMountPath, configuration: { accounts: [{ profile: "primary", accountId: "111111111111" }], cacheTtlMs: 28800000 }, agentId: manifest.assistant.agentId })
     : appId === "litellm"

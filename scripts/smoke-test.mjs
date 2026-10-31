@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 
 const apps = [
+  ["secops", 3045, "ui/apps/agentic-apps/secops/server.mjs", "SECOPS_APP_PORT", "AGENTIC_APP_SECOPS_JWT_DISABLED"],
   ["finops", 3010, "ui/apps/agentic-apps/finops/server.mjs", "FINOPS_APP_PORT", "AGENTIC_APP_FINOPS_JWT_DISABLED"],
   ["weather", 3020, "ui/apps/agentic-apps/weather/server.mjs", "WEATHER_APP_PORT", "AGENTIC_APP_WEATHER_JWT_DISABLED"],
   ["agentic-sdlc", 3030, "ui/apps/agentic-apps/agentic-sdlc/server.mjs", "AGENTIC_SDLC_APP_PORT", "AGENTIC_APP_AGENTIC_SDLC_JWT_DISABLED"],

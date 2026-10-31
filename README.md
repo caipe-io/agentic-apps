@@ -19,6 +19,7 @@ remains in the separate `platform-apps-deployment` repository.
 
 | Application | Mount path | Port | Dedicated agent | Purpose |
 | --- | --- | ---: | --- | --- |
+| SecOps Review | `/apps/secops` | 3045 | `agent-secops` | AWS exposure, IAM-user and GitHub control review |
 | FinOps Command Center | `/apps/finops` | 3010 | `agent-finops` | Cached AWS cost analytics · [configuration](ui/apps/agentic-apps/finops/README.md) |
 | Weather Lab | `/apps/weather` | 3020 | `agent-weather-agent` | Open-Meteo forecast and air-quality data |
 | Agentic SDLC | `/apps/agentic-sdlc` | 3030 | `agent-agentic-sdlc` | Repository delivery and ship-loop workflows |
