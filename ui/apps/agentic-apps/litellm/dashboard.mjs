@@ -15,8 +15,8 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId, ga
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LiteLLM Usage Dashboard</title>
   <style>
-    :root { color-scheme: dark; --app-font-scale: 1; font: calc(15px * var(--app-font-scale))/1.5 Inter, ui-sans-serif, system-ui, sans-serif; color: #e2e8f0; background: #080e1a; --surface: #101a2b; --text: #e2e8f0; --muted: #a2b3cc; --line: #293951; --track: #22314a; --series: #67e8f9; --output: #a5b4fc; --warning: #fcd34d; --error: #fecaca; }
-    :root[data-caipe-theme="light"] { color-scheme: light; color: #15233a; background: #f7f9fc; --surface: #fff; --text: #15233a; --muted: #50627b; --line: #dce3ed; --track: #e3eaf1; --series: #087a83; --output: #6056b4; --warning: #925705; --error: #a82323; }
+    :root { color-scheme: dark; --app-font-scale: 1; font: calc(15px * var(--app-font-scale))/1.5 Inter, ui-sans-serif, system-ui, sans-serif; color: var(--text); background: var(--bg, #080e1a); --surface: #101a2b; --text: #e2e8f0; --muted: #a2b3cc; --line: #293951; --track: #22314a; --series: #67e8f9; --output: #a5b4fc; --warning: #fcd34d; --error: #fecaca; }
+    :root[data-caipe-theme="light"] { color-scheme: light; color: var(--text); background: var(--bg, #f7f9fc); --surface: #fff; --text: #15233a; --muted: #50627b; --line: #dce3ed; --track: #e3eaf1; --series: #087a83; --output: #6056b4; --warning: #925705; --error: #a82323; }
     * { box-sizing: border-box; }
     body { margin: 0; }
     main { width: min(1280px, calc(100% - 40px)); margin: auto; padding: 28px 0 42px; }
@@ -45,7 +45,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId, ga
     input { width: 100%; } button { cursor: pointer; } button:hover:not(:disabled) { border-color: var(--series); } button:disabled { opacity: .5; cursor: default; }
     :is(input, select, button, a):focus-visible { outline: 2px solid var(--series); outline-offset: 3px; }
     .button-link { padding: 8px 11px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; min-height: 40px; display: inline-flex; align-items: center; }
-    .primary { background: var(--series); border-color: var(--series); color: #081a22; font-weight: 600; } :root[data-caipe-theme="light"] .primary { color: #fff; }
+    .primary { background: var(--series); border-color: var(--series); color: var(--on-accent, #081a22); font-weight: 600; } :root[data-caipe-theme="light"] .primary { color: var(--on-accent, #fff); }
     .panel { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 20px; min-width: 0; }
     .catalog { margin-bottom: 24px; } .panel-heading { margin-bottom: 8px; } .catalog-note { margin-bottom: 12px; }
     .table-wrap { overflow: auto; } table { width: 100%; border-collapse: collapse; font-size: .9rem; }

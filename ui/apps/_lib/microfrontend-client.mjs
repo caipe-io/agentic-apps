@@ -15,6 +15,29 @@ export function renderMicrofrontendClient(appId, env = process.env) {
         const context = message.context || {};
         document.documentElement.dataset.caipeSurface = context.surface || "hosted";
         document.documentElement.dataset.caipeTheme = context.theme || "system";
+        if (context.theme === "light" || context.theme === "dark") document.documentElement.style.colorScheme = context.theme;
+        const palette = context.palette;
+        const tokens = {
+          background: ["--bg", "--caipe-background"],
+          foreground: ["--text", "--caipe-foreground"],
+          card: ["--surface", "--caipe-card"],
+          cardForeground: ["--caipe-card-foreground"],
+          primary: ["--accent", "--series", "--caipe-primary"],
+          primaryForeground: ["--on-accent", "--caipe-primary-foreground"],
+          secondary: ["--track", "--caipe-secondary"],
+          mutedForeground: ["--muted", "--caipe-muted-foreground"],
+          border: ["--line", "--caipe-border"],
+          destructive: ["--caipe-destructive"],
+        };
+        const validPalette = palette && Object.keys(tokens).every((key) =>
+          typeof palette[key] === "string" && /^-?\\d{1,3}(?:\\.\\d+)?\\s+\\d{1,3}(?:\\.\\d+)?%\\s+\\d{1,3}(?:\\.\\d+)?%$/.test(palette[key]));
+        for (const [key, names] of Object.entries(tokens)) {
+          for (const name of names) {
+            if (validPalette) document.documentElement.style.setProperty(name, "hsl(" + palette[key] + ")");
+            else document.documentElement.style.removeProperty(name);
+          }
+        }
+        document.documentElement.dataset.caipePalette = validPalette ? "host" : "default";
         const density = context.preferences && context.preferences.density;
         if (document.body) document.body.classList.toggle("compact", density !== "comfortable");
         const textScale = context.preferences && context.preferences.textScale;
