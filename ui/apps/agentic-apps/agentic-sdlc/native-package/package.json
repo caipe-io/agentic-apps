@@ -1,0 +1,28 @@
+{
+  "name": "@caipe/agentic-sdlc-native",
+  "version": "0.1.0",
+  "description": "Trusted native UI example for the Agentic SDLC app",
+  "type": "module",
+  "license": "Apache-2.0",
+  "sideEffects": ["./styles.css"],
+  "exports": {
+    ".": "./index.mjs",
+    "./manifest": "./manifest.json",
+    "./styles.css": "./styles.css"
+  },
+  "files": [
+    "index.mjs",
+    "client.mjs",
+    "routes.mjs",
+    "manifest.json",
+    "styles.css",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "next": "^16.0.0",
+    "next-auth": "^4.24.0",
+    "next-themes": "^0.4.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

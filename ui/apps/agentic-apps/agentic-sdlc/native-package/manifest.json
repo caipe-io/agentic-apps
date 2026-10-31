@@ -1,0 +1,21 @@
+{
+  "id": "agentic-sdlc",
+  "displayName": "Agentic SDLC",
+  "description": "Repository delivery and ship-loop dashboard",
+  "contractVersion": "1.1",
+  "hostPaths": ["/sdlc"],
+  "navigation": {
+    "label": "Agentic SDLC",
+    "href": "/sdlc",
+    "placement": "after-chat",
+    "icon": "layout-grid"
+  },
+  "api": {
+    "appId": "agentic-sdlc",
+    "basePath": "/api/agentic-apps/runtime/agentic-sdlc",
+    "mounts": ["/api/agentic-sdlc"]
+  },
+  "auth": {
+    "mode": "app-scoped-token"
+  }
+}
