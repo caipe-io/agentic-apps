@@ -75,6 +75,13 @@ ghcr.io/caipe-io/agentic-apps-litellm-usage-dashboard:0.0.1
 Adding an application to `apps.manifest.json` is sufficient to add it to the build and publish
 matrix, provided it follows the standard app directory and `server.mjs` contract.
 
+## Build version
+
+Each app displays the image build tag and source revision. Release builds embed
+`APP_BUILD_VERSION` and `APP_BUILD_REVISION` automatically; they are not the
+host UI version. For a local container build, pass these as build arguments.
+When no build metadata is provided, the app displays `Build unavailable`.
+
 ## LiteLLM data handling
 
 The dashboard reads LiteLLM usage through its server-side runtime, while contextual chat uses the
