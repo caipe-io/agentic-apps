@@ -148,7 +148,7 @@ test("applies host density and text-scale preferences before notifying the app",
     document: {
       documentElement: {
         dataset: {},
-        style: { setProperty: (key, value) => styleValues.set(key, value) },
+        style: { setProperty: (key, value) => styleValues.set(key, value), removeProperty: (key) => styleValues.delete(key) },
       },
       body: {
         classList: { toggle: (key, value) => classValues.set(key, value) },
@@ -181,6 +181,18 @@ test("applies host density and text-scale preferences before notifying the app",
 
   assert.equal(classValues.get("compact"), false);
   assert.equal(styleValues.get("--app-font-scale"), "1.12");
+  const init = (palette, origin = "https://example.test") => callbacks.get("message")({
+    origin, source: parent, data: { type: "caipe.microfrontend.initialize.v1", version: "1.0", appId: "example-app", context: { palette } },
+  });
+  const palette = { background: "220 16% 14%", foreground: "220 20% 90%", card: "220 16% 20%", cardForeground: "220 20% 90%", primary: "193 43% 67%", primaryForeground: "220 16% 14%", secondary: "220 16% 25%", mutedForeground: "220 10% 70%", border: "220 16% 30%", destructive: "0 70% 50%" };
+  init(palette, "https://evil.test");
+  assert.equal(styleValues.has("--accent"), false);
+  init(palette);
+  assert.equal(styleValues.get("--accent"), "hsl(193 43% 67%)");
+  assert.equal(styleValues.get("--bg"), "hsl(220 16% 14%)");
+  init({ ...palette, primary: "url(https://evil.test)" });
+  assert.equal(styleValues.has("--accent"), false);
+  readyMessages.splice(1);
   assert.deepEqual(JSON.parse(JSON.stringify(readyMessages)), [
     {
       message: {

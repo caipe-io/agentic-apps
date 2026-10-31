@@ -276,8 +276,8 @@ function renderDashboard({ compact, basePath, appPath }) {
         --app-font-scale: 1;
         font-size: calc(16px * var(--app-font-scale));
         font-family: var(--app-font-family);
-        background: #020617;
-        color: #e2e8f0;
+        background: var(--caipe-background, #020617);
+        color: var(--caipe-foreground, #e2e8f0);
       }
       * { box-sizing: border-box; }
       body {
@@ -290,7 +290,7 @@ function renderDashboard({ compact, basePath, appPath }) {
           radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.22), transparent 28rem),
           radial-gradient(circle at 85% 20%, rgba(20, 184, 166, 0.16), transparent 26rem),
           radial-gradient(circle at 70% 95%, rgba(124, 58, 237, 0.14), transparent 32rem),
-          #020617;
+          var(--caipe-background, #020617);
       }
       main { max-width: 1340px; margin: 0 auto; padding: ${compact ? "14px" : "18px 18px 24px"}; }
       .shell {
@@ -300,8 +300,8 @@ function renderDashboard({ compact, basePath, appPath }) {
         margin-top: 10px;
       }
       .hero, .panel, .copilot {
-        border: 1px solid rgba(255,255,255,0.10);
-        background: rgba(15, 23, 42, 0.62);
+        border: 1px solid var(--caipe-border, rgba(255,255,255,0.10));
+        background: var(--caipe-card, rgba(15, 23, 42, 0.62));
         box-shadow: 0 18px 50px rgba(8, 47, 73, 0.18);
         backdrop-filter: blur(14px);
       }
@@ -310,7 +310,7 @@ function renderDashboard({ compact, basePath, appPath }) {
       .hero-title { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 240px; }
       .eyebrow {
         margin: 0;
-        color: #67e8f9;
+        color: var(--caipe-primary, #67e8f9);
         font-size: 0.64rem;
         font-weight: 800;
         letter-spacing: 0.22em;
@@ -320,8 +320,8 @@ function renderDashboard({ compact, basePath, appPath }) {
         gap: 7px;
       }
       h1 { margin: 0; font-size: 1.28rem; line-height: 1.15; letter-spacing: -0.025em; font-weight: 800; }
-      h2 { margin: 0 0 8px; font-size: 0.86rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #94a3b8; }
-      .subtitle { color: #94a3b8; line-height: 1.5; font-size: 0.86rem; max-width: 720px; }
+      h2 { margin: 0 0 8px; font-size: 0.86rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--caipe-muted-foreground, #94a3b8); }
+      .subtitle { color: var(--caipe-muted-foreground, #94a3b8); line-height: 1.5; font-size: 0.86rem; max-width: 720px; }
       .hero-status { display: inline-flex; }
       .dashboard-status {
         display: inline-flex;
@@ -330,7 +330,7 @@ function renderDashboard({ compact, basePath, appPath }) {
         max-width: min(360px, 42vw);
         border-radius: 999px;
         border: 1px solid rgba(56, 189, 248, 0.30);
-        background: rgba(2, 6, 23, 0.72);
+        background: var(--caipe-background, rgba(2, 6, 23, 0.72));
         color: #bae6fd;
         padding: 5px 10px;
         font-size: 0.72rem;
@@ -365,16 +365,16 @@ function renderDashboard({ compact, basePath, appPath }) {
         z-index: 30;
         max-width: calc(100vw - 36px);
         padding: 8px 10px;
-        border: 1px solid rgba(255,255,255,0.12);
+        border: 1px solid var(--caipe-border, rgba(255,255,255,0.12));
         border-radius: 18px;
-        background: rgba(2, 6, 23, 0.88);
-        box-shadow: 0 18px 50px rgba(2, 6, 23, 0.34);
+        background: var(--caipe-background, rgba(2, 6, 23, 0.88));
+        box-shadow: 0 18px 50px var(--caipe-background, rgba(2, 6, 23, 0.34));
         backdrop-filter: blur(18px);
         font-size: 0.78rem;
         line-height: 1;
       }
       .font-dock-title {
-        color: #e2e8f0;
+        color: var(--caipe-foreground, #e2e8f0);
         font-size: 0.72rem;
         font-weight: 1000;
         letter-spacing: 0.1em;
@@ -384,7 +384,7 @@ function renderDashboard({ compact, basePath, appPath }) {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        color: #cbd5e1;
+        color: var(--caipe-foreground, #cbd5e1);
         font-size: 0.72rem;
         font-weight: 900;
         letter-spacing: 0.08em;
@@ -393,9 +393,9 @@ function renderDashboard({ compact, basePath, appPath }) {
       .font-customizer select { min-width: 82px; padding: 7px 10px; font-size: 0.86rem; line-height: 1; }
       input, button, select {
         border-radius: 8px;
-        border: 1px solid rgba(255,255,255,0.14);
-        background: rgba(2, 6, 23, 0.72);
-        color: #e2e8f0;
+        border: 1px solid var(--caipe-border, rgba(255,255,255,0.14));
+        background: var(--caipe-background, rgba(2, 6, 23, 0.72));
+        color: var(--caipe-foreground, #e2e8f0);
         padding: 7px 10px;
         font-family: inherit;
         font-size: 0.78rem;
@@ -407,9 +407,9 @@ function renderDashboard({ compact, basePath, appPath }) {
         min-height: 76px;
         margin-top: 8px;
         border-radius: 10px;
-        border: 1px solid rgba(255,255,255,0.14);
-        background: rgba(2, 6, 23, 0.72);
-        color: #e2e8f0;
+        border: 1px solid var(--caipe-border, rgba(255,255,255,0.14));
+        background: var(--caipe-background, rgba(2, 6, 23, 0.72));
+        color: var(--caipe-foreground, #e2e8f0);
         padding: 8px 10px;
         font: inherit;
         font-size: 0.78rem;
@@ -417,17 +417,17 @@ function renderDashboard({ compact, basePath, appPath }) {
         resize: vertical;
         overflow: auto;
       }
-      .weather-question-input::placeholder { color: #94a3b8; opacity: 0.85; }
+      .weather-question-input::placeholder { color: var(--caipe-muted-foreground, #94a3b8); opacity: 0.85; }
       button { cursor: pointer; background: linear-gradient(135deg, #0284c7, #10b981); font-weight: 700; border: 0; }
-      button.ghost { background: rgba(2, 6, 23, 0.72); border: 1px solid rgba(255,255,255,0.14); font-weight: 600; }
+      button.ghost { background: var(--caipe-background, rgba(2, 6, 23, 0.72)); border: 1px solid var(--caipe-border, rgba(255,255,255,0.14)); font-weight: 600; }
       .panel, .copilot { border-radius: 14px; padding: 12px 14px; }
       .panel + .panel { margin-top: 10px; }
 
       .kpi-strip { display: grid; grid-template-columns: 1.4fr repeat(5, minmax(0, 1fr)); gap: 8px; }
       .kpi {
         border-radius: 12px;
-        background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(2, 6, 23, 0.65));
-        border: 1px solid rgba(255,255,255,0.08);
+        background: linear-gradient(180deg, var(--caipe-card, rgba(15, 23, 42, 0.72)), var(--caipe-background, rgba(2, 6, 23, 0.65)));
+        border: 1px solid var(--caipe-border, rgba(255,255,255,0.08));
         padding: 10px 12px;
         position: relative;
         overflow: hidden;
@@ -441,10 +441,10 @@ function renderDashboard({ compact, basePath, appPath }) {
       .kpi.accent-attention { border-color: rgba(56, 189, 248, 0.30); }
       .kpi.accent-warn { border-color: rgba(248, 191, 36, 0.32); }
       .kpi.accent-danger { border-color: rgba(248, 113, 113, 0.32); }
-      .kpi .kpi-label { color: #94a3b8; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
-      .kpi .kpi-value { color: #f8fafc; font-size: 1.42rem; font-weight: 800; letter-spacing: -0.025em; line-height: 1.05; display: flex; align-items: center; gap: 6px; }
+      .kpi .kpi-label { color: var(--caipe-muted-foreground, #94a3b8); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+      .kpi .kpi-value { color: var(--caipe-foreground, #f8fafc); font-size: 1.42rem; font-weight: 800; letter-spacing: -0.025em; line-height: 1.05; display: flex; align-items: center; gap: 6px; }
       .kpi .kpi-icon { font-size: 1.14rem; }
-      .kpi .kpi-sub { color: #94a3b8; font-size: 0.78rem; font-weight: 600; }
+      .kpi .kpi-sub { color: var(--caipe-muted-foreground, #94a3b8); font-size: 0.78rem; font-weight: 600; }
       .insights-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
       .insight {
         flex: 1 1 200px;
@@ -453,31 +453,31 @@ function renderDashboard({ compact, basePath, appPath }) {
         gap: 8px;
         padding: 8px 10px;
         border-radius: 10px;
-        background: rgba(2, 6, 23, 0.55);
-        border: 1px solid rgba(255,255,255,0.07);
+        background: var(--caipe-background, rgba(2, 6, 23, 0.55));
+        border: 1px solid var(--caipe-border, rgba(255,255,255,0.07));
         font-size: 0.78rem;
       }
       .insight .insight-icon { font-size: 1.14rem; line-height: 1; }
-      .insight .insight-text { color: #e2e8f0; line-height: 1.3; }
-      .insight .insight-text strong { color: #f8fafc; font-weight: 700; }
-      .insight .insight-text small { display: block; color: #94a3b8; font-size: 0.72rem; font-weight: 500; margin-top: 1px; }
+      .insight .insight-text { color: var(--caipe-foreground, #e2e8f0); line-height: 1.3; }
+      .insight .insight-text strong { color: var(--caipe-foreground, #f8fafc); font-weight: 700; }
+      .insight .insight-text small { display: block; color: var(--caipe-muted-foreground, #94a3b8); font-size: 0.72rem; font-weight: 500; margin-top: 1px; }
 
       .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 0; }
       .metric, .day, .message, .insight-card, .alert-row {
         border-radius: 10px;
-        background: rgba(2, 6, 23, 0.48);
-        border: 1px solid rgba(255,255,255,0.07);
+        background: var(--caipe-background, rgba(2, 6, 23, 0.48));
+        border: 1px solid var(--caipe-border, rgba(255,255,255,0.07));
         padding: 10px 12px;
       }
       .metric .icon { display: block; font-size: 0.92rem; margin-bottom: 4px; }
-      .label { color: #94a3b8; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.10em; text-transform: uppercase; }
+      .label { color: var(--caipe-muted-foreground, #94a3b8); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.10em; text-transform: uppercase; }
       .value { margin-top: 4px; font-size: 1.28rem; font-weight: 800; color: white; letter-spacing: -0.025em; }
       .insight-card {
         border-color: rgba(125, 211, 252, 0.22);
         background: linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(20, 184, 166, 0.08));
       }
-      .insight-card strong { color: #f8fafc; font-size: 0.92rem; font-weight: 700; }
-      .insight-card p { margin: 5px 0 0; color: #cbd5e1; line-height: 1.55; font-size: 0.84rem; }
+      .insight-card strong { color: var(--caipe-foreground, #f8fafc); font-size: 0.92rem; font-weight: 700; }
+      .insight-card p { margin: 5px 0 0; color: var(--caipe-foreground, #cbd5e1); line-height: 1.55; font-size: 0.84rem; }
       .risk-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
       .risk-pill {
         border-radius: 999px;
@@ -501,21 +501,21 @@ function renderDashboard({ compact, basePath, appPath }) {
       }
       .day:hover {
         border-color: rgba(103, 232, 249, 0.42);
-        background: linear-gradient(180deg, rgba(14, 165, 233, 0.14), rgba(2, 6, 23, 0.55));
+        background: linear-gradient(180deg, rgba(14, 165, 233, 0.14), var(--caipe-background, rgba(2, 6, 23, 0.55)));
         transform: translateY(-2px);
       }
       .day-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
       .day strong { color: white; font-size: 0.86rem; letter-spacing: -0.01em; font-weight: 700; }
       .weather-icon { font-size: 1.28rem; line-height: 1; filter: drop-shadow(0 6px 12px rgba(56, 189, 248, 0.18)); }
-      .condition { color: #cbd5e1; font-size: 0.72rem; font-weight: 600; line-height: 1.25; min-height: 28px; }
+      .condition { color: var(--caipe-foreground, #cbd5e1); font-size: 0.72rem; font-weight: 600; line-height: 1.25; min-height: 28px; }
       .forecast-temps { color: white; font-size: 1.05rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
       .forecast-temps .low { color: #93c5fd; font-size: 0.78rem; font-weight: 600; }
       .forecast-meta { display: flex; flex-wrap: wrap; gap: 4px; }
       .forecast-chip {
         border-radius: 999px;
         border: 1px solid rgba(148, 163, 184, 0.18);
-        background: rgba(15, 23, 42, 0.78);
-        color: #cbd5e1;
+        background: var(--caipe-card, rgba(15, 23, 42, 0.78));
+        color: var(--caipe-foreground, #cbd5e1);
         padding: 2px 6px;
         font-size: 0.64rem;
         font-weight: 700;
@@ -523,12 +523,12 @@ function renderDashboard({ compact, basePath, appPath }) {
       .air-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
       .alert-row { margin-top: 6px; border-color: rgba(251, 113, 133, 0.24); padding: 8px 10px; }
       .alert-row strong { color: #fecaca; font-size: 0.86rem; }
-      .alert-row span { display: block; margin-top: 3px; color: #cbd5e1; font-size: 0.78rem; line-height: 1.45; }
+      .alert-row span { display: block; margin-top: 3px; color: var(--caipe-foreground, #cbd5e1); font-size: 0.78rem; line-height: 1.45; }
       .copilot { position: sticky; top: 12px; align-self: start; }
       .copilot button { width: 100%; }
       .copilot button + button { margin-top: 6px; }
       .copilot input, .copilot select { width: 100%; }
-      .message { margin-top: 8px; color: #cbd5e1; line-height: 1.55; font-size: 0.84rem; padding: 10px 12px; }
+      .message { margin-top: 8px; color: var(--caipe-foreground, #cbd5e1); line-height: 1.55; font-size: 0.84rem; padding: 10px 12px; }
       .message strong { color: #bae6fd; }
       .markdown-report h1, .markdown-report h2, .markdown-report h3 { margin: 0.45rem 0 0.25rem; color: #e0f2fe; }
       .markdown-report p { margin: 0.35rem 0; }
@@ -537,14 +537,14 @@ function renderDashboard({ compact, basePath, appPath }) {
       .markdown-report code {
         border-radius: 4px;
         padding: 1px 4px;
-        background: rgba(15, 23, 42, 0.72);
+        background: var(--caipe-card, rgba(15, 23, 42, 0.72));
         color: #bae6fd;
       }
       .markdown-report pre {
         overflow: auto;
         border-radius: 8px;
         padding: 8px;
-        background: rgba(15, 23, 42, 0.72);
+        background: var(--caipe-card, rgba(15, 23, 42, 0.72));
       }
       .timeline {
         display: grid;
@@ -559,10 +559,10 @@ function renderDashboard({ compact, basePath, appPath }) {
         gap: 8px;
         align-items: start;
         border-radius: 10px;
-        border: 1px solid rgba(255,255,255,0.08);
-        background: rgba(2, 6, 23, 0.5);
+        border: 1px solid var(--caipe-border, rgba(255,255,255,0.08));
+        background: var(--caipe-background, rgba(2, 6, 23, 0.5));
         padding: 8px 10px;
-        color: #cbd5e1;
+        color: var(--caipe-foreground, #cbd5e1);
         font-size: 0.78rem;
       }
       .timeline li.active {
@@ -577,8 +577,8 @@ function renderDashboard({ compact, basePath, appPath }) {
         align-items: center;
         gap: 7px;
         border-radius: 999px;
-        border: 1px solid rgba(255,255,255,0.12);
-        background: rgba(2, 6, 23, 0.72);
+        border: 1px solid var(--caipe-border, rgba(255,255,255,0.12));
+        background: var(--caipe-background, rgba(2, 6, 23, 0.72));
         padding: 5px 10px;
         font-size: 0.78rem;
         font-weight: 800;
@@ -612,7 +612,7 @@ function renderDashboard({ compact, basePath, appPath }) {
       .activity-detail {
         display: block;
         margin-top: 3px;
-        color: #94a3b8;
+        color: var(--caipe-muted-foreground, #94a3b8);
         font-size: 0.72rem;
       }
       .stream-content {
@@ -623,12 +623,12 @@ function renderDashboard({ compact, basePath, appPath }) {
       }
       .debug-events {
         grid-column: 1 / -1;
-        border-top: 1px solid rgba(255,255,255,0.08);
+        border-top: 1px solid var(--caipe-border, rgba(255,255,255,0.08));
         padding-top: 8px;
       }
       .debug-events summary {
         cursor: pointer;
-        color: #94a3b8;
+        color: var(--caipe-muted-foreground, #94a3b8);
         font-size: 0.76rem;
         font-weight: 800;
         text-transform: uppercase;
@@ -644,13 +644,13 @@ function renderDashboard({ compact, basePath, appPath }) {
       .activity-footer details {
         border-radius: 14px;
         border: 1px solid rgba(56, 189, 248, 0.24);
-        background: rgba(2, 6, 23, 0.86);
+        background: var(--caipe-background, rgba(2, 6, 23, 0.86));
         box-shadow: 0 18px 50px rgba(8, 47, 73, 0.22);
         backdrop-filter: blur(18px);
         overflow: hidden;
       }
-      .activity-footer details[open] { background: rgba(2, 6, 23, 0.96); }
-      .activity-footer details[open] summary { border-bottom: 1px solid rgba(255,255,255,0.08); }
+      .activity-footer details[open] { background: var(--caipe-background, rgba(2, 6, 23, 0.96)); }
+      .activity-footer details[open] summary { border-bottom: 1px solid var(--caipe-border, rgba(255,255,255,0.08)); }
       .activity-footer details[open] .activity-drawer-body { max-height: 320px; overflow: auto; }
       .activity-footer summary {
         display: flex;
@@ -661,8 +661,8 @@ function renderDashboard({ compact, basePath, appPath }) {
         list-style: none;
       }
       .activity-footer summary::-webkit-details-marker { display: none; }
-      .activity-summary { min-width: 0; flex: 1; color: #cbd5e1; font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .activity-toggle-hint { color: #67e8f9; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; }
+      .activity-summary { min-width: 0; flex: 1; color: var(--caipe-foreground, #cbd5e1); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .activity-toggle-hint { color: var(--caipe-primary, #67e8f9); font-size: 0.78rem; font-weight: 800; text-transform: uppercase; }
       .activity-drawer-body {
         display: grid;
         grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
@@ -698,7 +698,7 @@ function renderDashboard({ compact, basePath, appPath }) {
         .dashboard-status { max-width: none; }
         .font-customizer { position: static; margin: 12px 0 0; }
       }
-      .example-link { color: #7dd3fc; font-size: 0.8rem; font-weight: 800; text-decoration: none; }
+      .example-link { color: var(--caipe-primary, #7dd3fc); font-size: 0.8rem; font-weight: 800; text-decoration: none; }
       .example-link:hover { text-decoration: underline; }
       body.compact .font-customizer,
       body.compact .run-history,
@@ -712,7 +712,9 @@ function renderDashboard({ compact, basePath, appPath }) {
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
       }
-    </style>
+
+      :root[data-caipe-palette="host"] button:not(.ghost) { background: var(--caipe-primary); color: var(--caipe-primary-foreground); }
+</style>
   </head>
   <body class="${compact ? "compact" : "standalone"}">
     <main>

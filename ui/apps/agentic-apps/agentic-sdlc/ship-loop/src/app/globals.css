@@ -11,3 +11,6 @@ body {margin:0; background:hsl(var(--background)); color:hsl(var(--foreground));
 .gradient-text {background:linear-gradient(100deg,#10b9a8,#9b5de5);background-clip:text;color:transparent;}
 .glass-panel {background:hsl(var(--card) / .55);border:1px solid hsl(var(--border) / .65);backdrop-filter:blur(10px);}
 @media (prefers-reduced-motion:reduce) {*,*::before,*::after {animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}}
+
+:root[data-caipe-palette="host"] .agentic-sdlc-app {background: hsl(var(--background));}
+:root[data-caipe-palette="host"] .gradient-text {background: none; color: hsl(var(--primary));}
