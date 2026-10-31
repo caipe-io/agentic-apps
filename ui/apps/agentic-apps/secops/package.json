@@ -1,0 +1,14 @@
+{
+  "name": "@caipe/agentic-app-secops",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "^22.23.4 || ^24.22.1 || >=26.12.1" },
+  "dependencies": {
+    "@aws-sdk/client-ec2": "3.1156.0",
+    "@aws-sdk/client-elastic-load-balancing-v2": "3.1156.0",
+    "@aws-sdk/client-iam": "3.1156.0",
+    "@aws-sdk/client-sts": "3.1156.0",
+    "@aws-sdk/credential-providers": "3.1156.0"
+  }
+}

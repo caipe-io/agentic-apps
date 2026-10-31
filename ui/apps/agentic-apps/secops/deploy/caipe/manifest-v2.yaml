@@ -1,0 +1,65 @@
+# Example package manifest; install only after configuring access and credentials.
+id: secops
+displayName: SecOps Review
+description: Read-only AWS exposure, IAM-user, and GitHub repository-control review.
+apiVersion: '2.0'
+version: 0.1.0
+ui:
+  profiles:
+    - id: hosted
+      mode: iframe
+  routes:
+    - id: home
+      path: /apps/secops
+  assistant:
+    agentId: agent-secops
+    name: SecOps Assistant
+    label: Ask SecOps
+    overlay: host
+api:
+  mounts: []
+auth:
+  mode: app-scoped-token
+runtime:
+  kind: proxied-next-zone
+  mountPath: /apps/secops
+  preserveMountPath: false
+surfaces:
+  showInHub: true
+  navOrder: 60
+  homeEligible: false
+access:
+  requiredRoles: [admin]
+  tokenScopes: [secops:read, secops:agent:invoke, agents:invoke]
+  policyActions:
+    - action: app.proxy.request
+      description: Forward authorized SecOps dashboard requests
+      defaultEffect: allow
+    - action: proxy:GET
+      description: Read configured security evidence
+      defaultEffect: allow
+      requiredScopes: [secops:read]
+    - action: proxy:HEAD
+      description: Probe dashboard readiness
+      defaultEffect: allow
+      requiredScopes: [secops:read]
+    - action: agent.invoke.secops
+      description: Investigate security signals
+      defaultEffect: allow
+      requiredScopes: [secops:agent:invoke, agents:invoke]
+provides:
+  mcp: []
+  agents: []
+  workflows: []
+consumes:
+  platformApis:
+    - id: app.gateway
+      version: '1.0'
+      required: true
+requestedPermissions: []
+health:
+  endpoint: /health/ready
+  timeoutMs: 1500
+catalog:
+  categories: [security, operations]
+  capabilities: [aws-exposure-review, iam-user-review, github-branch-controls]
