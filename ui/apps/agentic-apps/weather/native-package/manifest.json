@@ -1,0 +1,21 @@
+{
+  "id": "weather",
+  "displayName": "Weather Lab",
+  "description": "Live weather dashboard using the existing Weather app runtime",
+  "contractVersion": "1.1",
+  "hostPaths": ["/weather"],
+  "navigation": {
+    "label": "Weather Lab",
+    "href": "/weather",
+    "placement": "after-chat",
+    "icon": "layout-grid"
+  },
+  "api": {
+    "appId": "weather",
+    "basePath": "/api/agentic-apps/runtime/weather",
+    "mounts": ["/api/copilotkit/weather-agent"]
+  },
+  "auth": {
+    "mode": "app-scoped-token"
+  }
+}

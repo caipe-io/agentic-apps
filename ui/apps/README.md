@@ -27,6 +27,10 @@ not an instruction channel. CAIPE gateway and CAS/OpenFGA remain the policy enfo
 | OSS Repo Report Card | `agent-oss-repo-report-card` | `oss_repo_report_card` | 3040 |
 | Jira Project Dashboard | `agent-jira-agent` | host-configured integration | 3041 |
 
+The [Weather native-package example](agentic-apps/weather/native-package/README.md)
+is an optional React surface using the existing Weather runtime and app-scoped
+gateway. It does not replace the iframe deployment by default.
+
 The `/example` route is a static, network-free fixture for design and contract checks. It must not
 be used for operational decisions.
 
