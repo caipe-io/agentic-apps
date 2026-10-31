@@ -9,7 +9,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const buildRevision = process.env.APP_BUILD_REVISION;
   const version = buildVersion && buildVersion !== "unknown" && /^[A-Za-z0-9][A-Za-z0-9_.+-]{0,127}$/.test(buildVersion) ? buildVersion : null;
   const revision = buildRevision && /^[a-f0-9]{7,64}$/i.test(buildRevision) ? buildRevision.slice(0, 12) : null;
-  const build = version && version === buildRevision ? revision : version && revision ? `${version} · ${revision}` : version || revision || "unavailable";
+  const build = version && revision && version === buildRevision ? revision : version && revision ? `${version} · ${revision}` : version || revision || "unavailable";
   return (
     <html lang="en" className="dark">
       <body>
