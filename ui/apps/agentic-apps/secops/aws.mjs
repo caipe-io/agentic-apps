@@ -3,7 +3,7 @@ import { IAMClient, ListUsersCommand, ListAccessKeysCommand, GetAccessKeyLastUse
 import { ElasticLoadBalancingV2Client, DescribeLoadBalancersCommand, DescribeTagsCommand } from "@aws-sdk/client-elastic-load-balancing-v2";
 import { STSClient, GetCallerIdentityCommand } from "@aws-sdk/client-sts";
 import { fromNodeProviderChain, fromTemporaryCredentials, fromTokenFile } from "@aws-sdk/credential-providers";
-import { createAwsScopeCredentials } from "../../_lib/aws-scope-credentials.mjs";
+import { createSecopsScopeCredentials } from "./credentials.mjs";
 import { exposureSignals, iamUserRows } from "./findings.mjs";
 
 async function collect(client, Command, field, { iam = false, elb = false, input = {} } = {}) {
@@ -28,7 +28,7 @@ async function result(fn) {
 }
 
 export function createSecopsAwsService(configuration, { clientsForScope } = {}) {
-  const credentials = clientsForScope ? null : createAwsScopeCredentials(configuration, { fromNodeProviderChain, fromTemporaryCredentials, fromTokenFile }, { sessionName: "secops-dashboard", region: configuration.regions[0] || "us-east-1" });
+  const credentials = clientsForScope ? null : createSecopsScopeCredentials(configuration, { fromNodeProviderChain, fromTemporaryCredentials, fromTokenFile });
   const pending = new Map();
   return async function scan(scope) {
     const account = configuration.accounts.find((entry) => entry.profile === scope.profile);
