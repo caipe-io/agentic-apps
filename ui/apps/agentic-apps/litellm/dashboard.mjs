@@ -2,6 +2,7 @@ import { renderDonutSvg } from "../../_lib/donut-svg.mjs";
 import { estimateModelRequestCost } from "./model-info.mjs";
 import { buildLiteLlmAnomalyInvestigationFormat, validateLiteLlmAnomalyInvestigation } from "./anomaly-investigation.mjs";
 import { renderAgenticAppConversationClient } from "../../_lib/conversation-client.mjs";
+import { createQueryNavigation } from "../../_lib/query-navigation.mjs";
 import { renderMicrofrontendClient } from "../../_lib/microfrontend-client.mjs";
 
 export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId, gatewayName = "LLM Gateway" }) {
@@ -239,7 +240,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId, ga
 </main>
 ${renderMicrofrontendClient("litellm")}
 ${renderAgenticAppConversationClient()}
-<script>(${initializeLiteLlmDashboard.toString()})(${config}, ${estimateModelRequestCost.toString()}, ${validateLiteLlmAnomalyInvestigation.toString()}, ${renderDonutSvg.toString()});</script>
+<script>(${initializeLiteLlmDashboard.toString()})(${config}, ${estimateModelRequestCost.toString()}, ${validateLiteLlmAnomalyInvestigation.toString()}, ${renderDonutSvg.toString()}, ${createQueryNavigation.toString()});</script>
 </body>
 </html>`;
 }
@@ -249,7 +250,7 @@ function escapeHtml(value) {
 }
 
 /** Browser entry point: serialized into the page so chart and request state stay together. */
-function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyResponseFormat }, estimateModelRequestCost, validateInvestigation, renderDonutSvg) {
+function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyResponseFormat }, estimateModelRequestCost, validateInvestigation, renderDonutSvg, createNavigation) {
   const byId = (id) => document.getElementById(id);
   const state = { report: null, keys: [], selectedKey: null, modelCatalog: null, modelPage: 1, page: 1, pagination: null, maxSpend: 0, calculatorRows: [], calculatorNextId: 1, activeTab: "usage" };
   const initialQuery = new URLSearchParams(window.location.search);
@@ -313,6 +314,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
   const route = (path) => (basePath || "") + path;
   const text = (id, value) => { byId(id).textContent = value; };
   const notice = (id, message, error = false) => { text(id, message); byId(id).classList.toggle("error", error); };
+  let navigation;
   const tabs = [
     { name: "usage", button: "usageTab", panel: "usageTabPanel" },
     { name: "overview", button: "overviewTab", panel: "overviewTabPanel" },
@@ -331,6 +333,8 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
   });
   window.addEventListener("hashchange", () => { if (window.location.hash === "#availableModels") activateTab("calculator"); });
   activateTab(initialAllUsers ? "users" : initialQuery.get("tab") === "anomalies" ? "anomalies" : initialQuery.get("tab") === "calculator" || window.location.hash === "#availableModels" ? "calculator" : initialQuery.get("tab") === "overview" && !selectionRequest ? "overview" : "usage");
+
+  navigation = createNavigation({ appId: "litellm", appPath, restore: () => window.location.reload() });
 
   function activateTab(name, focus = false) {
     state.activeTab = name;
@@ -355,6 +359,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
       if (!state.anomalies && !state.anomaliesLoading) loadAnomalies();
       else if (state.anomalies) publishAnomalyContext(state.anomalies);
     }
+    commitNavigation();
   }
 
   byId("usageSearchForm").addEventListener("submit", (event) => event.preventDefault());
@@ -465,6 +470,7 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
     const key = state.pickerKeys[index];
     if (!key) return;
     selectKey(key);
+    commitNavigation();
     byId("keyFilter").focus();
     closeUserPicker();
     byId("keyFilter").select();
@@ -477,10 +483,10 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
     state.directory.error = "";
     renderDirectory();
     clearSharedLink();
-    directorySearchTimer = setTimeout(() => loadAllUsers(), 250);
+    directorySearchTimer = setTimeout(() => { commitNavigation("replace"); loadAllUsers(); }, 250);
   });
   byId("allUsersSearch").addEventListener("keydown", (event) => { if (event.key === "Enter") { event.preventDefault(); loadAllUsers(); } });
-  for (const id of ["allUsersSort", "pageSize"]) byId(id).addEventListener("change", () => { clearSharedLink(); state.directory.page = 1; loadAllUsers(); });
+  for (const id of ["allUsersSort", "pageSize"]) byId(id).addEventListener("change", () => { clearSharedLink(); state.directory.page = 1; commitNavigation(); loadAllUsers(); });
   byId("previousPage").addEventListener("click", () => { state.directory.page -= 1; loadAllUsers(); });
   byId("nextPage").addEventListener("click", () => { state.directory.page += 1; loadAllUsers(); });
   byId("retryAllUsers").addEventListener("click", () => loadAllUsers());
@@ -500,10 +506,10 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
       loadVirtualKeys();
     }
   });
-  byId("overviewPeriod").addEventListener("change", () => { clearSharedLink(); loadOverview(); });
+  byId("overviewPeriod").addEventListener("change", () => { clearSharedLink(); commitNavigation(); loadOverview(); });
   byId("overviewTrendMetric").addEventListener("change", renderOverviewTrend);
   byId("retryOverview").addEventListener("click", () => loadOverview());
-  byId("anomalyControls").addEventListener("submit", (event) => { event.preventDefault(); clearSharedLink(); investigateAnomalies(); });
+  byId("anomalyControls").addEventListener("submit", (event) => { event.preventDefault(); clearSharedLink(); commitNavigation(); investigateAnomalies(); });
   byId("anomalyControls").addEventListener("input", () => {
     anomalyController?.abort();
     resetInvestigation();
@@ -540,8 +546,8 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
     if (Number.isInteger(index) && state.anomalies.findings[index]) loadAnomalyContributors(state.anomalies, index);
   });
   byId("retryAnomalies").addEventListener("click", () => loadAnomalies());
-  byId("period").addEventListener("change", () => { explicitPeriod = true; clearSharedLink(); runReport(); });
-  byId("copyViewLink").addEventListener("click", async () => {
+  byId("period").addEventListener("change", () => { explicitPeriod = true; clearSharedLink(); commitNavigation(); runReport(); });
+  function viewUrl() {
     const url = new URL(appPath, window.location.origin);
     if (state.activeTab === "anomalies") {
       url.searchParams.set("tab", "anomalies");
@@ -564,7 +570,11 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
       url.searchParams.set("sort", state.keySort);
       url.searchParams.set("tab", state.activeTab);
     }
-    const link = url.toString();
+    return url;
+  }
+  function commitNavigation(mode = "push") { if (navigation) navigation.commit(viewUrl().search.slice(1), mode); }
+  byId("copyViewLink").addEventListener("click", async () => {
+    const link = viewUrl().toString();
     byId("shareLinkInput").value = link;
     try {
       await navigator.clipboard.writeText(link);
