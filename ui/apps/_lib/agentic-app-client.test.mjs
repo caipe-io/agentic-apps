@@ -161,9 +161,7 @@ test("applies host density and text-scale preferences before notifying the app",
       }
     },
   });
-  const source = renderMicrofrontendClient("example-app")
-    .replace(/^[\s\S]*?<script>/, "")
-    .replace(/<\/script>$/, "");
+  const source = renderMicrofrontendClient("example-app").split("<script>")[1].split("</script>")[0];
   vm.runInContext(source, context);
 
   callbacks.get("message")({
