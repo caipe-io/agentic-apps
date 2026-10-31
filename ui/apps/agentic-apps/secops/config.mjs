@@ -10,5 +10,5 @@ export function secopsConfiguration(env = process.env) {
   const crossAccountRoleName = env.SECOPS_CROSS_ACCOUNT_ROLE_NAME || "read-only";
   const partition = env.SECOPS_AWS_PARTITION || "aws";
   if (!/^[A-Za-z0-9+=,.@_/-]{1,128}$/.test(crossAccountRoleName) || !["aws", "aws-us-gov", "aws-cn"].includes(partition)) throw new Error("Invalid AWS role configuration.");
-  return { accounts, regions, repos, crossAccountRoleName, partition, awsAgentId: env.SECOPS_AWS_AGENT_ID || "", githubAgentId: env.SECOPS_GITHUB_AGENT_ID || "", assistantId: env.SECOPS_AGENT_ID || "agent-secops" };
+  return { accounts, regions, repos, crossAccountRoleName, partition, awsAgentId: env.SECOPS_AWS_AGENT_ID || "", githubAgentId: env.SECOPS_GITHUB_AGENT_ID ?? "agent-github-agent", assistantId: env.SECOPS_AGENT_ID || "agent-secops" };
 }

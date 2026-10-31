@@ -30,6 +30,9 @@ test("IAM rows preserve every user and distinguish three ages and unknown eviden
 test("configured scope rejects invalid IDs and branch rules preserve unknowns", () => {
   assert.throws(() => secopsConfiguration({ SECOPS_AWS_ACCOUNT_LIST: "example:123" }), /twelve-digit/);
   assert.throws(() => secopsConfiguration({ SECOPS_GITHUB_REPOS: "../x" }), /valid/);
+  assert.equal(secopsConfiguration({}).githubAgentId, "agent-github-agent");
+  assert.equal(secopsConfiguration({ SECOPS_GITHUB_AGENT_ID: "" }).githubAgentId, "");
+  assert.equal(secopsConfiguration({ SECOPS_GITHUB_AGENT_ID: "custom-github" }).githubAgentId, "custom-github");
   const repo = { full_name: "example/repo", default_branch: "main", private: true };
   assert.equal(githubControlSummary(repo, { protected: false }, [], { state: "absent" }).checks.pullRequests, "not_detected");
   assert.equal(githubControlSummary(repo, { protected: false }, [], { state: "unavailable" }).checks.requiredChecks, "unknown");
