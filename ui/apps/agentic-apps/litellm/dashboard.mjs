@@ -194,7 +194,7 @@ export function renderLiteLlmDashboard({ compact, basePath, appPath, agentId, ga
     <div class="selection"><div><h2 id="selectedTitle">Select a user or virtual key</h2><p id="selectedOwner" class="muted small"></p></div><label>Usage period<select id="period"><option value="current">Today</option><option value="month" selected>Current month</option><option value="3m">Last 3 months</option><option value="6m">Last 6 months</option><option value="12m">Last 12 months</option></select></label></div>
     <p id="reportStatus" class="notice" role="status" aria-live="polite">Usage will load after the key list is ready.</p>
     <div id="reportContent" hidden>
-      <p id="rangeLabel" class="muted small"></p>
+      <div class="selection"><p id="rangeLabel" class="muted small"></p><button id="chatAboutUsage" type="button">Chat about this with LiteLLM Agent</button></div>
       <section class="kpis" aria-label="Usage in selected period"><article class="panel kpi"><span class="muted small">Period spend</span><strong id="spend">—</strong><small>USD in selected period</small></article><article class="panel kpi"><span class="muted small">Total tokens</span><strong id="tokens">—</strong><small id="tokenSplit">Input and output</small></article><article class="panel kpi"><span class="muted small">Requests</span><strong id="requests">—</strong><small>Reported API requests</small></article></section>
       <div class="layout">
         <section class="panel" aria-labelledby="trendTitle"><div class="panel-heading"><h2 id="trendTitle">Usage trend</h2><label>Chart measure<select id="trendMetric"><option value="spend">Spend · USD</option><option value="totalTokens">Tokens</option><option value="requests">Requests</option></select></label></div><div id="trendEmpty" class="empty" hidden></div><svg id="trendChart" class="chart" role="img" aria-label="Usage by date"></svg><details><summary>View trend data</summary><div class="table-wrap"><table aria-label="Usage by date"><thead><tr><th scope="col">Date (UTC)</th><th scope="col" class="numeric">Spend</th><th scope="col" class="numeric">Tokens</th><th scope="col" class="numeric">Requests</th></tr></thead><tbody id="trendRows"></tbody></table></div></details></section>
@@ -1389,6 +1389,13 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
       byId("budgetScopes").append(node);
     }
   }
+
+  byId("chatAboutUsage").addEventListener("click", () => {
+    if (!state.report || state.activeTab !== "usage") return;
+    publishContext(state.report);
+    if (window.parent === window) { notice("reportStatus", "Chat is available when this dashboard is opened inside CAIPE."); return; }
+    window.parent.postMessage({ type: "caipe.agenticApp.assistant.open.v1", version: "1.0", appId: "litellm" }, window.location.origin);
+  });
 
   function publishContext(report) {
     const gateway = report.scope === "gateway";
