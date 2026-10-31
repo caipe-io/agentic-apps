@@ -212,6 +212,7 @@ test("build indicator reflects validated image build metadata", () => {
   const html = renderMicrofrontendClient("example-app", { APP_BUILD_VERSION: "v1.2.3", APP_BUILD_REVISION: "abcdef0123456789" });
   assert.match(html, /Build v1\.2\.3 · abcdef012345/);
   assert.match(renderMicrofrontendClient("example-app", {}), /Build unavailable/);
+  assert.match(renderMicrofrontendClient("example-app", { APP_BUILD_VERSION: "abcdef0123456789", APP_BUILD_REVISION: "abcdef0123456789" }), /Build abcdef012345<\/div>/);
   const untrusted = renderMicrofrontendClient("example-app", { APP_BUILD_VERSION: "<script>alert(1)</script>", APP_BUILD_REVISION: "bad-sha" });
   assert.match(untrusted, /Build unavailable/); assert.doesNotMatch(untrusted, /alert/);
 });
