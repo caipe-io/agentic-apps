@@ -6,6 +6,8 @@ import { handleAppMcpRequest } from "../../_lib/app-mcp-server.mjs";
 import { renderAgenticAppConversationClient } from "../../_lib/conversation-client.mjs";
 import { createRequiredAgenticAppJwtVerifier } from "../../_lib/jwt-verify.mjs";
 import { renderMicrofrontendClient } from "../../_lib/microfrontend-client.mjs";
+import { dashboardStyles } from "../../_lib/dashboard-styles.mjs";
+import { ossRepoStyles } from "./styles.mjs";
 import { authorizeAgenticAppRuntimeRequest } from "../../_lib/runtime-authorization.mjs";
 import {
   resolveAgenticAppRuntimeBasePath,
@@ -277,270 +279,31 @@ function renderDashboard({ compact, basePath, authorization }) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>OSS Repo Report Card</title>
-    <style>
-      :root {
-        color-scheme: dark;
-        --app-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        --app-font-scale: 1;
-        font-size: calc(16px * var(--app-font-scale));
-        font-family: var(--app-font-family);
-        background: var(--caipe-background, #020617);
-        color: var(--caipe-foreground, #e2e8f0);
-      }
-      * { box-sizing: border-box; }
-      [hidden] { display: none !important; }
-      body {
-        margin: 0;
-        min-height: 100vh;
-        font-size: 1rem;
-        font-family: var(--app-font-family);
-        line-height: 1.45;
-        background:
-          radial-gradient(circle at 10% 8%, rgba(34, 197, 94, 0.18), transparent 28rem),
-          radial-gradient(circle at 84% 16%, rgba(59, 130, 246, 0.14), transparent 30rem),
-          var(--caipe-background, #020617);
-      }
-      main { max-width: 1340px; margin: 0 auto; padding: ${compact ? "14px" : "18px 18px 24px"}; }
-      .hero, .panel, .assistant {
-        border: 1px solid var(--caipe-border, rgba(255,255,255,0.10));
-        background: var(--caipe-card, rgba(15, 23, 42, 0.62));
-        box-shadow: 0 18px 50px var(--caipe-card, rgba(15, 23, 42, 0.18));
-        backdrop-filter: blur(14px);
-      }
-      .hero { border-radius: 14px; padding: 12px 16px; margin-bottom: 10px; overflow: hidden; position: relative; }
-      .hero-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-      .hero-title { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 220px; }
-      .eyebrow { display: inline-flex; gap: 7px; align-items: center; color: #86efac; letter-spacing: 0.16em; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; margin: 0; }
-      .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 999px; background: #22c55e; box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.12); }
-      h1 { margin: 0; font-size: 1.5rem; line-height: 1.15; letter-spacing: -0.025em; font-weight: 800; }
-      h2 { margin: 0 0 10px; font-size: 0.92rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #a7b4c8; }
-      .subtitle { color: #a7b4c8; line-height: 1.55; font-size: 0.92rem; max-width: 720px; }
-      .data-status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; color: var(--caipe-foreground, #cbd5e1); font-size: 0.82rem; line-height: 1.45; }
-      .status-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--caipe-border, rgba(255,255,255,.1)); border-radius: 999px; background: var(--caipe-background, rgba(2,6,23,.48)); }
-      .status-chip.good { color: #a7f3d0; border-color: rgba(52,211,153,.28); }
-      .status-chip.warn { color: #fde68a; border-color: rgba(251,191,36,.28); }
-      .controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-      .run-history { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; margin-top: 8px; }
-      .run-history select { width: 100%; padding: 6px 10px; font-size: 0.78rem; }
-      .settings-fab { position: fixed; left: 18px; bottom: 24px; z-index: 31; display: inline-flex; align-items: center; gap: 7px; padding: 10px 13px; border: 1px solid rgba(125, 211, 252, 0.4); border-radius: 999px; background: var(--caipe-background, rgba(2, 6, 23, 0.9)); box-shadow: 0 18px 50px var(--caipe-background, rgba(2, 6, 23, 0.34)); color: #e0f2fe; font-size: 0.86rem; font-weight: 1000; letter-spacing: 0.08em; text-transform: uppercase; backdrop-filter: blur(18px); }
-      .settings-fab:hover { border-color: rgba(125, 211, 252, 0.75); background: rgba(14, 165, 233, 0.18); }
-      .font-customizer { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; position: fixed; left: 18px; bottom: 74px; z-index: 30; max-width: calc(100vw - 36px); padding: 8px 10px; border: 1px solid var(--caipe-border, rgba(255,255,255,0.12)); border-radius: 18px; background: var(--caipe-background, rgba(2, 6, 23, 0.92)); box-shadow: 0 18px 50px var(--caipe-background, rgba(2, 6, 23, 0.34)); backdrop-filter: blur(18px); font-size: 0.78rem; line-height: 1; }
-      .font-customizer[hidden] { display: none; }
-      .font-dock-title { color: var(--caipe-foreground, #e2e8f0); font-size: 0.72rem; font-weight: 1000; letter-spacing: 0.1em; text-transform: uppercase; }
-      .font-customizer label { display: inline-flex; align-items: center; gap: 6px; color: var(--caipe-foreground, #cbd5e1); font-size: 0.72rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
-      .font-customizer select { min-width: 82px; padding: 7px 10px; font-size: 0.86rem; line-height: 1; }
-      input, select, textarea, button {
-        border-radius: 8px;
-        border: 1px solid var(--caipe-border, rgba(255,255,255,0.12));
-        background: var(--caipe-background, rgba(2, 6, 23, 0.72));
-        color: var(--caipe-foreground, #e2e8f0);
-        padding: 7px 10px;
-        font-family: inherit;
-        font-size: 0.78rem;
-      }
-      .controls input, .controls select { min-height: 38px; padding: 7px 10px; font-size: 0.84rem; }
-      .controls button { min-height: 38px; padding: 7px 12px; font-size: 0.84rem; }
-      input { min-width: 180px; }
-      textarea { border-radius: 10px; min-height: 76px; width: 100%; resize: vertical; line-height: 1.45; }
-      button { cursor: pointer; border: 0; font-weight: 700; background: linear-gradient(135deg, #22c55e, #0ea5e9); color: white; }
-      button.ghost { background: var(--caipe-background, rgba(2, 6, 23, 0.72)); border: 1px solid var(--caipe-border, rgba(255,255,255,0.12)); font-weight: 600; }
-      button:disabled { opacity: 0.6; cursor: wait; }
-      :is(a, button, input, select, textarea, summary):focus-visible { outline: 3px solid rgba(103, 232, 249, 0.78); outline-offset: 2px; }
-      .shell { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr); gap: 12px; margin-top: 10px; }
-      .panel, .assistant { border-radius: 14px; padding: 12px 14px; }
-      .panel + .panel { margin-top: 10px; }
-      .assistant { position: sticky; top: 12px; align-self: start; }
-      .assistant button { width: 100%; }
-      .assistant button + button { margin-top: 6px; }
-      .kpi-strip { display: grid; grid-template-columns: 1.4fr repeat(5, minmax(0, 1fr)); gap: 8px; }
-      .kpi {
-        border-radius: 12px;
-        background: linear-gradient(180deg, var(--caipe-card, rgba(15, 23, 42, 0.72)), var(--caipe-background, rgba(2, 6, 23, 0.65)));
-        border: 1px solid var(--caipe-border, rgba(255,255,255,0.08));
-        padding: 10px 12px;
-        position: relative;
-        overflow: hidden;
-        min-height: 78px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        gap: 4px;
-      }
-      .kpi.accent-good { border-color: rgba(52, 211, 153, 0.30); }
-      .kpi.accent-attention { border-color: rgba(56, 189, 248, 0.28); }
-      .kpi.accent-warn { border-color: rgba(248, 191, 36, 0.32); }
-      .kpi.accent-danger { border-color: rgba(248, 113, 113, 0.32); }
-      .kpi .kpi-label {
-        color: var(--caipe-muted-foreground, #94a3b8);
-        font-size: 0.7rem;
-        font-weight: 800;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-      .kpi .kpi-value {
-        color: var(--caipe-foreground, #f8fafc);
-        font-size: 1.42rem;
-        font-weight: 800;
-        letter-spacing: -0.025em;
-        line-height: 1.05;
-      }
-      .kpi .kpi-sub { color: var(--caipe-muted-foreground, #94a3b8); font-size: 0.78rem; font-weight: 600; }
-      .insights-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-      .insight {
-        flex: 1 1 200px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 10px;
-        border-radius: 10px;
-        background: var(--caipe-background, rgba(2, 6, 23, 0.55));
-        border: 1px solid var(--caipe-border, rgba(255,255,255,0.07));
-        font-size: 0.78rem;
-      }
-      .insight .insight-icon { font-size: 1.14rem; line-height: 1; }
-      .insight .insight-text { color: var(--caipe-foreground, #e2e8f0); line-height: 1.3; }
-      .insight .insight-text strong { color: var(--caipe-foreground, #f8fafc); font-weight: 700; }
-      .insight .insight-text small { display: block; color: var(--caipe-muted-foreground, #94a3b8); font-size: 0.72rem; font-weight: 500; margin-top: 1px; }
-      .progress-bar { width: 100%; height: 5px; background: rgba(148,163,184,0.18); border-radius: 999px; overflow: hidden; margin-top: 4px; }
-      .progress-fill { height: 100%; background: linear-gradient(90deg, #34d399, #38bdf8); }
-      .repo-health-card, .action-card {
-        border: 1px solid var(--caipe-border, rgba(255,255,255,0.08));
-        border-radius: 10px;
-        padding: 10px 12px;
-        background: var(--caipe-background, rgba(2, 6, 23, 0.45));
-        font-size: 0.84rem;
-      }
-      .repo-health-card strong, .action-card strong { color: var(--caipe-foreground, #f8fafc); font-size: 0.86rem; font-weight: 700; display: block; margin-top: 2px; }
-      .repo-health-card p, .action-card p { margin: 4px 0 0; color: var(--caipe-foreground, #cbd5e1); line-height: 1.45; }
-      .label { color: var(--caipe-muted-foreground, #94a3b8); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
-      .action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-      .empty-state { grid-column: 1 / -1; padding: 22px; border: 1px dashed rgba(125,211,252,.32); border-radius: 12px; background: rgba(14,165,233,.06); }
-      .empty-state strong { display: block; color: #e0f2fe; font-size: 1rem; margin-bottom: 5px; }
-      .empty-state p { margin: 0; color: #a7b4c8; font-size: .88rem; line-height: 1.55; }
-      .repo-profile { margin-top: 10px; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; }
-      .repo-profile .repo-health-card { min-height: 68px; }
-      .repo-link { color: var(--caipe-primary, #7dd3fc); text-decoration: none; overflow-wrap: anywhere; }
-      .repo-link:hover { text-decoration: underline; }
-      .report-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-      .chart-card { min-height: 220px; }
-      .chart-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; margin-bottom: 10px; }
-      .chart-head strong { color: var(--caipe-foreground, #f8fafc); font-size: 0.92rem; }
-      .chart-head span, .coverage { color: var(--caipe-muted-foreground, #94a3b8); font-size: 0.72rem; line-height: 1.4; }
-      .bar-chart { height: 118px; display: flex; align-items: end; gap: 5px; padding-top: 8px; border-bottom: 1px solid rgba(148,163,184,.2); }
-      .bar { flex: 1; min-width: 4px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, #38bdf8, #22c55e); position: relative; }
-      .bar:hover::after { content: attr(data-label); position: absolute; left: 50%; bottom: calc(100% + 5px); transform: translateX(-50%); z-index: 3; white-space: nowrap; padding: 4px 6px; border-radius: 5px; background: var(--caipe-background, #020617); color: var(--caipe-foreground, #e2e8f0); font-size: .68rem; }
-      .axis-labels { display: flex; justify-content: space-between; color: #64748b; font-size: .66rem; margin-top: 5px; }
-      .sparkline { width: 100%; height: 118px; overflow: visible; }
-      .sparkline .line { fill: none; stroke: #34d399; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
-      .sparkline .area { fill: url(#starGradient); opacity: .34; }
-      .practice-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-      .practice { padding: 9px; border-radius: 9px; border: 1px solid var(--caipe-border, rgba(255,255,255,.08)); background: var(--caipe-background, rgba(2,6,23,.42)); }
-      .practice.good { border-color: rgba(52,211,153,.32); }
-      .practice.warn { border-color: rgba(251,191,36,.28); }
-      .framework-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-      .framework-links a { color: var(--caipe-primary, #7dd3fc); border: 1px solid rgba(125,211,252,.22); border-radius: 999px; padding: 5px 9px; text-decoration: none; font-size: .75rem; }
-      .readiness-head { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: baseline; margin: 14px 0 8px; }
-      .readiness-head strong { color: var(--caipe-foreground, #f8fafc); }
-      .readiness-head span { color: var(--caipe-muted-foreground, #94a3b8); font-size: .75rem; }
-      .criteria-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-      .criterion { padding: 9px 10px; border-radius: 9px; background: var(--caipe-background, rgba(2,6,23,.42)); border: 1px solid rgba(148,163,184,.18); }
-      .criterion.pass { border-color: rgba(52,211,153,.34); }
-      .criterion.warn { border-color: rgba(251,191,36,.34); }
-      .criterion.manual, .criterion.unavailable { border-color: rgba(56,189,248,.28); }
-      .criterion p { margin: 5px 0 0; color: #a7b4c8; font-size: .74rem; line-height: 1.4; }
-      .criterion .criterion-status { float: right; color: var(--caipe-foreground, #cbd5e1); font-size: .65rem; text-transform: uppercase; }
-      .severity-high { color: #fca5a5; }
-      .severity-medium { color: #fde68a; }
-      .maintainer-ask { border-left: 3px solid #22c55e; }
-      .message { margin-top: 8px; border-radius: 10px; padding: 10px 12px; background: var(--caipe-background, rgba(2,6,23,0.45)); border: 1px solid var(--caipe-border, rgba(255,255,255,0.07)); color: var(--caipe-foreground, #cbd5e1); line-height: 1.55; white-space: pre-wrap; font-size: 0.84rem; }
-      .activity-footer { position: sticky; bottom: 12px; z-index: 5; margin-top: 12px; border: 1px solid var(--caipe-border, rgba(255,255,255,0.10)); border-radius: 14px; background: var(--caipe-background, rgba(2,6,23,0.92)); backdrop-filter: blur(18px); }
-      .activity-footer:has(details[open]) { position: relative; bottom: auto; background: var(--caipe-background, rgba(2,6,23,0.96)); }
-      .activity-footer summary { cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 14px; list-style: none; }
-      .activity-footer summary::-webkit-details-marker { display: none; }
-      .activity-footer details[open] summary { border-bottom: 1px solid var(--caipe-border, rgba(255,255,255,0.08)); }
-      .activity-footer details[open] .activity-drawer-body { max-height: 320px; overflow: auto; }
-      .run-status { display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 5px 10px; background: var(--caipe-card, rgba(15,23,42,0.9)); font-weight: 800; font-size: 0.78rem; border: 1px solid rgba(148, 163, 184, 0.18); }
-      .status-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--caipe-muted-foreground, #94a3b8); }
-      .active .status-dot { background: #38bdf8; animation: pulse 1s infinite; }
-      .done .status-dot { background: #22c55e; }
-      .error .status-dot { background: #ef4444; }
-      .activity-summary { color: var(--caipe-foreground, #cbd5e1); font-size: 0.78rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .activity-toggle-hint { color: var(--caipe-primary, #67e8f9); font-size: 0.78rem; font-weight: 800; }
-      .activity-drawer-body { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 12px; padding: 0 14px 14px; }
-      .activity-drawer-body h2 { font-size: 0.78rem; }
-      .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-      .timeline li { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--caipe-border, rgba(255,255,255,0.08)); border-radius: 10px; padding: 8px 10px; background: var(--caipe-card, rgba(15,23,42,0.54)); font-size: 0.78rem; }
-      .activity-spinner { width: 14px; height: 14px; border-radius: 999px; border: 2px solid rgba(148,163,184,0.30); border-top-color: #38bdf8; animation: spin 0.8s linear infinite; }
-      .activity-time { display: block; color: var(--caipe-muted-foreground, #94a3b8); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      @keyframes pulse { 50% { transform: scale(1.3); opacity: 0.7; } }
-      .example-link { color: var(--caipe-primary, #7dd3fc); font-size: 0.8rem; font-weight: 800; text-decoration: none; }
-      .example-link:hover { text-decoration: underline; }
-      body.compact .settings-fab,
-      body.compact .font-customizer,
-      body.compact #githubAgentId { display: none; }
-      @media (max-width: 1100px) {
-        .kpi-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        .report-grid { grid-template-columns: 1fr 1fr; }
-      }
-      @media (max-width: 760px) {
-        .shell, .activity-drawer-body { grid-template-columns: 1fr; }
-        .kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .action-grid { grid-template-columns: 1fr; }
-        .repo-profile { grid-template-columns: repeat(2,minmax(0,1fr)); }
-        .report-grid, .practice-grid, .criteria-grid { grid-template-columns: 1fr; }
-        .assistant { position: static; }
-        .font-customizer { position: static; margin: 12px 0 0; }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
-      }
-
-      :root[data-caipe-palette="host"] button:not(.ghost) { background: var(--caipe-primary); color: var(--caipe-primary-foreground); }
-</style>
+    <style>${dashboardStyles}\n${ossRepoStyles}</style>
   </head>
   <body class="${compact ? "compact" : "standalone"}">
     <main>
-      <section class="hero">
-        <div class="hero-row">
-          <div class="hero-title">
-            <p class="eyebrow"><span class="pulse"></span>GitHub REST API • CAS protected</p>
-            <h1>OSS Repo Report Card</h1>
-            <p class="subtitle">Source-backed adoption, engagement, delivery, contributor, and security trends for an open source repository.</p>
-          </div>
-          <div class="controls">
-            <input id="repoInput" value="${escapeHtml(defaultRepoName)}" aria-label="Repository owner/repo" placeholder="owner/repo or GitHub URL" />
-            <button id="runAnalysis">Generate report card</button>
-            <button id="downloadMarkdown" class="ghost" type="button" disabled>Download Markdown</button>
-            <a class="example-link" href="${basePath}/example">Static example</a>
-          </div>
-        </div>
-        <div class="run-history">
-          <select id="runHistory" aria-label="Cached OSS repo report cards"><option value="">No cached report cards yet</option></select>
-        </div>
-        <div class="data-status" id="dataStatus" role="status" aria-live="polite">
-          <span class="status-chip good">CAS ${escapeHtml(authorization?.launchDecision || "verified")}</span>
-          <span class="status-chip ${githubToken ? "good" : "warn"}">GitHub ${githubToken ? "server credential" : "public API"}</span>
-          <span>Enter a repository to load a live snapshot.</span>
-        </div>
+      <header class="page-header">
+        <div><h1>OSS Repo Report Card</h1><p class="subtitle">Explore repository adoption, delivery, community health, and security controls.</p></div>
+        <div class="actions"><button id="downloadMarkdown" type="button" disabled>Download Markdown</button><button id="settingsToggle" type="button" aria-expanded="false" aria-controls="fontCustomizer">View settings</button><button id="openAssistantChat" type="button">Ask GitHub</button></div>
+      </header>
+      <section class="panel scope-panel" aria-label="Repository scope">
+        <div class="controls"><label class="grow">Repository<input id="repoInput" value="${escapeHtml(defaultRepoName)}" aria-label="Repository owner/repo" placeholder="owner/repo or GitHub URL" /></label><button id="runAnalysis" class="primary">Refresh repository</button><a class="button" href="${basePath}/example">Static example</a></div>
+        <div class="data-status" id="dataStatus" role="status" aria-live="polite"><span class="status-chip good">Access verified</span><span class="status-chip ${githubToken ? "good" : "warn"}">GitHub ${githubToken ? "connected" : "public API"}</span><span>Enter a repository to load a live snapshot.</span></div>
+        <details class="view-settings"><summary>Saved report cards</summary><div class="run-history"><select id="runHistory" aria-label="Cached OSS repo report cards"><option value="">No cached report cards yet</option></select></div></details>
       </section>
-
-      <button class="settings-fab" id="settingsToggle" type="button" aria-expanded="false" aria-controls="fontCustomizer">Settings</button>
-      <div class="font-customizer font-dock" id="fontCustomizer" aria-label="Font customization" hidden>
+      <div class="font-customizer" id="fontCustomizer" aria-label="Font customization" hidden>
         <span class="font-dock-title">View settings</span>
-        <label>Font <select id="fontFamilySelect" aria-label="Font family"><option value="inter">Inter</option><option value="system">System</option><option value="mono">Mono</option><option value="serif">Serif</option></select></label>
-        <label>Size <select id="fontScaleSelect" aria-label="Text size"><option value="small">Small</option><option value="default">Default</option><option value="large">Large</option><option value="xl">XL</option></select></label>
+        <label>Font<select id="fontFamilySelect" aria-label="Font family"><option value="inter">Inter</option><option value="system">System</option><option value="mono">Mono</option><option value="serif">Serif</option></select></label>
+        <label>Size<select id="fontScaleSelect" aria-label="Text size"><option value="small">Small</option><option value="default">Default</option><option value="large">Large</option><option value="xl">XL</option></select></label>
       </div>
 
-      <div class="panel">
+      <section class="summary-section">
         <h2>Report card summary</h2>
         <div class="kpi-strip" id="summaryCards"></div>
         <div class="insights-strip" id="insightsStrip" hidden></div>
         <div class="repo-profile" id="repoProfile" hidden></div>
-      </div>
+      </section>
 
       <div class="panel" id="trendsPanel" hidden>
         <h2>12-week trends</h2>
@@ -561,24 +324,17 @@ function renderDashboard({ compact, basePath, authorization }) {
         <div class="framework-links" id="frameworkLinks"></div>
       </div>
 
-      <div class="shell">
-        <section>
-          <div class="panel">
-            <h2>Maintainer Action Cards</h2>
-            <div class="action-grid" id="actionCards"></div>
-          </div>
-        </section>
-        <aside class="assistant">
-          <p class="eyebrow">Maintainer copilot</p>
-          <h2>Repo Report Card Assistant</h2>
-          <p class="subtitle">Share the verified repository snapshot with Grid, then ask about triage, review queues, or release readiness.</p>
-          <input id="githubAgentId" aria-label="GitHub agent id" value="${escapeHtml(defaultGithubAgentId)}" style="width: 100%; margin: 8px 0;" />
-          <textarea id="questionInput" aria-label="Repository question" placeholder="Ask: what needs maintainer attention in this repo?"></textarea>
-          <button id="openAssistantChat" style="margin-top: 8px;" type="button">Ask with current context</button>
-          <button id="askRepoCopilot" class="ghost" ${defaultGithubAgentId ? "" : "hidden"}>Generate optional agent brief</button>
-          <div class="message" id="copilotMessage">${defaultGithubAgentId ? "Optional GitHub agent is configured." : "Live metrics use GitHub directly. No optional repository agent is configured."}</div>
-        </aside>
-      </div>
+      <section class="panel">
+        <h2>Maintainer actions</h2><div class="action-grid" id="actionCards"></div>
+      </section>
+      <details class="panel assistant">
+        <summary>Repository analysis</summary>
+        <p class="subtitle">Ask about triage, review queues, or release readiness using the current repository snapshot.</p>
+        <div class="assistant-fields"><label>Question<textarea id="questionInput" aria-label="Repository question" placeholder="What needs maintainer attention in this repository?"></textarea></label></div>
+        <details class="advanced"><summary>Advanced options</summary><label>Agent identifier<input id="githubAgentId" aria-label="GitHub agent id" value="${escapeHtml(defaultGithubAgentId)}" /></label></details>
+        <div class="actions"><button id="askRepoCopilot" ${defaultGithubAgentId ? "" : "hidden"}>Generate optional agent brief</button></div>
+        <div class="message" id="copilotMessage">${defaultGithubAgentId ? "Optional GitHub agent is configured." : "Open Ask GitHub to discuss the current repository snapshot."}</div>
+      </details>
 
       <footer class="activity-footer" id="activityFooter" ${defaultGithubAgentId ? "" : "hidden"}>
         <details id="activityDrawer">
@@ -780,7 +536,7 @@ function renderDashboard({ compact, basePath, authorization }) {
         document.getElementById("trendsPanel").hidden = true;
         document.getElementById("healthPanel").hidden = true;
         document.getElementById("actionCards").innerHTML = '<div class="empty-state"><strong>Source access needs attention</strong><p>Check the repository name and server-side GitHub credential, then retry.</p></div>';
-        document.getElementById("dataStatus").innerHTML = '<span class="status-chip good">CAS ${escapeHtml(authorization?.launchDecision || "verified")}</span><span class="status-chip warn">GitHub request failed</span><span>' + escapeHtml(message) + '</span>';
+        document.getElementById("dataStatus").innerHTML = '<span class="status-chip good">Access verified</span><span class="status-chip warn">GitHub request failed</span><span>' + escapeHtml(message) + '</span>';
         copilotMessage.textContent = "Repository context was not published because the GitHub source could not be verified.";
       }
 
@@ -813,7 +569,7 @@ function renderDashboard({ compact, basePath, authorization }) {
           ? "Browser cache"
           : dashboard?.delivery?.cache === "hit" ? "Runtime cache hit" : "Fresh source report";
         node.innerHTML =
-          '<span class="status-chip good">CAS ${escapeHtml(authorization?.launchDecision || "verified")}</span>' +
+          '<span class="status-chip good">Access verified</span>' +
           '<span class="status-chip good">Source: ' + escapeHtml(source) + '</span>' +
           '<span class="status-chip">Access: ' + escapeHtml(accessMode) + '</span>' +
           '<span class="status-chip">' + escapeHtml(cacheStatus) + '</span>' +

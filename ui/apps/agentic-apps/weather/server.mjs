@@ -7,6 +7,8 @@ import { handleAppMcpRequest } from "../../_lib/app-mcp-server.mjs";
 import { renderAgenticAppConversationClient } from "../../_lib/conversation-client.mjs";
 import { createRequiredAgenticAppJwtVerifier } from "../../_lib/jwt-verify.mjs";
 import { renderMicrofrontendClient } from "../../_lib/microfrontend-client.mjs";
+import { dashboardStyles } from "../../_lib/dashboard-styles.mjs";
+import { weatherStyles } from "./styles.mjs";
 import { authorizeAgenticAppRuntimeRequest } from "../../_lib/runtime-authorization.mjs";
 import {
   resolveAgenticAppRuntimeBasePath,
@@ -269,486 +271,23 @@ function renderDashboard({ compact, basePath, appPath }) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Weather Lab</title>
-    <style>
-      :root {
-        color-scheme: dark;
-        --app-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        --app-font-scale: 1;
-        font-size: calc(16px * var(--app-font-scale));
-        font-family: var(--app-font-family);
-        background: var(--caipe-background, #020617);
-        color: var(--caipe-foreground, #e2e8f0);
-      }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        min-height: 100vh;
-        font-size: 1rem;
-        font-family: var(--app-font-family);
-        line-height: 1.45;
-        background:
-          radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.22), transparent 28rem),
-          radial-gradient(circle at 85% 20%, rgba(20, 184, 166, 0.16), transparent 26rem),
-          radial-gradient(circle at 70% 95%, rgba(124, 58, 237, 0.14), transparent 32rem),
-          var(--caipe-background, #020617);
-      }
-      main { max-width: 1340px; margin: 0 auto; padding: ${compact ? "14px" : "18px 18px 24px"}; }
-      .shell {
-        display: grid;
-        grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
-        gap: 12px;
-        margin-top: 10px;
-      }
-      .hero, .panel, .copilot {
-        border: 1px solid var(--caipe-border, rgba(255,255,255,0.10));
-        background: var(--caipe-card, rgba(15, 23, 42, 0.62));
-        box-shadow: 0 18px 50px rgba(8, 47, 73, 0.18);
-        backdrop-filter: blur(14px);
-      }
-      .hero { border-radius: 14px; padding: 12px 16px; margin-bottom: 10px; position: relative; overflow: hidden; }
-      .hero-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-      .hero-title { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 240px; }
-      .eyebrow {
-        margin: 0;
-        color: var(--caipe-primary, #67e8f9);
-        font-size: 0.64rem;
-        font-weight: 800;
-        letter-spacing: 0.22em;
-        text-transform: uppercase;
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-      }
-      h1 { margin: 0; font-size: 1.28rem; line-height: 1.15; letter-spacing: -0.025em; font-weight: 800; }
-      h2 { margin: 0 0 8px; font-size: 0.86rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--caipe-muted-foreground, #94a3b8); }
-      .subtitle { color: var(--caipe-muted-foreground, #94a3b8); line-height: 1.5; font-size: 0.86rem; max-width: 720px; }
-      .hero-status { display: inline-flex; }
-      .dashboard-status {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        max-width: min(360px, 42vw);
-        border-radius: 999px;
-        border: 1px solid rgba(56, 189, 248, 0.30);
-        background: var(--caipe-background, rgba(2, 6, 23, 0.72));
-        color: #bae6fd;
-        padding: 5px 10px;
-        font-size: 0.72rem;
-        font-weight: 800;
-        cursor: help;
-        backdrop-filter: blur(18px);
-      }
-      .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 999px;
-        background: currentColor;
-        box-shadow: 0 0 0 6px rgba(56, 189, 248, 0.10);
-      }
-      .run-history {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 10px;
-        max-width: 720px;
-      }
-      .run-history select { flex: 1; min-width: 220px; }
-      .controls { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 0; align-items: center; }
-      .font-customizer {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-        position: fixed;
-        left: 18px;
-        bottom: 74px;
-        z-index: 30;
-        max-width: calc(100vw - 36px);
-        padding: 8px 10px;
-        border: 1px solid var(--caipe-border, rgba(255,255,255,0.12));
-        border-radius: 18px;
-        background: var(--caipe-background, rgba(2, 6, 23, 0.88));
-        box-shadow: 0 18px 50px var(--caipe-background, rgba(2, 6, 23, 0.34));
-        backdrop-filter: blur(18px);
-        font-size: 0.78rem;
-        line-height: 1;
-      }
-      .font-dock-title {
-        color: var(--caipe-foreground, #e2e8f0);
-        font-size: 0.72rem;
-        font-weight: 1000;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-      }
-      .font-customizer label {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        color: var(--caipe-foreground, #cbd5e1);
-        font-size: 0.72rem;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-      .font-customizer select { min-width: 82px; padding: 7px 10px; font-size: 0.86rem; line-height: 1; }
-      input, button, select {
-        border-radius: 8px;
-        border: 1px solid var(--caipe-border, rgba(255,255,255,0.14));
-        background: var(--caipe-background, rgba(2, 6, 23, 0.72));
-        color: var(--caipe-foreground, #e2e8f0);
-        padding: 7px 10px;
-        font-family: inherit;
-        font-size: 0.78rem;
-      }
-      .controls input, .controls select, .controls button { min-height: 38px; padding: 7px 12px; font-size: 0.84rem; }
-      .weather-question-input {
-        display: block;
-        width: 100%;
-        min-height: 76px;
-        margin-top: 8px;
-        border-radius: 10px;
-        border: 1px solid var(--caipe-border, rgba(255,255,255,0.14));
-        background: var(--caipe-background, rgba(2, 6, 23, 0.72));
-        color: var(--caipe-foreground, #e2e8f0);
-        padding: 8px 10px;
-        font: inherit;
-        font-size: 0.78rem;
-        line-height: 1.45;
-        resize: vertical;
-        overflow: auto;
-      }
-      .weather-question-input::placeholder { color: var(--caipe-muted-foreground, #94a3b8); opacity: 0.85; }
-      button { cursor: pointer; background: linear-gradient(135deg, #0284c7, #10b981); font-weight: 700; border: 0; }
-      button.ghost { background: var(--caipe-background, rgba(2, 6, 23, 0.72)); border: 1px solid var(--caipe-border, rgba(255,255,255,0.14)); font-weight: 600; }
-      .panel, .copilot { border-radius: 14px; padding: 12px 14px; }
-      .panel + .panel { margin-top: 10px; }
-
-      .kpi-strip { display: grid; grid-template-columns: 1.4fr repeat(5, minmax(0, 1fr)); gap: 8px; }
-      .kpi {
-        border-radius: 12px;
-        background: linear-gradient(180deg, var(--caipe-card, rgba(15, 23, 42, 0.72)), var(--caipe-background, rgba(2, 6, 23, 0.65)));
-        border: 1px solid var(--caipe-border, rgba(255,255,255,0.08));
-        padding: 10px 12px;
-        position: relative;
-        overflow: hidden;
-        min-height: 80px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        gap: 4px;
-      }
-      .kpi.accent-good { border-color: rgba(52, 211, 153, 0.30); }
-      .kpi.accent-attention { border-color: rgba(56, 189, 248, 0.30); }
-      .kpi.accent-warn { border-color: rgba(248, 191, 36, 0.32); }
-      .kpi.accent-danger { border-color: rgba(248, 113, 113, 0.32); }
-      .kpi .kpi-label { color: var(--caipe-muted-foreground, #94a3b8); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
-      .kpi .kpi-value { color: var(--caipe-foreground, #f8fafc); font-size: 1.42rem; font-weight: 800; letter-spacing: -0.025em; line-height: 1.05; display: flex; align-items: center; gap: 6px; }
-      .kpi .kpi-icon { font-size: 1.14rem; }
-      .kpi .kpi-sub { color: var(--caipe-muted-foreground, #94a3b8); font-size: 0.78rem; font-weight: 600; }
-      .insights-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-      .insight {
-        flex: 1 1 200px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 10px;
-        border-radius: 10px;
-        background: var(--caipe-background, rgba(2, 6, 23, 0.55));
-        border: 1px solid var(--caipe-border, rgba(255,255,255,0.07));
-        font-size: 0.78rem;
-      }
-      .insight .insight-icon { font-size: 1.14rem; line-height: 1; }
-      .insight .insight-text { color: var(--caipe-foreground, #e2e8f0); line-height: 1.3; }
-      .insight .insight-text strong { color: var(--caipe-foreground, #f8fafc); font-weight: 700; }
-      .insight .insight-text small { display: block; color: var(--caipe-muted-foreground, #94a3b8); font-size: 0.72rem; font-weight: 500; margin-top: 1px; }
-
-      .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 0; }
-      .metric, .day, .message, .insight-card, .alert-row {
-        border-radius: 10px;
-        background: var(--caipe-background, rgba(2, 6, 23, 0.48));
-        border: 1px solid var(--caipe-border, rgba(255,255,255,0.07));
-        padding: 10px 12px;
-      }
-      .metric .icon { display: block; font-size: 0.92rem; margin-bottom: 4px; }
-      .label { color: var(--caipe-muted-foreground, #94a3b8); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.10em; text-transform: uppercase; }
-      .value { margin-top: 4px; font-size: 1.28rem; font-weight: 800; color: white; letter-spacing: -0.025em; }
-      .insight-card {
-        border-color: rgba(125, 211, 252, 0.22);
-        background: linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(20, 184, 166, 0.08));
-      }
-      .insight-card strong { color: var(--caipe-foreground, #f8fafc); font-size: 0.92rem; font-weight: 700; }
-      .insight-card p { margin: 5px 0 0; color: var(--caipe-foreground, #cbd5e1); line-height: 1.55; font-size: 0.84rem; }
-      .risk-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-      .risk-pill {
-        border-radius: 999px;
-        border: 1px solid rgba(251, 191, 36, 0.3);
-        background: rgba(120, 53, 15, 0.22);
-        color: #fde68a;
-        padding: 3px 8px;
-        font-size: 0.72rem;
-        font-weight: 800;
-      }
-      .chart { width: 100%; min-height: 160px; margin-top: 6px; }
-      .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
-      .day {
-        cursor: pointer;
-        min-height: 124px;
-        display: grid;
-        align-content: space-between;
-        gap: 6px;
-        padding: 8px 10px;
-        transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
-      }
-      .day:hover {
-        border-color: rgba(103, 232, 249, 0.42);
-        background: linear-gradient(180deg, rgba(14, 165, 233, 0.14), var(--caipe-background, rgba(2, 6, 23, 0.55)));
-        transform: translateY(-2px);
-      }
-      .day-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-      .day strong { color: white; font-size: 0.86rem; letter-spacing: -0.01em; font-weight: 700; }
-      .weather-icon { font-size: 1.28rem; line-height: 1; filter: drop-shadow(0 6px 12px rgba(56, 189, 248, 0.18)); }
-      .condition { color: var(--caipe-foreground, #cbd5e1); font-size: 0.72rem; font-weight: 600; line-height: 1.25; min-height: 28px; }
-      .forecast-temps { color: white; font-size: 1.05rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
-      .forecast-temps .low { color: #93c5fd; font-size: 0.78rem; font-weight: 600; }
-      .forecast-meta { display: flex; flex-wrap: wrap; gap: 4px; }
-      .forecast-chip {
-        border-radius: 999px;
-        border: 1px solid rgba(148, 163, 184, 0.18);
-        background: var(--caipe-card, rgba(15, 23, 42, 0.78));
-        color: var(--caipe-foreground, #cbd5e1);
-        padding: 2px 6px;
-        font-size: 0.64rem;
-        font-weight: 700;
-      }
-      .air-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-      .alert-row { margin-top: 6px; border-color: rgba(251, 113, 133, 0.24); padding: 8px 10px; }
-      .alert-row strong { color: #fecaca; font-size: 0.86rem; }
-      .alert-row span { display: block; margin-top: 3px; color: var(--caipe-foreground, #cbd5e1); font-size: 0.78rem; line-height: 1.45; }
-      .copilot { position: sticky; top: 12px; align-self: start; }
-      .copilot button { width: 100%; }
-      .copilot button + button { margin-top: 6px; }
-      .copilot input, .copilot select { width: 100%; }
-      .message { margin-top: 8px; color: var(--caipe-foreground, #cbd5e1); line-height: 1.55; font-size: 0.84rem; padding: 10px 12px; }
-      .message strong { color: #bae6fd; }
-      .markdown-report h1, .markdown-report h2, .markdown-report h3 { margin: 0.45rem 0 0.25rem; color: #e0f2fe; }
-      .markdown-report p { margin: 0.35rem 0; }
-      .markdown-report ul, .markdown-report ol { margin: 0.35rem 0 0.35rem 1.1rem; padding: 0; }
-      .markdown-report li { margin: 0.2rem 0; }
-      .markdown-report code {
-        border-radius: 4px;
-        padding: 1px 4px;
-        background: var(--caipe-card, rgba(15, 23, 42, 0.72));
-        color: #bae6fd;
-      }
-      .markdown-report pre {
-        overflow: auto;
-        border-radius: 8px;
-        padding: 8px;
-        background: var(--caipe-card, rgba(15, 23, 42, 0.72));
-      }
-      .timeline {
-        display: grid;
-        gap: 6px;
-        margin: 0;
-        padding: 0;
-        list-style: none;
-      }
-      .timeline li {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
-        gap: 8px;
-        align-items: start;
-        border-radius: 10px;
-        border: 1px solid var(--caipe-border, rgba(255,255,255,0.08));
-        background: var(--caipe-background, rgba(2, 6, 23, 0.5));
-        padding: 8px 10px;
-        color: var(--caipe-foreground, #cbd5e1);
-        font-size: 0.78rem;
-      }
-      .timeline li.active {
-        border-color: rgba(56, 189, 248, 0.65);
-        color: #bae6fd;
-        box-shadow: 0 0 28px rgba(14, 165, 233, 0.12);
-      }
-      .timeline li.done { border-color: rgba(52, 211, 153, 0.42); color: #bbf7d0; }
-      .timeline li.error { border-color: rgba(248, 113, 113, 0.45); color: #fecaca; }
-      .run-status {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        border-radius: 999px;
-        border: 1px solid var(--caipe-border, rgba(255,255,255,0.12));
-        background: var(--caipe-background, rgba(2, 6, 23, 0.72));
-        padding: 5px 10px;
-        font-size: 0.78rem;
-        font-weight: 800;
-      }
-      .run-status.active { border-color: rgba(56, 189, 248, 0.5); color: #bae6fd; }
-      .run-status.done { border-color: rgba(52, 211, 153, 0.45); color: #bbf7d0; }
-      .run-status.error { border-color: rgba(248, 113, 113, 0.45); color: #fecaca; }
-      .run-status.active .status-dot { animation: statusPulse 1s ease-in-out infinite; }
-      @keyframes statusPulse {
-        0%, 100% { transform: scale(1); opacity: 0.75; }
-        50% { transform: scale(1.35); opacity: 1; }
-      }
-      .activity-spinner {
-        width: 14px;
-        height: 14px;
-        border-radius: 999px;
-        border: 2px solid rgba(186, 230, 253, 0.25);
-        border-top-color: #38bdf8;
-        animation: spin 0.85s linear infinite;
-      }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      .activity-content { min-width: 0; }
-      .activity-time {
-        display: block;
-        color: #64748b;
-        font-size: 0.64rem;
-        font-weight: 800;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
-      .activity-detail {
-        display: block;
-        margin-top: 3px;
-        color: var(--caipe-muted-foreground, #94a3b8);
-        font-size: 0.72rem;
-      }
-      .stream-content {
-        max-height: 220px;
-        overflow: auto;
-        white-space: pre-wrap;
-        background: rgba(8, 47, 73, 0.18);
-      }
-      .debug-events {
-        grid-column: 1 / -1;
-        border-top: 1px solid var(--caipe-border, rgba(255,255,255,0.08));
-        padding-top: 8px;
-      }
-      .debug-events summary {
-        cursor: pointer;
-        color: var(--caipe-muted-foreground, #94a3b8);
-        font-size: 0.76rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-      }
-      .activity-footer {
-        position: sticky;
-        bottom: 12px;
-        z-index: 20;
-        margin-top: 12px;
-      }
-      .activity-footer:has(details[open]) { position: relative; bottom: auto; }
-      .activity-footer details {
-        border-radius: 14px;
-        border: 1px solid rgba(56, 189, 248, 0.24);
-        background: var(--caipe-background, rgba(2, 6, 23, 0.86));
-        box-shadow: 0 18px 50px rgba(8, 47, 73, 0.22);
-        backdrop-filter: blur(18px);
-        overflow: hidden;
-      }
-      .activity-footer details[open] { background: var(--caipe-background, rgba(2, 6, 23, 0.96)); }
-      .activity-footer details[open] summary { border-bottom: 1px solid var(--caipe-border, rgba(255,255,255,0.08)); }
-      .activity-footer details[open] .activity-drawer-body { max-height: 320px; overflow: auto; }
-      .activity-footer summary {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 14px;
-        cursor: pointer;
-        list-style: none;
-      }
-      .activity-footer summary::-webkit-details-marker { display: none; }
-      .activity-summary { min-width: 0; flex: 1; color: var(--caipe-foreground, #cbd5e1); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .activity-toggle-hint { color: var(--caipe-primary, #67e8f9); font-size: 0.78rem; font-weight: 800; text-transform: uppercase; }
-      .activity-drawer-body {
-        display: grid;
-        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-        gap: 12px;
-        padding: 0 14px 14px;
-      }
-      .activity-drawer-body h2 { font-size: 0.78rem; }
-      .pulse {
-        display: inline-flex;
-        width: 8px;
-        height: 8px;
-        border-radius: 999px;
-        margin-right: 0;
-        background: #34d399;
-        box-shadow: 0 0 0 6px rgba(52,211,153,0.14);
-      }
-      :is(a, button, input, select, textarea, summary):focus-visible {
-        outline: 3px solid rgba(103, 232, 249, 0.78);
-        outline-offset: 2px;
-      }
-      @media (max-width: 1100px) {
-        .kpi-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        .days { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-      }
-      @media (max-width: 760px) {
-        .shell { grid-template-columns: 1fr; }
-        .kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .metrics, .air-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .days { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        .activity-drawer-body { grid-template-columns: 1fr; }
-        .copilot { position: static; }
-        .hero-status { position: relative; inset: auto; }
-        .dashboard-status { max-width: none; }
-        .font-customizer { position: static; margin: 12px 0 0; }
-      }
-      .example-link { color: var(--caipe-primary, #7dd3fc); font-size: 0.8rem; font-weight: 800; text-decoration: none; }
-      .example-link:hover { text-decoration: underline; }
-      body.compact .font-customizer,
-      body.compact .run-history,
-      body.compact .secondary-panel,
-      body.compact #agentId { display: none; }
-      .panel[hidden] { display: none; }
-      @media (max-width: 480px) {
-        .metrics, .air-grid { grid-template-columns: 1fr; }
-        .days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
-      }
-
-      :root[data-caipe-palette="host"] button:not(.ghost) { background: var(--caipe-primary); color: var(--caipe-primary-foreground); }
-</style>
+    <style>${dashboardStyles}\n${weatherStyles}</style>
   </head>
   <body class="${compact ? "compact" : "standalone"}">
     <main>
-      <section class="hero">
-        <div class="hero-row">
-          <div class="hero-title">
-            <p class="eyebrow"><span class="pulse"></span>Weather Lab • Open-Meteo • Embedded Agent</p>
-            <h1 id="locationTitle">Loading ${city}</h1>
-            <p class="subtitle">Current conditions, forecast, and practical guidance from live weather providers${weatherAgentConfigured ? " and the configured CAIPE Weather Agent" : ""}.</p>
-            <a class="example-link" href="${basePath}/example">View static example</a>
-          </div>
-          <div class="controls">
-            <input id="cityInput" value="${city}" aria-label="City" />
-            <select id="unitToggle" aria-label="Temperature unit">
-              <option value="fahrenheit" selected>Fahrenheit</option>
-              <option value="celsius">Celsius</option>
-            </select>
-            <button id="loadWeather">${weatherAgentConfigured ? "Refresh with agent" : "Refresh live weather"}</button>
-            <span class="hero-status">
-              <span class="dashboard-status" id="dashboardStatus" title="No forecast loaded yet." role="status" aria-live="polite">
-                <span class="status-dot" aria-hidden="true"></span>
-                Updated: loading
-              </span>
-            </span>
-          </div>
+      <header class="page-header">
+        <div><h1>Weather Lab</h1><p class="subtitle">Current conditions, forecasts, air quality, and weather alerts.</p></div>
+        <div class="actions"><a class="button" href="${basePath}/example">Static example</a><button id="openAssistantChat" type="button">Ask Weather</button></div>
+      </header>
+      <section class="panel scope-panel" aria-label="Weather scope">
+        <div class="controls">
+          <label class="grow">City<input id="cityInput" value="${city}" aria-label="City" /></label>
+          <label>Temperature unit<select id="unitToggle" aria-label="Temperature unit"><option value="fahrenheit" selected>Fahrenheit</option><option value="celsius">Celsius</option></select></label>
+          <button id="loadWeather" class="primary">${weatherAgentConfigured ? "Refresh with agent" : "Refresh live weather"}</button>
+          <span class="dashboard-status" id="dashboardStatus" title="No forecast loaded yet." role="status" aria-live="polite"><span class="status-dot" aria-hidden="true"></span>Updated: loading</span>
         </div>
-        <div class="run-history">
-          <select id="runHistory" aria-label="Previous Weather Agent runs">
-            <option value="">No previous runs loaded yet</option>
-          </select>
-          <button class="ghost" id="loadSelectedRun" type="button">Load run</button>
-        </div>
-      </section>
-
+        <details class="view-settings"><summary>View settings and saved forecasts</summary>
+          <div class="run-history"><select id="runHistory" aria-label="Previous Weather Agent runs"><option value="">No previous runs loaded yet</option></select><button id="loadSelectedRun" type="button">Load run</button></div>
       <div class="font-customizer font-dock" id="fontCustomizer" aria-label="Font customization">
         <span class="font-dock-title">View settings</span>
         <label>
@@ -770,67 +309,54 @@ function renderDashboard({ compact, basePath, appPath }) {
           </select>
         </label>
       </div>
+        </details>
+      </section>
 
-      <div class="panel">
-        <h2>Current conditions</h2>
+      <section class="summary-section">
+        <div class="section-heading"><h2>Current conditions</h2><p id="locationTitle" class="muted">Loading ${city}</p></div>
         <div class="kpi-strip" id="kpiStrip"></div>
         <div class="insights-strip" id="insightsStrip" hidden></div>
-      </div>
+      </section>
 
-      <div class="shell">
-        <section>
-          <div class="panel">
+      <div class="weather-content">
+          <div class="panel guidance-panel">
             <h2>How is my day?</h2>
             <div class="insight-card" id="howIsMyDay">
               <strong>Loading daily guidance...</strong>
               <p>Forecast, air quality, and alert context will appear here.</p>
             </div>
           </div>
-          <div class="panel secondary-panel">
+          <div class="panel conditions-panel">
             <h2>Live conditions detail</h2>
             <div class="metrics" id="metrics"></div>
           </div>
-          <div class="panel">
+          <div class="panel temperature-panel">
             <h2>24 hour temperature arc</h2>
             <svg class="chart" id="tempChart" viewBox="0 0 720 200" role="img" aria-label="24 hour temperature chart"></svg>
           </div>
-          <div class="panel">
+          <div class="panel air-quality-panel">
             <h2>Air quality</h2>
             <div id="aqiPanel" class="air-grid"></div>
           </div>
-          <div class="panel">
+          <div class="panel outlook-panel">
             <h2>7 day outlook</h2>
             <div class="days" id="days"></div>
           </div>
-          <div class="panel">
+          <div class="panel alerts-panel">
             <h2>National weather alerts</h2>
             <div id="alertRows" class="message">Checking national weather alerts...</div>
           </div>
-        </section>
-
-        <aside class="copilot">
-          <p class="eyebrow">Weather Intelligence</p>
-          <h2>${weatherAgentConfigured ? "Weather Agent" : "Weather Intelligence"}</h2>
-          <p class="subtitle">${weatherAgentConfigured ? "Ask the embedded weather panel to call your CAIPE Weather Agent and turn the forecast into an operational dashboard recommendation." : "Use live Open-Meteo forecast and air-quality data to build an operational dashboard recommendation."}</p>
-          <input id="agentId" aria-label="Weather agent id" value="${escapeHtml(defaultAgentId)}" style="margin: 8px 0;" />
-          <select id="intent">
-            <option value="forecast-summary">Forecast summary</option>
-            <option value="travel-planning">Travel planning</option>
-            <option value="deploy-window">Outdoor deploy window</option>
-            <option value="snow-conditions">Snow conditions</option>
-            <option value="weather-alert-explanation">Risk explanation</option>
-          </select>
-          <textarea
-            id="questionInput"
-            class="weather-question-input"
-            aria-label="Weather question"
-            rows="3"
-            placeholder="Ask a question, e.g. What are the snow conditions in Denver?"
-          ></textarea>
-          <button id="askCopilot" style="margin-top: 8px;">${weatherAgentConfigured ? "Run Weather Agent" : "Refresh live weather"}</button>
-          <button id="openAssistantChat" class="ghost" type="button">Open Ask Weather Chat</button>
+        <details class="panel copilot">
+          <summary>Weather analysis</summary>
+          <p class="subtitle">Explore travel plans, outdoor work, and weather risks using the current forecast.</p>
+          <div class="assistant-fields">
+            <label>Analysis<select id="intent"><option value="forecast-summary">Forecast summary</option><option value="travel-planning">Travel planning</option><option value="deploy-window">Outdoor deploy window</option><option value="snow-conditions">Snow conditions</option><option value="weather-alert-explanation">Risk explanation</option></select></label>
+            <label>Question<textarea id="questionInput" class="weather-question-input" aria-label="Weather question" rows="3" placeholder="Ask about the forecast, travel, or weather risks"></textarea></label>
+          </div>
+          <details class="advanced"><summary>Advanced options</summary><label>Agent identifier<input id="agentId" aria-label="Weather agent id" value="${escapeHtml(defaultAgentId)}" /></label></details>
+          <div class="actions"><button id="askCopilot" class="primary">${weatherAgentConfigured ? "Run Weather Agent" : "Refresh live weather"}</button></div>
           <div class="message" id="copilotMessage">Load a forecast, then ask for an insight.</div>
-        </aside>
+        </details>
       </div>
       <footer class="activity-footer" id="activityFooter">
         <details id="activityDrawer">
@@ -1510,7 +1036,7 @@ function renderDashboard({ compact, basePath, appPath }) {
           node.setAttribute("aria-label", "Share " + day.label + " forecast with CAIPE");
           node.addEventListener("click", () => publishAssistantContext(forecast, day));
           node.addEventListener("keydown", (event) => {
-            if (event.key === "Enter" || event.key === " ") publishAssistantContext(forecast, day);
+            if (event.key === "Enter" || event.key === " ") { event.preventDefault(); publishAssistantContext(forecast, day); }
           });
           node.innerHTML =
             '<div class="day-header">' +
@@ -1760,14 +1286,13 @@ function renderDashboard({ compact, basePath, appPath }) {
           return (index === 0 ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1);
         }).join(" ");
         tempChart.innerHTML =
-          '<defs><linearGradient id="tempGlow" x1="0" x2="1"><stop offset="0%" stop-color="#38bdf8"/><stop offset="55%" stop-color="#34d399"/><stop offset="100%" stop-color="#facc15"/></linearGradient></defs>' +
-          '<path d="' + path + '" fill="none" stroke="url(#tempGlow)" stroke-width="4" stroke-linecap="round"/>' +
+          '<path d="' + path + '" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>' +
           points.filter((_, index) => index % 4 === 0).map((point, index) => {
             const x = 28 + (index * 4) * (664 / Math.max(1, points.length - 1));
-            return '<text x="' + x.toFixed(1) + '" y="192" fill="#94a3b8" font-size="11" text-anchor="middle">' + escapeHtml(point.label) + '</text>';
+            return '<text x="' + x.toFixed(1) + '" y="192" fill="var(--muted)" font-size="11" text-anchor="middle">' + escapeHtml(point.label) + '</text>';
           }).join("") +
-          '<text x="20" y="26" fill="#bae6fd" font-size="11" font-weight="700">' + max + temperatureSuffix() + ' high</text>' +
-          '<text x="20" y="172" fill="#bae6fd" font-size="11" font-weight="700">' + min + temperatureSuffix() + ' low</text>';
+          '<text x="20" y="26" fill="var(--text)" font-size="11" font-weight="700">' + max + temperatureSuffix() + ' high</text>' +
+          '<text x="20" y="172" fill="var(--text)" font-size="11" font-weight="700">' + min + temperatureSuffix() + ' low</text>';
       }
 
       function displayTemperatureValue(valueC) {
