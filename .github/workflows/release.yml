@@ -87,6 +87,8 @@ jobs:
           build-args: |
             APP_ID=${{ matrix.id }}
             APP_PORT=${{ matrix.port }}
+            APP_BUILD_VERSION=${{ inputs.tag || github.ref_name }}
+            APP_BUILD_REVISION=${{ github.sha }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.metadata.outputs.tags }}

@@ -162,7 +162,7 @@ test("applies host density and text-scale preferences before notifying the app",
     },
   });
   const source = renderMicrofrontendClient("example-app")
-    .replace(/^<script>/, "")
+    .replace(/^[\s\S]*?<script>/, "")
     .replace(/<\/script>$/, "");
   vm.runInContext(source, context);
 
@@ -208,3 +208,12 @@ for (const kind of ["finops", "weather", "litellm", "oss-repo-management"]) {
     assert.doesNotMatch(html, /https?:\/\//i);
   });
 }
+
+
+test("build indicator reflects validated image build metadata", () => {
+  const html = renderMicrofrontendClient("example-app", { APP_BUILD_VERSION: "v1.2.3", APP_BUILD_REVISION: "abcdef0123456789" });
+  assert.match(html, /Build v1\.2\.3 · abcdef012345/);
+  assert.match(renderMicrofrontendClient("example-app", {}), /Build unavailable/);
+  const untrusted = renderMicrofrontendClient("example-app", { APP_BUILD_VERSION: "<script>alert(1)</script>", APP_BUILD_REVISION: "bad-sha" });
+  assert.match(untrusted, /Build unavailable/); assert.doesNotMatch(untrusted, /alert/);
+});

@@ -5,6 +5,9 @@ COPY ui/apps/agentic-apps/ec2/package.json ui/apps/agentic-apps/ec2/package-lock
 RUN npm ci --omit=dev --ignore-scripts
 
 FROM node:22-alpine AS runtime
+ARG APP_BUILD_VERSION=unknown
+ARG APP_BUILD_REVISION=unknown
+ENV APP_BUILD_VERSION=${APP_BUILD_VERSION} APP_BUILD_REVISION=${APP_BUILD_REVISION}
 WORKDIR /app
 ENV NODE_ENV=production
 RUN apk upgrade --no-cache \
