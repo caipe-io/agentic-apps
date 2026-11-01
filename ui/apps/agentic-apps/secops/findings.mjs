@@ -8,8 +8,10 @@ export function exposureSignals(instances, groups) {
     const dev = [tags.environment, tags.env, tags.stage, tags.name].some((value) => /(?:^|[^a-z0-9])(dev|development|test|staging|sandbox|nonprod)(?:$|[^a-z0-9])/i.test(value || ""));
     const interfaces = instance.NetworkInterfaces?.length ? instance.NetworkInterfaces : [{ Association: { PublicIp: instance.PublicIpAddress }, Groups: instance.SecurityGroups }];
     for (const nic of interfaces) {
-      const ipv4 = Boolean(nic.Association?.PublicIp);
-      const ipv6 = Boolean(nic.Ipv6Addresses?.length);
+      const ipv4Addresses = [...new Set([nic.Association?.PublicIp, ...(nic.PrivateIpAddresses || []).map((address) => address.Association?.PublicIp)].filter(Boolean))];
+      const ipv6Addresses = (nic.Ipv6Addresses || []).map((address) => address.Ipv6Address).filter(Boolean);
+      const ipv4 = ipv4Addresses.length > 0;
+      const ipv6 = ipv6Addresses.length > 0;
       if (!ipv4 && !ipv6) continue;
       if (!Array.isArray(nic.Groups) || !nic.Groups.length) throw new Error("Public interface security groups are unavailable.");
       for (const attachment of nic.Groups) {
@@ -22,9 +24,16 @@ export function exposureSignals(instances, groups) {
           if (!sources.length) continue;
           const protocol = String(rule.IpProtocol || "").toLowerCase();
           const tcp = ["tcp", "6", "-1"].includes(protocol);
-          const ssh = tcp && (protocol === "-1" || (rule.FromPort <= 22 && rule.ToPort >= 22));
-          if (!ssh && !dev) continue;
-          rows.push({ kind: ssh ? "public_ssh_candidate" : "public_dev_ingress_candidate", instanceId: instance.InstanceId, interfaceId: nic.NetworkInterfaceId || null, name: tags.name || instance.InstanceId, state: instance.State?.Name || "unknown", groupId: group.GroupId, protocol, ports: protocol === "-1" ? "all" : `${rule.FromPort ?? "?"}–${rule.ToPort ?? "?"}`, sources, devTagged: dev });
+          const udp = ["udp", "17"].includes(protocol);
+          const covers = (port) => protocol === "-1" || (Number.isInteger(rule.FromPort) && Number.isInteger(rule.ToPort) && rule.FromPort <= port && rule.ToPort >= port);
+          const servicePorts = [
+            { port: 22, service: "SSH" }, { port: 3389, service: "RDP" },
+            { port: 80, service: "HTTP" }, { port: 443, service: "HTTPS" },
+          ].filter(({ port }) => (tcp || udp) && covers(port))
+            .map(({ port, service }) => ({ port, service: udp && port !== 3389 ? `UDP/${port}` : service }));
+          if (!servicePorts.length && !dev) continue;
+          const ssh = tcp && covers(22);
+          rows.push({ kind: ssh ? "public_ssh_candidate" : servicePorts.length ? "public_service_ingress_candidate" : "public_dev_ingress_candidate", instanceId: instance.InstanceId, interfaceId: nic.NetworkInterfaceId || null, name: tags.name || instance.InstanceId, state: instance.State?.Name || "unknown", groupId: group.GroupId, protocol, ports: protocol === "-1" ? "all" : `${rule.FromPort ?? "?"}–${rule.ToPort ?? "?"}`, sources, servicePorts, addresses: [...(sources.includes("0.0.0.0/0") ? ipv4Addresses : []), ...(sources.includes("::/0") ? ipv6Addresses : [])], devTagged: dev });
         }
       }
     }
