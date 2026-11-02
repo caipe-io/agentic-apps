@@ -48,6 +48,7 @@ existing contract fixtures; the published app image now builds this runtime.
 | `GITHUB_WEBHOOK_SECRET`             | Server-side signing key shared with the public receiver                                                                      |
 | `AGENTIC_SDLC_GITHUB_WEBHOOK_URL`   | Approved public webhook URL; no raw key reaches the browser                                                                  |
 | `AGENTIC_SDLC_GITHUB_API_URL`       | Optional GitHub Enterprise REST API base                                                                                     |
+| `AGENTIC_SDLC_REVIEW_WORKSPACE_URL` | Optional trusted HTTPS workspace URL used once in published review summaries; no credentials, query or fragment               |
 | `AGENTIC_SDLC_REVIEWER_LOGINS`      | Comma-separated GitHub logins allowed to report agent outcomes                                                               |
 | `AGENTIC_SDLC_REVIEW_TASK_IDS`      | Comma-separated trusted autonomous review task IDs                                                                           |
 | `AGENTIC_SDLC_AUTONOMOUS_ORIGIN`    | Private native Autonomous service origin for signed task hooks; management uses the caller-authorized BFF instead            |
@@ -215,6 +216,15 @@ generic test requests and CI transcripts are omitted. A pending CI job alone
 does not make source inspection incomplete. Summaries stay under 120 words;
 inline findings under 150 words plus a small suggested patch. Five inline
 comments is a ceiling, not a target; related symptoms share one comment.
+
+Published findings use labeled Unicode severity cues: 🔴 Critical, 🟠 Major,
+🟡 Minor, and 🔵 Review info for relevant context. Minor still means an evidenced
+logic defect; optional test/style suggestions stay suppressed. A summary starts
+with `🔎 Agentic SDLC review · N new findings` and includes one workspace footer
+when `AGENTIC_SDLC_REVIEW_WORKSPACE_URL` is configured. The link is deployment-owned
+and never derived from webhook/PR content. No external badge images are needed.
+Dashboard status badges use the same semantic color families with text labels
+and readable light/dark variants; a generic findings status does not infer severity.
 
 The public receiver must verify the original GitHub HMAC and preserve event,
 delivery ID and signed payload when forwarding to the app. Configure preexisting
