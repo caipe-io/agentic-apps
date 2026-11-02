@@ -14,3 +14,9 @@ body {margin:0; background:hsl(var(--background)); color:hsl(var(--foreground));
 
 :root[data-caipe-palette="host"] .agentic-sdlc-app {background: hsl(var(--background));}
 :root[data-caipe-palette="host"] .gradient-text {background: none; color: hsl(var(--primary));}
+
+/* Follow the host's color-scheme, including standalone dark mode. */
+.review-status-success {color:light-dark(#166534,#86efac);border-color:light-dark(#86efac,#166534);background-color:light-dark(#f0fdf4,#052e16);}
+.review-status-warning {color:light-dark(#854d0e,#fde68a);border-color:light-dark(#fcd34d,#854d0e);background-color:light-dark(#fffbeb,#422006);}
+.review-status-info {color:light-dark(#1e40af,#93c5fd);border-color:light-dark(#93c5fd,#1e40af);background-color:light-dark(#eff6ff,#172554);}
+.review-status-error {color:light-dark(#991b1b,#fca5a5);border-color:light-dark(#fca5a5,#991b1b);background-color:light-dark(#fef2f2,#450a0a);}
