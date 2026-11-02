@@ -191,7 +191,7 @@ inferred from a webhook or from the repositories a user can see.
    reviewer with a narrow GitHub tool allowlist, and a user-owned native webhook
    task. Future non-draft `pull_request.opened`, `pull_request.synchronize` and
    `pull_request.ready_for_review` events can post a concise **COMMENT** review
-   only for new actionable findings, with up to ten inline findings, using the
+   only for new logic or security findings, with up to five inline findings, using the
    enabling user's connected GitHub credentials. Contents/PR/check/status read
    and PR review write permissions must be available. There is no retroactive
    agent review during registration, refresh or synchronization.
@@ -208,7 +208,13 @@ members able to edit the agent can change its behavior through normal host
 permissions; operators should restrict that access appropriately.
 
 Drafts are skipped. Clean/incomplete outcomes remain in task history; public
-reviews are reserved for new actionable findings, deduplicated across heads.
+reviews are reserved for new logic or security defects, deduplicated by root
+cause across heads and prior human/bot feedback. Each finding must identify the
+trigger, changed-code cause, impact and minimal fix. Style/compliance checklists,
+generic test requests and CI transcripts are omitted. A pending CI job alone
+does not make source inspection incomplete. Summaries stay under 120 words;
+inline findings under 150 words plus a small suggested patch. Five inline
+comments is a ceiling, not a target; related symptoms share one comment.
 
 The public receiver must verify the original GitHub HMAC and preserve event,
 delivery ID and signed payload when forwarding to the app. Configure preexisting
@@ -236,10 +242,19 @@ user's unrelated pending review. A repo rename requires reconnect plus explicit
 disable/re-enable before reviews target the new canonical name.
 
 Existing reviewers retain their saved policy after an app update. Adopting the
-new defaults involves the task's `prompt` and `trigger.filter`, the agent's
-`system_prompt`, and its `updated_at` cache version. The templates are in
-`review-policy.ts` and `review-eligibility.ts`. Running reviews retain their
-captured instructions; app and saved-policy rollback are separate changes.
+new defaults involves the private skill's `skill_content` and task `llm_prompt`
+(followed by a passing security rescan), the autonomous task's `prompt` and
+`trigger.filter`, and the agent's `system_prompt` and `updated_at` cache version.
+The templates are in `review-policy.ts` and `review-eligibility.ts`; the policy
+marker is `caipe-pr-publication-policy:v3`. Apply these through the owner's
+authorized host APIs/UI, preserving resource IDs, ownership, model, tool
+allowlist, enabled state and webhook signing key. An app image update or
+disable/re-enable alone does not replace a saved skill. Running reviews retain
+their captured instructions; app and saved-policy rollback are separate changes.
+
+The PR dashboard reads GitHub review artifacts. Silent runs therefore do not
+publish a current-head verdict there; use Autonomous task history for completed
+reviews with no new findings. Silence must not be interpreted as approval.
 
 `sdlc_review_bindings` lives only in the app database. Task
 secrets are AES-256-GCM encrypted, bound to the immutable connection key, using an

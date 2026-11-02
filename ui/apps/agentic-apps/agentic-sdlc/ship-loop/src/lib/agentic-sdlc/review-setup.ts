@@ -221,15 +221,15 @@ export async function configureRepositoryReviews(
         {
           name: `SDLC PR conformance ${meta.full_name}`,
           description:
-            "Evidence-backed security and documented code style review.",
+            "PR logic and security review; publish only new actionable findings.",
           category: "GitHub Operations",
           visibility: "private",
           difficulty: "intermediate",
           is_quick_start: false,
-          metadata: { version: "1.0.0", source: "agentic-sdlc" },
+          metadata: { version: "2.0.0", source: "agentic-sdlc" },
           tasks: [
             {
-              display_text: "Check PR conformance",
+              display_text: "Review PR logic and security",
               subagent: "github",
               llm_prompt: CONFORMANCE_SKILL,
             },
