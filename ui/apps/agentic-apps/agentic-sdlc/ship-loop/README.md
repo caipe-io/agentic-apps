@@ -134,8 +134,9 @@ an always-visible extra row. The original header animation remains compact.
 
 ### Agent outcome protocol
 
-The reviewer continues to publish a GitHub **COMMENT** review. An outcome is
-advisory and separate from non-agent GitHub approval, CI, and conformance claims.
+When there are new actionable findings, the reviewer publishes a concise GitHub
+**COMMENT** review. An outcome is advisory and separate from non-agent GitHub
+approval, CI, and conformance claims.
 Never infer no findings from review presence, prose or a passing check.
 
 Configure both reviewer-login and task-ID allowlists. The review must be from
@@ -188,8 +189,9 @@ inferred from a webhook or from the repositories a user can see.
    this app never impersonates ownership headers or uses an admin service token.
 5. Setup creates a private scanned conformance skill, a team-owned repository
    reviewer with a narrow GitHub tool allowlist, and a user-owned native webhook
-   task. Future `pull_request.opened` and `pull_request.synchronize` events can
-   post a **COMMENT** review and up to ten actionable inline findings using the
+   task. Future non-draft `pull_request.opened`, `pull_request.synchronize` and
+   `pull_request.ready_for_review` events can post a concise **COMMENT** review
+   only for new actionable findings, with up to ten inline findings, using the
    enabling user's connected GitHub credentials. Contents/PR/check/status read
    and PR review write permissions must be available. There is no retroactive
    agent review during registration, refresh or synchronization.
@@ -205,6 +207,9 @@ deploy. Native runtime permissions remain authoritative at every run. Team
 members able to edit the agent can change its behavior through normal host
 permissions; operators should restrict that access appropriately.
 
+Drafts are skipped. Clean/incomplete outcomes remain in task history; public
+reviews are reserved for new actionable findings, deduplicated across heads.
+
 The public receiver must verify the original GitHub HMAC and preserve event,
 delivery ID and signed payload when forwarding to the app. Configure preexisting
 reviewers in `AGENTIC_SDLC_MANAGED_REVIEW_TASKS` **before enabling onboarding** to
@@ -214,8 +219,9 @@ is `{"example/repository":"existing-review-task-id"}`.
 
 ### Durable review dispatch and recovery
 
-Only registered, signed `opened`/`synchronize` events for an enabled binding
-create a review outbox entry in the same persisted event document. The app signs
+Only registered, signed `opened`/`synchronize`/`ready_for_review` events for an
+open, non-draft PR and an enabled binding create a review outbox entry in the
+same persisted event document. The app signs
 its serialization with that task's separate high-entropy secret and preserves
 the original delivery ID. Native per-task HMAC validation, structured repo/action
 filters and durable delivery deduplication remain enabled. Manual repo sync
@@ -225,9 +231,15 @@ Recovery runs every 15 seconds with leases, bounded batches, exponential retry
 and an eight-attempt cap. Failures/uncertain final attempts remain inspectable in
 the stored event; the connection panel exposes the binding's latest delivery
 status, while actual findings and run results belong in Autonomous/GitHub. Review
-prompts also guard duplicate task/head reviews, stale heads and a connected
+prompts also guard duplicate findings across heads, draft/stale heads and a connected
 user's unrelated pending review. A repo rename requires reconnect plus explicit
 disable/re-enable before reviews target the new canonical name.
+
+Existing reviewers retain their saved policy after an app update. Adopting the
+new defaults involves the task's `prompt` and `trigger.filter`, the agent's
+`system_prompt`, and its `updated_at` cache version. The templates are in
+`review-policy.ts` and `review-eligibility.ts`. Running reviews retain their
+captured instructions; app and saved-policy rollback are separate changes.
 
 `sdlc_review_bindings` lives only in the app database. Task
 secrets are AES-256-GCM encrypted, bound to the immutable connection key, using an

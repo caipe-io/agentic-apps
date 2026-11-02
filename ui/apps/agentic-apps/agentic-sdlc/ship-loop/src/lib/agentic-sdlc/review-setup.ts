@@ -23,6 +23,7 @@ import {
   reviewPrompt,
   reviewSystem,
 } from "./review-policy";
+import { reviewTriggerFilter } from "./review-eligibility";
 
 export async function repositoryContext(
   req: Request,
@@ -355,25 +356,7 @@ export async function configureRepositoryReviews(
             type: "webhook",
             provider: "github",
             dedup_header: "X-GitHub-Delivery",
-            filter: {
-              conditions: [
-                {
-                  source: "payload",
-                  field: "repository.full_name",
-                  values: [meta.full_name],
-                },
-                {
-                  source: "header",
-                  field: "X-GitHub-Event",
-                  values: ["pull_request"],
-                },
-                {
-                  source: "payload",
-                  field: "action",
-                  values: ["opened", "synchronize"],
-                },
-              ],
-            },
+            filter: reviewTriggerFilter(meta.full_name),
           },
           metadata: {
             source: "agentic-sdlc",
@@ -405,25 +388,7 @@ export async function configureRepositoryReviews(
     const trigger = {
       ...task.trigger,
       secret,
-      filter: {
-        conditions: [
-          {
-            source: "payload",
-            field: "repository.full_name",
-            values: [meta.full_name],
-          },
-          {
-            source: "header",
-            field: "X-GitHub-Event",
-            values: ["pull_request"],
-          },
-          {
-            source: "payload",
-            field: "action",
-            values: ["opened", "synchronize"],
-          },
-        ],
-      },
+      filter: reviewTriggerFilter(meta.full_name),
     };
     await platformRequest(
       req,

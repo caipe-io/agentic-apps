@@ -3,6 +3,7 @@ import type { ObjectId } from "mongodb";
 import { getAgenticSdlcEventsCollection } from "./mongo-collections";
 import { managedReviewTask } from "./platform-client";
 import { openReviewSecret, reviewBindings } from "./review-bindings";
+import { eligibleReviewEvent } from "./review-eligibility";
 import type { AgenticSdlcEvent } from "@/types/agentic-sdlc";
 
 export async function prepareReviewDispatch(
@@ -13,14 +14,9 @@ export async function prepareReviewDispatch(
   payload: Record<string, unknown>,
 ): Promise<AgenticSdlcEvent["review_dispatch"] | undefined> {
   if (
-    event !== "pull_request" ||
-    !["opened", "synchronize"].includes(action || "") ||
+    !eligibleReviewEvent(event, action, payload) ||
     managedReviewTask(fullName)
   )
-    return;
-  const pr = payload.pull_request as
-    { state?: string; head?: { sha?: string } } | undefined;
-  if (pr?.state !== "open" || !/^[a-f0-9]{40}$/.test(pr.head?.sha || ""))
     return;
   const binding = await (
     await reviewBindings()
@@ -110,6 +106,12 @@ async function deliverReview(eventId: ObjectId) {
         $unset: { "review_dispatch.lease_until": "" },
       },
     );
+  // Queued deliveries may predate this policy. Recheck before forwarding so
+  // recovery cannot launch reviews for old draft or otherwise ineligible events.
+  if (!eligibleReviewEvent(ev.github_event_type, ev.github_action, ev.payload)) {
+    await finish("skipped", "This event is not eligible for autonomous review.");
+    return;
+  }
   const bindings = await reviewBindings();
   const binding = await bindings.findOne({
     repo_id: ev.repo_id,
