@@ -466,7 +466,8 @@ function ConnectionDialog({
                     Optional. On PR creation or new commits, an agent uses the
                     enabling user's connected GitHub credentials to post a
                     COMMENT review and inline findings. It checks security and
-                    documented code style. It cannot approve, merge or deploy.
+                    logic regressions. It posts only new actionable findings.
+                    It cannot approve, merge or deploy.
                   </p>
                   {connection?.reviews.state === "managed" ? (
                     <p className="text-sm">
