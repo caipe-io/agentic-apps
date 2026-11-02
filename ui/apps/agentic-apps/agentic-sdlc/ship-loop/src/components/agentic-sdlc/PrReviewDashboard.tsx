@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { ChevronDown, Search, Tag } from "lucide-react";
+import { ChevronDown, Loader2, Search, Tag } from "lucide-react";
 import type { PrDashboardItem } from "@/lib/agentic-sdlc/pr-dashboard";
 
 type Snapshot = {
@@ -56,10 +56,22 @@ export function PrReviewDashboard({
   const [reviewerHandle, setReviewerHandle] = useState("");
   const [reviewerRole, setReviewerRole] = useState("either");
   const handlesId = useId();
-  const [data, setData] = useState<Snapshot | null>(null);
-  const [error, setError] = useState("");
+  const requestKey = JSON.stringify([owner, repo, state]);
+  // Retain one successful snapshot for this mounted dashboard, never a shared
+  // browser/server cache. A different repository or PR state cannot display it.
+  const [snapshot, setSnapshot] = useState<{
+    key: string;
+    data: Snapshot;
+  } | null>(null);
+  const [request, setRequest] = useState({
+    key: requestKey,
+    loading: true,
+    error: "",
+  });
+  const data = snapshot?.key === requestKey ? snapshot.data : null;
+  const loading = request.key !== requestKey || request.loading;
+  const error = request.key === requestKey ? request.error : "";
   const [tick, setTick] = useState(0);
-  const [loading, setLoading] = useState(false);
   useEffect(() => {
     setLabel("");
     setChecks("");
@@ -87,9 +99,7 @@ export function PrReviewDashboard({
   }, [owner, repo]);
   useEffect(() => {
     const stop = new AbortController();
-    setLoading(true);
-    setError("");
-    setData(null);
+    setRequest({ key: requestKey, loading: true, error: "" });
     fetch(
       `/apps/agentic-sdlc/api/agentic-sdlc/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls?state=${state}`,
       {
@@ -98,22 +108,30 @@ export function PrReviewDashboard({
       },
     )
       .then(async (response) => {
+        // Access loss invalidates the saved view; transient failures retain it.
+        if ([401, 403, 404].includes(response.status) && !stop.signal.aborted)
+          setSnapshot(null);
         const value = await response.json();
         if (!response.ok)
           throw new Error(value.message || "Could not read pull requests");
         return value;
       })
-      .then((value) => {
-        if (!stop.signal.aborted) setData(value);
+      .then((value: Snapshot) => {
+        if (stop.signal.aborted) return;
+        setSnapshot({ key: requestKey, data: value });
+        setRequest({ key: requestKey, loading: false, error: "" });
       })
-      .catch((cause) => {
-        if (!stop.signal.aborted) setError(cause.message);
-      })
-      .finally(() => {
-        if (!stop.signal.aborted) setLoading(false);
+      .catch((cause: unknown) => {
+        if (!stop.signal.aborted)
+          setRequest({
+            key: requestKey,
+            loading: false,
+            error:
+              cause instanceof Error ? cause.message : "Could not read pull requests",
+          });
       });
     return () => stop.abort();
-  }, [owner, repo, state, revision, tick]);
+  }, [owner, repo, state, requestKey, revision, tick]);
 
   const items = data?.items ?? [];
   const search = query.trim().toLowerCase().replace(/^#/, "");
@@ -386,12 +404,23 @@ export function PrReviewDashboard({
           type="button"
           disabled={loading}
           onClick={() => setTick((current) => current + 1)}
-          className="rounded-md border border-primary/40 px-3 py-2 text-sm text-primary disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-md border border-primary/40 px-3 py-2 text-sm text-primary disabled:opacity-50"
         >
-          {loading ? "Refreshing…" : "Refresh GitHub"}
+          {loading && (
+            <Loader2
+              className="h-4 w-4 animate-spin motion-reduce:animate-none"
+              aria-hidden
+            />
+          )}
+          {loading ? (data ? "Refreshing…" : "Loading…") : "Refresh GitHub"}
         </button>
+        <span role="status" className="sr-only">
+          {loading && data
+            ? "Refreshing pull requests. The previous snapshot remains visible."
+            : ""}
+        </span>
       </div>
-      {loading && (
+      {loading && !data && (
         <p role="status" className="py-6 text-sm text-muted-foreground">
           Loading current PR reviews and CI evidence…
         </p>
@@ -401,6 +430,7 @@ export function PrReviewDashboard({
           role="alert"
           className="rounded-xl border border-destructive/40 p-4 text-sm text-destructive"
         >
+          {data ? "Refresh failed. Showing the last successful snapshot. " : ""}
           {error}. Check your GitHub connection and use Refresh GitHub to retry.
         </p>
       )}
@@ -421,7 +451,11 @@ export function PrReviewDashboard({
             : "No pull requests match this state."}
         </p>
       )}
-      <div className="space-y-4">
+      <div
+        className="space-y-4"
+        aria-label="Pull request list"
+        aria-busy={loading}
+      >
         {visible.map((pr) => (
           <PrCard key={`${pr.number}:${pr.head_sha}`} pr={pr} />
         ))}
