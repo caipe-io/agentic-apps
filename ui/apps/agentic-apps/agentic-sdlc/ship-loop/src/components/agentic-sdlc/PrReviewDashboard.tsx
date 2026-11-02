@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { Bot, ChevronDown, Search, Tag } from "lucide-react";
+import { ChevronDown, Search, Tag } from "lucide-react";
 import type { PrDashboardItem } from "@/lib/agentic-sdlc/pr-dashboard";
 
 type Snapshot = {
@@ -20,6 +20,20 @@ const agentLabels: Record<PrDashboardItem["agent_review"]["status"], string> = {
   not_reviewed: "Not reviewed",
   unverified: "Unverified attribution",
   unknown: "Unavailable",
+};
+
+const agentPresentation: Record<
+  PrDashboardItem["agent_review"]["status"],
+  { icon: string; tone: string }
+> = {
+  no_findings: { icon: "✅", tone: "review-status-success" },
+  findings: { icon: "💬", tone: "review-status-warning" },
+  incomplete: { icon: "⚠️", tone: "review-status-warning" },
+  reviewed: { icon: "🔵", tone: "review-status-info" },
+  stale: { icon: "🔄", tone: "border-border text-muted-foreground" },
+  not_reviewed: { icon: "⏳", tone: "border-border text-muted-foreground" },
+  unverified: { icon: "⚠️", tone: "review-status-warning" },
+  unknown: { icon: "❔", tone: "border-border text-muted-foreground" },
 };
 
 export function PrReviewDashboard({
@@ -469,8 +483,9 @@ function PrCard({ pr }: { pr: PrDashboardItem }) {
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           <span
-            className={`rounded-md border px-2.5 py-1 ${pr.ci.status === "passing" ? "border-emerald-500/30 text-emerald-300" : pr.ci.status === "failing" ? "border-red-400/40 text-red-300" : "border-amber-400/30 text-amber-200"}`}
+            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 ${pr.ci.status === "passing" ? "review-status-success" : pr.ci.status === "failing" ? "review-status-error" : pr.ci.status === "pending" ? "review-status-warning" : "border-border text-muted-foreground"}`}
           >
+            <span aria-hidden="true">{pr.ci.status === "passing" ? "✅" : pr.ci.status === "failing" ? "❌" : pr.ci.status === "pending" ? "⏳" : "❔"}</span>
             Checks: {pr.ci.status}
           </span>
           <span className="rounded-md border border-border px-2.5 py-1 text-muted-foreground">
@@ -478,9 +493,9 @@ function PrCard({ pr }: { pr: PrDashboardItem }) {
           </span>
           <span
             title="Agent-reported outcome for this commit, not GitHub approval, CI clearance or compliance certification."
-            className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 ${pr.agent_review.status === "no_findings" ? "border-emerald-500/30 text-emerald-300" : pr.agent_review.status === "findings" ? "border-amber-400/30 text-amber-200" : "border-border text-muted-foreground"}`}
+            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 ${agentPresentation[pr.agent_review.status].tone}`}
           >
-            <Bot className="h-3 w-3" aria-hidden />
+            <span aria-hidden="true">{agentPresentation[pr.agent_review.status].icon}</span>
             {pr.agent_review.url ? (
               <a
                 href={pr.agent_review.url}
