@@ -7,15 +7,43 @@ export const dynamic = "force-dynamic";
 export default function Layout({ children }: { children: ReactNode }) {
   const buildVersion = process.env.APP_BUILD_VERSION;
   const buildRevision = process.env.APP_BUILD_REVISION;
-  const version = buildVersion && buildVersion !== "unknown" && /^[A-Za-z0-9][A-Za-z0-9_.+-]{0,127}$/.test(buildVersion) ? buildVersion : null;
-  const revision = buildRevision && /^[a-f0-9]{7,64}$/i.test(buildRevision) ? buildRevision.slice(0, 12) : null;
-  const build = version && revision && version === buildRevision ? revision : version && revision ? `${version} · ${revision}` : version || revision || "unavailable";
+  const version =
+    buildVersion &&
+    buildVersion !== "unknown" &&
+    /^[A-Za-z0-9][A-Za-z0-9_.+-]{0,127}$/.test(buildVersion)
+      ? buildVersion
+      : null;
+  const revision =
+    buildRevision && /^[a-f0-9]{7,64}$/i.test(buildRevision)
+      ? buildRevision.slice(0, 12)
+      : null;
+  const build =
+    version && revision && version === buildRevision
+      ? revision
+      : version && revision
+        ? `${version} · ${revision}`
+        : version || revision || "unavailable";
   return (
     <html lang="en" className="dark">
       <body>
         <div className="agentic-sdlc-app min-h-screen">
+          <div className="sticky top-0 z-40 flex justify-end border-b border-border/50 bg-background/95 px-6 py-2 text-xs text-muted-foreground backdrop-blur">
+            <span
+              aria-label="Application build version"
+              title={
+                revision
+                  ? `Commit ${buildRevision}`
+                  : "Build revision unavailable"
+              }
+              className="inline-flex flex-wrap items-center justify-end gap-x-2"
+            >
+              <span>Agentic SDLC</span>
+              <span className="rounded-md border border-border bg-secondary/50 px-2 py-0.5 font-mono text-foreground">
+                Version {build}
+              </span>
+            </span>
+          </div>
           {children}
-          <div aria-label="Application build version" title={revision ? buildRevision : "Build revision unavailable"} style={{ padding: "10px 24px", textAlign: "right", color: "#94a3b8", fontSize: "12px" }}>Build {build}</div>
           <RuntimeBridge prOnly={isPrWorkspace()} />
         </div>
       </body>

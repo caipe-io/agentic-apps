@@ -43,3 +43,15 @@ test("completed clean heads publish once while incomplete and stale reviews stay
   }
   assert.match(reviewPrompt("example/repository", "review-task"), /Recheck every earlier unresolved finding/);
 });
+
+test("manual re-review inspects an already reviewed commit without repeating public results", () => {
+  const prompt = reviewPrompt("example/repository", "review-task");
+  assert.match(prompt, /caipe-pr-manual-review-policy:v1/);
+  assert.match(prompt, /_caipe_manual_request.source=authenticated_ui/);
+  assert.match(prompt, /If the head changed, record skipped/);
+  assert.match(prompt, /marker suppresses duplicate publication, not inspection/);
+  for (const policy of [prompt, reviewSystem("example/repository")]) {
+    assert.match(policy, /inspect the source again even when this task\/head marker exists/);
+    assert.match(policy, /never an unchanged clean status or repeated finding/);
+  }
+});
