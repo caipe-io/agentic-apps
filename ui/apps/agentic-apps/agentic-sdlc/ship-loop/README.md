@@ -315,6 +315,23 @@ Manual re-review inspects an already reviewed commit again. Previously reported
 findings and unchanged clean summaries are not posted again; a new distinct
 finding can be published after all normal identity, draft and current-head checks.
 
+
+### Reloading a saved reviewer policy
+
+Save Autonomous task updates through the authenticated task update API
+(`PUT /api/autonomous/tasks/{id}`), preserving the complete task configuration,
+ownership, agent, metadata, enabled state and webhook signing key. This API also
+re-registers the task in the running webhook/scheduler registry. Direct MongoDB
+updates alone leave the old task prompt active in that registry until reload.
+If a migration already updated the database, re-save that same configuration
+through the API; do not rotate the signing key or restart unrelated tasks.
+
+Verify the runtime registration and the next genuine run's `request_prompt`
+against the expected policy version or prompt hash. A database read or a passing
+skill scan alone does not prove which task prompt the live receiver will use.
+Do not trigger a public review merely to test configuration reload. Existing run
+snapshots remain historical evidence and must not be rewritten.
+
 ### Running version
 
 A sticky bar at the top of every Agentic SDLC view displays the running image's
