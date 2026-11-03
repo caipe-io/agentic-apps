@@ -1,54 +1,8 @@
 import { repositoryContext } from "./review-setup";
 import { reviewBindings } from "./review-bindings";
-import { platformRequest, SetupError } from "./platform-client";
+import { SetupError } from "./platform-client";
 
-export async function manualReviewContext(
-  req: Request,
-  owner: string,
-  repo: string,
-) {
-  const { client, meta } = await repositoryContext(req, owner, repo);
-  const binding = await (
-    await reviewBindings()
-  ).findOne({ repo_id: String(meta.id) });
-  if (
-    !binding ||
-    binding.state !== "enabled" ||
-    !binding.task_id ||
-    !binding.agent_id ||
-    binding.full_name.toLowerCase() !== meta.full_name.toLowerCase()
-  )
-    throw new SetupError(
-      "Enable repository reviews in Connection & agent first.",
-      409,
-    );
-  const path = `/api/autonomous/tasks/${encodeURIComponent(binding.task_id)}`;
-  // The host checks the original caller's Autonomous entitlement and task ownership.
-  const task = await platformRequest(req, path);
-  if (
-    !task.enabled ||
-    task.dynamic_agent_id !== binding.agent_id ||
-    task.owner_sub !== binding.owner_sub ||
-    !task.description?.includes(`[sdlc-binding:${binding.binding_key}]`)
-  )
-    throw new SetupError(
-      "The configured reviewer is disabled or its scope changed.",
-      409,
-    );
-  if (task.manual_run_context_version !== 1)
-    throw new SetupError(
-      "Upgrade the Autonomous service to enable UI re-review.",
-      409,
-    );
-  if (!task.prompt?.includes("<!-- caipe-pr-manual-review-policy:v1 -->"))
-    throw new SetupError(
-      "Update the saved reviewer's manual-review policy before using Re-review.",
-      409,
-    );
-  return { client, meta, path };
-}
-
-export async function requestManualReview(
+export async function prepareManualReview(
   req: Request,
   owner: string,
   repo: string,
@@ -66,7 +20,22 @@ export async function requestManualReview(
     throw new SetupError(
       "A current commit and request identifier are required.",
     );
-  const { client, meta, path } = await manualReviewContext(req, owner, repo);
+  const { client, meta } = await repositoryContext(req, owner, repo);
+  const binding = await (
+    await reviewBindings()
+  ).findOne({ repo_id: String(meta.id) });
+  if (
+    !binding ||
+    binding.state !== "enabled" ||
+    !binding.task_id ||
+    !binding.agent_id ||
+    !/^[a-zA-Z0-9_-]+$/.test(binding.task_id) ||
+    binding.full_name.toLowerCase() !== meta.full_name.toLowerCase()
+  )
+    throw new SetupError(
+      "Enable repository reviews in Connection & agent first.",
+      409,
+    );
   const { data: pr } = await client.pulls.get({
     owner,
     repo,
@@ -83,24 +52,26 @@ export async function requestManualReview(
       "This PR changed or is no longer eligible. Refresh before requesting a review.",
       409,
     );
-  const result = await platformRequest(req, `${path}/run`, "POST", {
-    request_id: input.request_id,
-    context: {
-      manual_review: true,
-      repository: { id: meta.id, full_name: meta.full_name },
-      pull_request: {
-        number: pr.number,
-        html_url: pr.html_url,
-        head: { sha: pr.head.sha },
-        draft: false,
-        state: "open",
+  // This route only prepares public identifiers and a verified PR snapshot.
+  // The host authorizes task access/run using the caller's browser session.
+  return {
+    task_id: binding.task_id,
+    agent_id: binding.agent_id,
+    owner_sub: binding.owner_sub,
+    binding_key: binding.binding_key,
+    run_body: {
+      request_id: input.request_id,
+      context: {
+        manual_review: true,
+        repository: { id: meta.id, full_name: meta.full_name },
+        pull_request: {
+          number: pr.number,
+          html_url: pr.html_url,
+          head: { sha: pr.head.sha },
+          draft: false,
+          state: "open",
+        },
       },
     },
-  });
-  if (typeof result?.run_id !== "string")
-    throw new SetupError(
-      "The service did not return a review run. Retry with the same request.",
-      502,
-    );
-  return { run_id: result.run_id, head_sha: pr.head.sha, status: "accepted" };
+  };
 }

@@ -9,7 +9,7 @@ const hooks = registerHooks({ resolve(specifier, context, next) {
     return { url: fixture, shortCircuit: true };
   return next(specifier, context);
 } });
-const { requestManualReview } = await import(subject);
+const { prepareManualReview } = await import(subject);
 hooks.deregister();
 const head = "a".repeat(40);
 const body = { head_sha: head, request_id: "b6a6d8ec-8f03-46b7-a21f-09af26d6ee00" };
@@ -33,34 +33,30 @@ function setup(changes = {}) {
   });
   return calls;
 }
-test("manual review forwards the original request and a server-fetched PR snapshot", async () => {
+test("preparation returns a verified PR snapshot without using an app bearer for task administration", async () => {
   const calls = setup();
-  const req = new Request("https://app.example.test/");
-  const result = await requestManualReview(req, "example", "repository", 42, body);
-  assert.equal(result.run_id, "run-1");
-  assert.equal(calls[1][0], req);
-  assert.equal(calls[1][1], "/api/autonomous/tasks/review-task/run");
-  assert.deepEqual(calls[1][3], { request_id: body.request_id, context: {
+  const result = await prepareManualReview(new Request("https://app.example.test/"), "example", "repository", 42, body);
+  assert.equal(result.task_id, "review-task");
+  assert.equal(result.owner_sub, "owner-sub");
+  assert.deepEqual(result.run_body, { request_id: body.request_id, context: {
     manual_review: true, repository: { id: 1, full_name: "example/repository" },
     pull_request: { number: 42, html_url: "https://github.com/example/repository/pull/42", head: { sha: head }, draft: false, state: "open" },
   } });
-  assert.ok(!JSON.stringify(calls).includes("secret"));
+  assert.equal(calls.length, 0);
+  assert.ok(!JSON.stringify(result).includes("secret"));
 });
 for (const changes of [
-  { denyRepo: true }, { denyTask: true },
+  { denyRepo: true },
   { binding: { state: "disabled" } }, { binding: { full_name: "example/other" } },
-  { task: { enabled: false } }, { task: { dynamic_agent_id: "other" } },
-  { task: { owner_sub: "other" } }, { task: { description: "unrelated" } },
-  { task: { manual_run_context_version: undefined } }, { task: { prompt: "old policy" } },
   { pr: { draft: true } }, { pr: { state: "closed" } }, { pr: { merged: true } },
   { pr: { head: { sha: "b".repeat(40) } } }, { pr: { base: { repo: { id: 2 } } } },
 ]) test(`ineligible or unauthorized request does not dispatch: ${JSON.stringify(changes)}`, async () => {
   const calls = setup(changes);
-  await assert.rejects(requestManualReview(new Request("https://app.example.test/"), "example", "repository", 42, body), SetupError);
+  await assert.rejects(prepareManualReview(new Request("https://app.example.test/"), "example", "repository", 42, body), SetupError);
   assert.equal(calls.filter((call) => call[2] === "POST").length, 0);
 });
 test("invalid request identifiers cannot dispatch", async () => {
   const calls = setup();
-  await assert.rejects(requestManualReview(new Request("https://app.example.test/"), "example", "repository", 42, { ...body, request_id: "bad" }), SetupError);
+  await assert.rejects(prepareManualReview(new Request("https://app.example.test/"), "example", "repository", 42, { ...body, request_id: "bad" }), SetupError);
   assert.equal(calls.length, 0);
 });
