@@ -256,15 +256,26 @@ new defaults involves the private skill's `skill_content` and task `llm_prompt`
 (followed by a passing security rescan), the autonomous task's `prompt` and
 `trigger.filter`, and the agent's `system_prompt` and `updated_at` cache version.
 The templates are in `review-policy.ts` and `review-eligibility.ts`; the policy
-marker is `caipe-pr-publication-policy:v3`. Apply these through the owner's
+marker is `caipe-pr-publication-policy:v4`. Apply these through the owner's
 authorized host APIs/UI, preserving resource IDs, ownership, model, tool
-allowlist, enabled state and webhook signing key. An app image update or
+allowlist (with only the start-reaction `add_issue_comment` addition), enabled
+state and webhook signing key. An app image update or
 disable/re-enable alone does not replace a saved skill. Running reviews retain
 their captured instructions; app and saved-policy rollback are separate changes.
 
-The PR dashboard reads GitHub review artifacts. Silent runs therefore do not
-publish a current-head verdict there; use Autonomous task history for completed
-reviews with no new findings. Silence must not be interpreted as approval.
+After verifying an eligible current head, reviewers add a 👀 PR-body reaction
+through `add_issue_comment` with `reaction: "eyes"` (no comment body). This marks
+that review has started at least once; it remains after completion and is not a
+live running indicator. GitHub deduplicates that account/reaction across retries
+and heads. Reaction failure is recorded privately and does not block inspection.
+
+The PR dashboard reads GitHub review artifacts. Completed reviews publish one
+concise COMMENT review per current head, including no new actionable findings,
+with the reviewed SHA, outcome marker, coverage and actual CI/inspection limits.
+Retries and repeated CI updates do not publish duplicate task/head markers.
+Incomplete inspections remain in task history and must not claim no findings.
+Earlier unresolved findings must be rechecked against the current code. Neither
+a no-findings result nor silence is GitHub approval.
 
 `sdlc_review_bindings` lives only in the app database. Task
 secrets are AES-256-GCM encrypted, bound to the immutable connection key, using an

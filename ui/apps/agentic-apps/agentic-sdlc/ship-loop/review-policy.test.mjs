@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { reviewWorkspaceLink } from "./src/lib/agentic-sdlc/review-policy.ts";
+import { reviewWorkspaceLink, reviewPrompt, reviewSystem, REVIEW_TOOLS } from "./src/lib/agentic-sdlc/review-policy.ts";
 
 test("an unconfigured workspace adds no link", () => {
   assert.equal(reviewWorkspaceLink(), "");
@@ -21,4 +21,25 @@ test("workspace links reject non-HTTPS URLs, credentials and private URL paramet
     "https://review.example.test/#secret",
     "not a URL",
   ]) assert.throws(() => reviewWorkspaceLink(url));
+});
+
+
+test("start status uses a PR-body eyes reaction, not an extra comment", () => {
+  const prompt = reviewPrompt("example/repository", "review-task");
+  assert.ok(REVIEW_TOOLS.includes("add_issue_comment"));
+  assert.match(prompt, /reaction="eyes", omitting body and comment_id/);
+  assert.match(prompt, /Recheck eligibility\/head immediately before this write/);
+  assert.match(prompt, /GitHub deduplicates the same account\/reaction/);
+  assert.match(prompt, /If the reaction fails.*continue inspection/);
+});
+
+test("completed clean heads publish once while incomplete and stale reviews stay guarded", () => {
+  for (const prompt of [reviewPrompt("example/repository", "review-task"), reviewSystem("example/repository")]) {
+    assert.match(prompt, /publish exactly one concise COMMENT review/);
+    assert.match(prompt, /Incomplete inspection is not a clean result/);
+    assert.match(prompt, /existing matching task\/head marker/);
+    assert.match(prompt, /discard superseded work/);
+    assert.doesNotMatch(prompt, /do not create or submit a GitHub review or comment, even on the first eligible head/);
+  }
+  assert.match(reviewPrompt("example/repository", "review-task"), /Recheck every earlier unresolved finding/);
 });
