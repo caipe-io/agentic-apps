@@ -314,3 +314,12 @@ Newly configured reviewers use the updated policy automatically.
 Manual re-review inspects an already reviewed commit again. Previously reported
 findings and unchanged clean summaries are not posted again; a new distinct
 finding can be published after all normal identity, draft and current-head checks.
+
+### Running version
+
+A sticky bar at the top of every Agentic SDLC view displays the running image's
+release version and short commit SHA. Hover over it for the full commit SHA.
+The release pipeline supplies `APP_BUILD_VERSION` and `APP_BUILD_REVISION` to
+the image; the server reads them at runtime, so preview and production show
+their own deployed build. Missing metadata is explicitly shown as unavailable.
+The indicator uses the selected appearance theme's colors.
