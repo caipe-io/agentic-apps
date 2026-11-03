@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2, RotateCw } from "lucide-react";
+import {
+  startPreparedReview,
+  reviewRunStatus,
+} from "@/lib/agentic-sdlc/manual-review-client";
 
 type Props = {
   owner: string;
@@ -11,7 +15,9 @@ type Props = {
   eligible: boolean;
 };
 export function ReReviewButton({ owner, repo, number, head, eligible }: Props) {
-  const [run, setRun] = useState<string | null>(null);
+  const [run, setRun] = useState<{ taskId: string; runId: string } | null>(
+    null,
+  );
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const busy = useRef(false);
@@ -32,13 +38,13 @@ export function ReReviewButton({ owner, repo, number, head, eligible }: Props) {
     const deadline = Date.now() + 20 * 60 * 1000;
     async function poll() {
       try {
-        const response = await fetch(
-          `${url}?run_id=${encodeURIComponent(run!)}`,
-          { cache: "no-store", signal: controller.signal },
-        );
-        const value = await response.json();
-        if (!response.ok)
-          throw new Error(value.message || "Could not read review status.");
+        const value = {
+          status: await reviewRunStatus(
+            run!.taskId,
+            run!.runId,
+            controller.signal,
+          ),
+        };
         if (controller.signal.aborted) return;
         setStatus(value.status);
         if (["success", "failed", "skipped"].includes(value.status)) {
@@ -86,7 +92,7 @@ export function ReReviewButton({ owner, repo, number, head, eligible }: Props) {
     setStatus("submitting");
     setError("");
     try {
-      const response = await fetch(url, {
+      const response = await fetch(`${url}/prepare`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ head_sha: head, request_id: requestId.current }),
@@ -96,8 +102,10 @@ export function ReReviewButton({ owner, repo, number, head, eligible }: Props) {
       if (!response.ok)
         throw new Error(value.message || "Could not request review.");
       if (controller.signal.aborted) return;
+      const accepted = await startPreparedReview(value, controller.signal);
+      if (controller.signal.aborted) return;
       setStatus("queued");
-      setRun(value.run_id);
+      setRun(accepted);
     } catch (cause) {
       if (controller.signal.aborted) return;
       busy.current = false;

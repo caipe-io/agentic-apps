@@ -297,11 +297,19 @@ while inline status tracks submission, queueing and execution. Completion means
 the run finished, not that GitHub approved the PR or that no defects exist.
 The current-head verdict and task history remain the review evidence.
 
-The server re-fetches the PR, rejects changed heads, verifies the enabled
-repository binding and forwards the original caller to Autonomous. Only the
-task owner or a platform administrator with Autonomous access can run it.
-Retries reuse a request UUID to avoid duplicate submissions. Status polling
-stops after 20 minutes; the run can continue in Autonomous history.
+The app server re-fetches the PR, rejects changed heads, and verifies the enabled
+repository binding. It returns a PR snapshot and non-secret task identifiers;
+it does not impersonate the bot or submit a run. The browser then uses the
+host's session-authorized Autonomous API to check the task and submit that
+snapshot. Only the task owner or a platform administrator with Autonomous access
+can run it. Delegated app bearer tokens do not inherit browser-session admin
+privileges and are not used for these task operations. Signing keys and browser
+session credentials are never forwarded to the app server.
+
+Retries reuse a request UUID to avoid duplicate submissions. Status polling uses
+the same host session and stops after 20 minutes; the run can continue in
+Autonomous history. An older deployment or saved policy returns an availability
+message, not a request to grant the user broader permissions.
 
 Rollout order: deploy Autonomous with `manual_run_context_version: 1`, then
 this app. Existing saved reviewers need the manual-review task policy marker
