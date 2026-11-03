@@ -258,9 +258,16 @@ new defaults involves the private skill's `skill_content` and task `llm_prompt`
 The templates are in `review-policy.ts` and `review-eligibility.ts`; the policy
 marker is `caipe-pr-publication-policy:v4`. Apply these through the owner's
 authorized host APIs/UI, preserving resource IDs, ownership, model, tool
-allowlist, enabled state and webhook signing key. An app image update or
+allowlist (with only the start-reaction `add_issue_comment` addition), enabled
+state and webhook signing key. An app image update or
 disable/re-enable alone does not replace a saved skill. Running reviews retain
 their captured instructions; app and saved-policy rollback are separate changes.
+
+After verifying an eligible current head, reviewers add a 👀 PR-body reaction
+through `add_issue_comment` with `reaction: "eyes"` (no comment body). This marks
+that review has started at least once; it remains after completion and is not a
+live running indicator. GitHub deduplicates that account/reaction across retries
+and heads. Reaction failure is recorded privately and does not block inspection.
 
 The PR dashboard reads GitHub review artifacts. Completed reviews publish one
 concise COMMENT review per current head, including no new actionable findings,
