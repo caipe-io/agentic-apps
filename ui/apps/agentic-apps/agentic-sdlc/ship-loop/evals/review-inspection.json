@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "new-route-loses-call-budget",
+      "change": "The editor switches from /ai/assist (legacy-route.js) to /projects/example/assist (new-route.js). Both routes call worker/suggest.js. Review this change.",
+      "diff": "+ editor.endpoint = \"/projects/example/assist\";\n+ export async function POST(request) { const user = await authenticate(request); const project = await loadProject(request); requireEditor(user, project); return suggest(await request.json()); }",
+      "files": {
+        "ui/new-route.js": "export async function POST(request) { const user = await authenticate(request); const project = await loadProject(request); requireEditor(user, project); return suggest(await request.json()); }",
+        "ui/legacy-route.js": "export async function POST(request) { const user = await authenticate(request); if (!consume(user.id, \"assist\", 30, 300000)) return response(429); return suggest(await request.json()); }",
+        "ui/middleware.js": "export async function middleware(request) { return authenticate(request); }",
+        "worker/suggest.js": "export async function suggest(input) { return await provider.generate(input); }"
+      },
+      "expected": {
+        "outcome": "findings",
+        "issue": "The new route bypasses the per-user model call budget; repeated authorized requests all reach the provider."
+      }
+    },
+    {
+      "id": "budget-enforced-in-middleware",
+      "change": "The editor switches to the project route. The middleware is mounted before every request, including project assist.",
+      "diff": "+ editor.endpoint = \"/projects/example/assist\";\n+ export async function POST(request) { const user = await authenticate(request); const project = await loadProject(request); requireEditor(user, project); return suggest(await request.json()); }",
+      "files": {
+        "ui/new-route.js": "export async function POST(request) { const user = await authenticate(request); const project = await loadProject(request); requireEditor(user, project); return suggest(await request.json()); }",
+        "ui/legacy-route.js": "export async function POST(request) { const user = await authenticate(request); if (!consume(user.id, \"assist\", 30, 300000)) return response(429); return suggest(await request.json()); }",
+        "ui/middleware.js": "export async function middleware(request) { const user = await authenticate(request); if (request.method === \"POST\" && request.path.endsWith(\"/assist\") && !consume(user.id, \"assist\", 30, 300000)) return response(429); return next(); }",
+        "worker/suggest.js": "export async function suggest(input) { return await provider.generate(input); }"
+      },
+      "expected": {
+        "outcome": "no_findings",
+        "issue": "No missing-budget finding: middleware enforces the same per-user budget on the new route."
+      }
+    },
+    {
+      "id": "renamed-export-breaks-unchanged-consumer",
+      "change": "Rename an exported helper. Review the effect on its consumers.",
+      "diff": "- export function getState() { return \"ready\"; }\n+ export function getStatus() { return \"ready\"; }",
+      "files": {
+        "lib/status.js": "export function getStatus() { return \"ready\"; }",
+        "ui/home.js": "import { getState } from \"../lib/status.js\"; export const state = getState();"
+      },
+      "expected": {
+        "outcome": "findings",
+        "issue": "Unchanged consumer still imports the deleted getState export and fails to load."
+      }
+    },
+    {
+      "id": "compatibility-alias-preserves-consumer",
+      "change": "Rename a helper while retaining its previous export for existing consumers.",
+      "diff": "- export function getState() { return \"ready\"; }\n+ export function getStatus() { return \"ready\"; }\n+ export const getState = getStatus;",
+      "files": {
+        "lib/status.js": "export function getStatus() { return \"ready\"; } export const getState = getStatus;",
+        "ui/home.js": "import { getState } from \"../lib/status.js\"; export const state = getState();"
+      },
+      "expected": {
+        "outcome": "no_findings",
+        "issue": "The compatibility alias preserves the unchanged consumer; do not report a removed-export defect."
+      }
+    },
+    {
+      "id": "unverified-prior-finding-is-incomplete",
+      "change": "Earlier unresolved finding: a malformed document id bypasses the authorization helper and reads another account document. This update claims to fix it. The helper source is unavailable; review the new call and recheck that finding.",
+      "diff": "- return store.read(input.id);\n+ return store.read(await authorizeDocument(input.id, user));",
+      "files": {
+        "route.js": "import { authorizeDocument } from \"./authorization.js\"; export async function GET(input, user) { return store.read(await authorizeDocument(input.id, user)); }"
+      },
+      "expected": {
+        "outcome": "incomplete",
+        "issue": "The prior authorization defect cannot be verified fixed without the helper implementation; do not certify a clean result."
+      }
+    },
+    {
+      "id": "unindexed-import-readable-at-head",
+      "change": "The PR adds a project authorization helper and calls it before returning the document. The code-search index is from the default branch and contains no entry for this new helper. The read_source tool reads the reviewed head.",
+      "diff": "+ import { authorize } from \"./lib/new-authorization.js\";\n+ if (!authorize(user, document)) return response(403);\n+ return document;",
+      "files": {
+        "route.js": "import { authorize } from \"./lib/new-authorization.js\"; export function GET(user, document) { if (!authorize(user, document)) return response(403); return document; }",
+        "lib/new-authorization.js": "export function authorize(user, document) { return Boolean(user && document && user.tenantId === document.tenantId); }"
+      },
+      "search_index": {},
+      "expected": {
+        "outcome": "no_findings",
+        "issue": "Fetch the helper by its exact import path at the reviewed head. A stale search index does not make available source unavailable."
+      }
+    },
+    {
+      "id": "assist-rejects-authorized-note-creators",
+      "change": "The note editor switches AI suggestions to the new project assist route. Trace which users are offered the action and what response the new handler returns. The model only returns a proposal and does not write notes. The supplied middleware runs before every route.",
+      "diff": "+ editor.assistEndpoint = \"/projects/example/assist\";\n+ export async function POST(request) { const scope = await loadProject(request); requireSteward(scope); return provider.suggest(await request.json()); }",
+      "files": {
+        "ui/note-editor.js": "export function showAssist({creating,canEdit}) { return creating || canEdit; }",
+        "api/create-note.js": "export async function POST(request) { const scope = await loadProject(request); requireRead(scope); return notes.insert(await request.json()); }",
+        "api/assist.js": "export async function POST(request) { const scope = await loadProject(request); requireSteward(scope); return provider.suggest(await request.json()); }",
+        "auth.js": "export async function loadProject(request) { const user = await authenticate(request); return { user, canRead: user.member === true, canEdit: user.steward === true || user.admin === true }; } export function requireRead(scope) { if (!scope.canRead) throw forbidden(); } export function requireSteward(scope) { if (!scope.canEdit) throw forbidden(); }",
+        "middleware.js": "export async function middleware(request) { const user = await authenticate(request); if (request.method === \"POST\" && !consume(user.id, \"assist\", 30, 300000)) return response(429); return next(); }",
+        "provider.js": "export const provider = { async suggest(text) { return model.complete(text); } };"
+      },
+      "expected": {
+        "outcome": "findings",
+        "issue": "A project reader can create a note and see Assist but the new endpoint denies them because it requires steward rights."
+      }
+    },
+    {
+      "id": "steward-only-note-controls",
+      "change": "The note editor switches AI suggestions to the new project assist route. Trace which users are offered the action and what response the new handler returns. The model only returns a proposal and does not write notes. The supplied middleware runs before every route.",
+      "diff": "+ editor.assistEndpoint = \"/projects/example/assist\";\n+ export async function POST(request) { const scope = await loadProject(request); requireSteward(scope); return provider.suggest(await request.json()); }",
+      "files": {
+        "ui/note-editor.js": "export function showAssist({canEdit}) { return canEdit; }",
+        "api/create-note.js": "export async function POST(request) { const scope = await loadProject(request); requireSteward(scope); return notes.insert(await request.json()); }",
+        "api/assist.js": "export async function POST(request) { const scope = await loadProject(request); requireSteward(scope); return provider.suggest(await request.json()); }",
+        "auth.js": "export async function loadProject(request) { const user = await authenticate(request); return { user, canRead: user.member === true, canEdit: user.steward === true || user.admin === true }; } export function requireRead(scope) { if (!scope.canRead) throw forbidden(); } export function requireSteward(scope) { if (!scope.canEdit) throw forbidden(); }",
+        "middleware.js": "export async function middleware(request) { const user = await authenticate(request); if (request.method === \"POST\" && !consume(user.id, \"assist\", 30, 300000)) return response(429); return next(); }",
+        "provider.js": "export const provider = { async suggest(text) { return model.complete(text); } };"
+      },
+      "expected": {
+        "outcome": "no_findings",
+        "issue": "Creation and assistance both require steward rights, and the button follows those rights."
+      }
+    }
+  ]
+}

@@ -340,3 +340,17 @@ The release pipeline supplies `APP_BUILD_VERSION` and `APP_BUILD_REVISION` to
 the image; the server reads them at runtime, so preview and production show
 their own deployed build. Missing metadata is explicitly shown as unavailable.
 The indicator uses the selected appearance theme's colors.
+
+### Review inspection policy
+
+The versioned inspection policy requires tracing the changed execution path and
+checking guarantees when a route/helper/provider is replaced. Relevant controls
+may live in unchanged callers or middleware. Mocked boundary tests do not prove
+that those controls still apply. Before a clean result, inspect concrete
+change-specific failure scenarios and recheck unresolved prior findings.
+
+See `evals/` for read-only defect/control calibration cases. Deploying an app
+image does not update saved skills, system prompts or task prompts. Migrate
+compatible saved reviewers explicitly, run the private-skill security scan,
+save the task through the canonical API to reload its runtime, and verify the
+version in actual run evidence. Preserve custom instructions, tools and models.
