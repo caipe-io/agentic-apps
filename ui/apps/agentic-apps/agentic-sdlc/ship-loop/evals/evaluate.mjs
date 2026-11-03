@@ -2,7 +2,8 @@
 import { readFile } from "node:fs/promises";
 import { CONFORMANCE_SKILL, REVIEW_INSPECTION_POLICY } from "../src/lib/agentic-sdlc/review-policy.ts";
 
-const base = new URL(process.env.REVIEW_API_BASE_URL || "https://api.openai.com/v1/");
+if (!process.env.REVIEW_API_BASE_URL) throw new Error("Set REVIEW_API_BASE_URL explicitly.");
+const base = new URL(process.env.REVIEW_API_BASE_URL);
 if (base.protocol !== "https:" || base.username || base.password)
   throw new Error("Use an HTTPS model API URL without embedded credentials.");
 const key = process.env.REVIEW_API_KEY;
@@ -34,7 +35,7 @@ async function evaluate(item, name) {
   const trace = [];
   for (let turn = 0; turn < 12; turn++) {
     const response = await fetch(endpoint, {
-      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      method: "POST", redirect: "error", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
       body: JSON.stringify({ model, messages, tools, max_tokens: 4096,
         ...(process.env.REVIEW_REASONING_EFFORT ? { reasoning_effort: process.env.REVIEW_REASONING_EFFORT } : {}) }),
       signal: AbortSignal.timeout(150000),
