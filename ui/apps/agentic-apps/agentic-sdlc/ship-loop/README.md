@@ -288,3 +288,29 @@ review dispatcher to a public unauthenticated management API.
 
 GitHub's test-delivery behavior is documented in the
 [repository webhook REST API](https://docs.github.com/en/rest/repos/webhooks#test-the-push-repository-webhook).
+
+### Re-review from the PR dashboard
+
+Each PR card has **Re-review** for its displayed commit. Open, non-draft PRs
+can be submitted to the existing configured reviewer; the list remains visible
+while inline status tracks submission, queueing and execution. Completion means
+the run finished, not that GitHub approved the PR or that no defects exist.
+The current-head verdict and task history remain the review evidence.
+
+The server re-fetches the PR, rejects changed heads, verifies the enabled
+repository binding and forwards the original caller to Autonomous. Only the
+task owner or a platform administrator with Autonomous access can run it.
+Retries reuse a request UUID to avoid duplicate submissions. Status polling
+stops after 20 minutes; the run can continue in Autonomous history.
+
+Rollout order: deploy Autonomous with `manual_run_context_version: 1`, then
+this app. Existing saved reviewers need the manual-review task policy marker
+`caipe-pr-manual-review-policy:v1` and publication policy v5 in their saved task,
+agent and private skill prompts, followed by a passing private-skill scan.
+Do not overwrite customized prompts or tool scopes. Until migrated, the button
+returns a setup message rather than running an older task without PR context.
+Newly configured reviewers use the updated policy automatically.
+
+Manual re-review inspects an already reviewed commit again. Previously reported
+findings and unchanged clean summaries are not posted again; a new distinct
+finding can be published after all normal identity, draft and current-head checks.

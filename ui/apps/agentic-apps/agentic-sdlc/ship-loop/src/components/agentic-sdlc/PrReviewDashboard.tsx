@@ -4,6 +4,8 @@ import { useEffect, useId, useState } from "react";
 import { ChevronDown, Loader2, Search, Tag } from "lucide-react";
 import type { PrDashboardItem } from "@/lib/agentic-sdlc/pr-dashboard";
 
+import { ReReviewButton } from "./ReReviewButton";
+
 type Snapshot = {
   generated_at: string;
   viewer_login: string | null;
@@ -457,14 +459,14 @@ export function PrReviewDashboard({
         aria-busy={loading}
       >
         {visible.map((pr) => (
-          <PrCard key={`${pr.number}:${pr.head_sha}`} pr={pr} />
+          <PrCard key={`${owner}/${repo}:${pr.number}:${pr.head_sha}`} pr={pr} owner={owner} repo={repo} />
         ))}
       </div>
     </section>
   );
 }
 
-function PrCard({ pr }: { pr: PrDashboardItem }) {
+function PrCard({ pr, owner, repo }: { pr: PrDashboardItem; owner: string; repo: string }) {
   const [history, setHistory] = useState(false);
   const [detail, setDetail] = useState<
     "checks" | "reviews" | "comments" | null
@@ -499,6 +501,7 @@ function PrCard({ pr }: { pr: PrDashboardItem }) {
             {pr.draft ? "Draft · " : ""}
             {pr.state}
           </span>
+          <ReReviewButton owner={owner} repo={repo} number={pr.number} head={pr.head_sha} eligible={pr.state === "open" && !pr.draft} />
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span>
