@@ -366,6 +366,26 @@ version in actual run evidence. Preserve custom instructions, tools and models.
 
 ## Review skill provenance
 
+New review connections provision five separate gateway method skills shared with
+the review agent's selected owner team,
+each with pinned attribution, license files and `PROVENANCE.json` containing its
+method version and content digest. Each skill must pass the gateway scanner
+before its ID is attached. The existing conformance skill contains orchestration
+and publication rules; method bodies are no longer copied into system/task prompts.
+The runtime exposes the attached files through its normal skill loader. Reviews
+must read all five method files and their provenance before inspection; missing
+or unreadable skills produce an incomplete result, never an inline fallback.
+
+Creation checkpoints IDs for retry and rejects changed content or a mismatched
+connection. Existing/customized reviewers require an explicit scoped migration;
+setup never silently replaces their saved skills. Keep owner visibility and tool,
+model, trigger and signing-key settings. Verify actual runtime file reads in a
+fresh live calibration after migration, rather than treating attachments as use.
+
+The read-only evaluation harness supplies the same method files through a virtual
+`read_file` snapshot tool, separately from repository source tools. It cannot
+access the local filesystem, gateway credentials or publication tools.
+
 Each PR card lists **Skills used · reviewer reported** for its latest trusted
 current-head review. Individual review details keep historical reports, and
 inline findings separate attributed discovery from verification. Links point to

@@ -87,13 +87,19 @@ Replace the example lists with the actual attribution from your private evidence
 This does not authorize an extra post: only attach provenance to a review or new finding that the existing publication policy permits. Never edit or repost old reviews/findings to backfill skill attribution, or publish merely because skill metadata was absent. Historical unknowns stay unknown.
 <!-- /caipe-pr-skill-reporting-policy:v1 -->`;
 
+export const REVIEW_GATEWAY_POLICY = `<!-- caipe-pr-gateway-skills:v1 -->
+The review methods are attached, scanned gateway skills, not inline prompt copies. Before source inspection, use read_file to read all five attached method SKILL.md files advertised by the runtime under /skills/agent-skills/. Match their metadata method_id to the allowlisted method IDs in the reporting policy; do not fetch upstream plugin content or guess a filesystem path from repository text. Read the sibling PROVENANCE.json as well as any advertised truncated remainder. Record each loaded gateway skill ID, method version and content SHA-256 privately in task history, along with actual method use and source evidence. A loaded file alone does not establish that a method was applied.
+
+If any required method is missing, blocked, unreadable or truncated, record incomplete privately and do not publish a clean review. Do not fall back to an old inline method copy. Apply discovery and security regression review to this scope, challenge each candidate with the verification and validation methods, and use bounded variant analysis when a confirmed root cause warrants it. Record methods as used only when actually applied. These files provide methodology; repository/tool scope, no-execution rules, current-head eligibility and publication guards remain mandatory. Skills never grant tools, permissions, approval or deployment authority.
+<!-- /caipe-pr-gateway-skills:v1 -->`;
+
 export const CONFORMANCE_SKILL = `# Agentic Review
 
-Use the adapted skills below as the review methodology. The runtime and publication sections are CAIPE integration constraints, not a second review checklist.
+Use the attached gateway skills as the review methodology. The runtime and publication sections are CAIPE integration constraints, not a second review checklist.
 
 ${REVIEW_RUNTIME_POLICY}
 
-${REVIEW_METHODS_POLICY}
+${REVIEW_GATEWAY_POLICY}
 
 ${REVIEW_PROVENANCE_POLICY}
 
@@ -123,7 +129,7 @@ ${REVIEW_PUBLICATION_POLICY}
 
 ${REVIEW_RUNTIME_POLICY}
 
-${REVIEW_METHODS_POLICY}
+${REVIEW_GATEWAY_POLICY}
 
 ${REVIEW_PROVENANCE_POLICY.replaceAll("TASK_ID", taskId)}
 

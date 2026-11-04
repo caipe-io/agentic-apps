@@ -16,6 +16,7 @@ export type ReviewBinding = {
   team_slug?: string;
   agent_id?: string;
   skill_id?: string;
+  method_skill_ids?: Record<string, string>;
   task_id?: string;
   secret?: { iv: string; tag: string; data: string };
   enabled_at?: Date;
