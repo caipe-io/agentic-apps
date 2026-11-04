@@ -1,6 +1,6 @@
 // Explicit, read-only evaluation. No production agent, repository or publication tools.
 import { readFile } from "node:fs/promises";
-import { CONFORMANCE_SKILL, REVIEW_INSPECTION_POLICY, REVIEW_METHODS_POLICY } from "../src/lib/agentic-sdlc/review-policy.ts";
+import { CONFORMANCE_SKILL } from "../src/lib/agentic-sdlc/review-policy.ts";
 
 if (!process.env.REVIEW_API_BASE_URL) throw new Error("Set REVIEW_API_BASE_URL explicitly.");
 const base = new URL(process.env.REVIEW_API_BASE_URL);
@@ -11,9 +11,12 @@ const model = process.env.REVIEW_MODEL;
 if (!key || !model) throw new Error("Set REVIEW_API_KEY and REVIEW_MODEL explicitly.");
 const endpoint = new URL(`${base.pathname.replace(/\/$/, "")}/chat/completions`, base);
 const dataset = JSON.parse(await readFile(new URL("./review-inspection.json", import.meta.url), "utf8"));
+const legacySkill = (await readFile(new URL("./baselines/production-v0.0.16.md", import.meta.url), "utf8")).trimEnd();
+const legacyInspection = legacySkill.match(/<!-- caipe-pr-inspection-policy:v2 -->[\s\S]*?<!-- \/caipe-pr-inspection-policy:v2 -->/)?.[0];
+if (!legacyInspection) throw new Error("Missing frozen inspection baseline.");
 const variant = process.argv.find(arg => arg.startsWith("--variant="))?.split("=")[1] || "both";
 if (!["baseline", "candidate", "both"].includes(variant)) throw new Error("Invalid variant.");
-const policyName = process.argv.find(arg => arg.startsWith("--policy="))?.split("=")[1] || "inspection";
+const policyName = process.argv.find(arg => arg.startsWith("--policy="))?.split("=")[1] || "methods";
 if (!["inspection", "methods"].includes(policyName)) throw new Error("Invalid policy.");
 const caseId = process.argv.find(arg => arg.startsWith("--case="))?.split("=")[1];
 const cases = dataset.cases.filter(item => !caseId || item.id === caseId);
@@ -28,7 +31,9 @@ function resultContent(content) {
   catch { return { result: { outcome: "invalid", raw: text }, format_valid: false }; }
 }
 async function evaluate(item, name) {
-  const policy = name === "baseline" ? CONFORMANCE_SKILL.replace(policyName === "methods" ? REVIEW_METHODS_POLICY : REVIEW_INSPECTION_POLICY, "") : CONFORMANCE_SKILL;
+  const policy = policyName === "inspection"
+    ? (name === "baseline" ? legacySkill.replace(legacyInspection, "") : legacySkill)
+    : (name === "baseline" ? legacySkill : CONFORMANCE_SKILL);
   // Deliberately omit expected outcomes and implementations from the initial request.
   const messages = [
     { role: "system", content: `${policy}\n\nOFFLINE READ-ONLY CALIBRATION: This is an open non-draft PR in example/repository at the reviewed head. Only the supplied snapshot tools exist. Do not publish or execute code. Return JSON only: {"outcome":"findings|no_findings|incomplete","findings":[{"path":"...","trigger":"...","impact":"...","fix":"..."}],"limits":["..."]}. Missing essential evidence is incomplete.` },

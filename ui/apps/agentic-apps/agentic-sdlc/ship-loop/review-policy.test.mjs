@@ -70,3 +70,15 @@ test("adapted methods reach all default reviewer prompts without weakening publi
     assert.match(prompt, /at most five new inline findings/);
   }
 });
+
+
+test("skills replace the legacy methodology in all runtime prompt copies", async () => {
+  const { CONFORMANCE_SKILL } = await import("./src/lib/agentic-sdlc/review-policy.ts");
+  for (const prompt of [CONFORMANCE_SKILL, reviewSystem("example/repository"), reviewPrompt("example/repository", "task")]) {
+    assert.doesNotMatch(prompt, /caipe-pr-inspection-policy:v2/);
+    assert.doesNotMatch(prompt, /Focus on two kinds of actionable findings/);
+    assert.match(prompt, /caipe-pr-review-runtime:v1/);
+    assert.match(prompt, /caipe-pr-review-methods:v1/);
+    assert.match(prompt, /code search is discovery/);
+  }
+});

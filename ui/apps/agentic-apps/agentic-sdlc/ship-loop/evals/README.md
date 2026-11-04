@@ -14,7 +14,13 @@ while keeping `read_source` pinned to `files`; an empty default-branch index
 must not prevent direct reads of a new PR-head file. Do not give the model `expected`, repository credentials,
 network/file-execution tools, or review/comment publication tools.
 
-Compare the same model/settings with and without `REVIEW_INSPECTION_POLICY`.
+Use `--policy=methods` (default) to compare the frozen production v0.0.16
+handwritten skill with the replacement skill-based reviewer. The archived
+`baselines/production-v0.0.16.md` was extracted from app commit
+`c37355a53ad2fc6c48a0ac66ead5b28e732205cf`; it is evaluation data, never a
+production prompt import. `--policy=inspection` preserves the historical
+comparison with/without inspection v2 using only that frozen baseline.
+
 Record the outcome, concrete trigger/impact/source evidence, requested files and
 missing evidence. Inspect the reasoning against `expected`; an outcome match
 alone is insufficient. Report false positives on the guarded controls as well
@@ -37,6 +43,6 @@ fixture-backed reads/searches. It never sends the expected rubric to the model,
 and cannot invoke a repository, write a review or execute suggested code.
 Inspect invalid-format responses and errors instead of silently discarding them.
 
-For the adapted review methods, use `--policy=methods --variant=both`. This
-retains inspection v2 in both variants and removes only REVIEW_METHODS_POLICY
-from the baseline. No upstream plugin or publication tools are invoked.
+The replacement uses adapted discovery/security/verification skills plus only
+CAIPE runtime and publication constraints. No upstream plugin or publication
+tools are invoked by this evaluation.

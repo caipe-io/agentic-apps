@@ -14,6 +14,8 @@ Changes: rewritten for remote, head-pinned source inspection; bounded task scope
 
 ## Persistence and rollout
 
+The adapted methods replace the former custom inspection/checklist text. A small versioned runtime bridge retains remote-source semantics and CAIPE safety rules. The former policy exists only as frozen evaluation data, not a production prompt import.
+
 `REVIEW_METHODS_POLICY` is embedded in the default private skill, reviewer system prompt and task prompt. Existing saved agents/tasks/skills are persisted separately; a code/image update alone does not rewrite them. Upgrade only an explicitly selected compatible reviewer, preserving customized content, tools, model, ownership and webhook trigger/signing key. Scan the complete candidate private skill before writes; update the task through the canonical task API so its in-memory registry reloads. Check the versioned methods block exactly once in each of the four saved prompt copies. A changed/customized baseline must fail closed for manual reconciliation, not be overwritten. Do not migrate unrelated agents.
 
 The additional methods are not proof of improved recall. Run baseline/candidate evaluations with expected findings withheld; include guarded controls and incomplete-source cases. Retain existing duplicate, stale-head, draft and manual-request guards.
