@@ -21,6 +21,10 @@ if (!["inspection", "methods"].includes(policyName)) throw new Error("Invalid po
 const caseId = process.argv.find(arg => arg.startsWith("--case="))?.split("=")[1];
 const cases = dataset.cases.filter(item => !caseId || item.id === caseId);
 if (!cases.length) throw new Error("Unknown evaluation case.");
+const provenance = process.argv.includes("--provenance");
+const outputSchema = provenance
+  ? `Return JSON only: {"outcome":"findings|no_findings|incomplete","review_body":"simulated review text with the single-line skill report marker, or empty if incomplete","findings":[{"path":"...","trigger":"...","impact":"...","fix":"...","body":"simulated new inline comment including finding-skill attribution marker"}],"limits":["..."]}. For this simulation the trusted task is calibration-task and the reviewed SHA is ${"a".repeat(40)}. Output strings only; do not publish anything. Record applied methods honestly. For incomplete inspection do not simulate a public review body.`
+  : 'Return JSON only: {"outcome":"findings|no_findings|incomplete","findings":[{"path":"...","trigger":"...","impact":"...","fix":"..."}],"limits":["..."]}.';
 const tools = [
   { type: "function", function: { name: "read_source", description: "Read one supplied repository file at the reviewed head.", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"], additionalProperties: false } } },
   { type: "function", function: { name: "search_source", description: "Discover references in the supplied search index; only read_source proves head contents.", parameters: { type: "object", properties: { pattern: { type: "string" } }, required: ["pattern"], additionalProperties: false } } },
@@ -31,12 +35,13 @@ function resultContent(content) {
   catch { return { result: { outcome: "invalid", raw: text }, format_valid: false }; }
 }
 async function evaluate(item, name) {
-  const policy = policyName === "inspection"
+  const selectedPolicy = policyName === "inspection"
     ? (name === "baseline" ? legacySkill.replace(legacyInspection, "") : legacySkill)
     : (name === "baseline" ? legacySkill : CONFORMANCE_SKILL);
+  const policy = provenance ? selectedPolicy.replaceAll("TASK_ID", "calibration-task") : selectedPolicy;
   // Deliberately omit expected outcomes and implementations from the initial request.
   const messages = [
-    { role: "system", content: `${policy}\n\nOFFLINE READ-ONLY CALIBRATION: This is an open non-draft PR in example/repository at the reviewed head. Only the supplied snapshot tools exist. Do not publish or execute code. Return JSON only: {"outcome":"findings|no_findings|incomplete","findings":[{"path":"...","trigger":"...","impact":"...","fix":"..."}],"limits":["..."]}. Missing essential evidence is incomplete.` },
+    { role: "system", content: `${policy}\n\nOFFLINE READ-ONLY CALIBRATION: This is an open non-draft PR in example/repository at the reviewed head. Only the supplied snapshot tools exist. Do not publish or execute code. ${outputSchema} Missing essential evidence is incomplete.` },
     { role: "user", content: JSON.stringify({ change: item.change, diff: item.diff, files: Object.keys(item.files) }) },
   ];
   const trace = [];

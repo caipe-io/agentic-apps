@@ -362,3 +362,42 @@ image does not update saved skills, system prompts or task prompts. Migrate
 compatible saved reviewers explicitly, run the private-skill security scan,
 save the task through the canonical API to reload its runtime, and verify the
 version in actual run evidence. Preserve custom instructions, tools and models.
+
+
+## Review skill provenance
+
+Each PR card lists **Skills used · reviewer reported** for its latest trusted
+current-head review. Individual review details keep historical reports, and
+inline findings separate attributed discovery from verification. Links point to
+an allowlisted catalog of the five pinned adapted Sentry, Trail of Bits and
+Anthropic methods. These are methods within a combined reviewer, not independent
+plugin invocations; the metadata does not prove causal ownership of an issue.
+
+The reviewer records a compact visible skill line plus a hidden JSON marker:
+
+```text
+<!-- caipe-pr-skills:v1 {"task":"review-task","head":"<40-character reviewed SHA>","used":["sentry-find-bugs","trailofbits-fp-check"]} -->
+<!-- caipe-pr-finding-skills:v1 {"task":"review-task","head":"<same SHA>","found_by":["sentry-find-bugs"],"verified_by":["trailofbits-fp-check"]} -->
+```
+
+Only the existing trusted reviewer/task binding can establish a report. The
+parser requires an exact task and review SHA, unique markers, bounded payloads,
+allowlisted IDs and finding attribution contained in the parent review's used
+set. Inline comments must match the original submitted COMMENT review's ID,
+author and original commit; GitHub remapping a comment to a newer diff must not
+relabel its original attribution. Pending/dismissed reviews and incomplete review
+pages cannot establish latest usage. Unknown IDs, bad bindings or ambiguous
+metadata show as unverified. Marker data never authorizes tools or actions.
+
+Legacy reviews show **Not recorded**; do not infer usage from category, current
+configuration or an earlier run, and do not rewrite old comments to add tags.
+Roll out the UI/parser before migrating persisted reviewer prompts to the new
+reporting policy. New default reviewers include it; existing customized prompts
+need a scoped, scanned migration through the canonical task API. Review/comment
+publication and per-head deduplication rules still apply. No production
+credentials or live review writes are needed for the fixture tests.
+
+UI rendering checks run with `npm run test:ui` and are also required by the
+app's build command, so the existing CI/release build jobs run them after
+installing the pinned UI dependencies. Root `npm test` covers parsing and
+projection without needing UI dependencies in the general test job.

@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build --webpack",
+    "build": "npm run test:ui && next build --webpack",
     "start": "next start -p 3030",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:ui": "node --test review-skills.ui-check.mjs"
   },
   "dependencies": {
     "next": "16.4.3",
