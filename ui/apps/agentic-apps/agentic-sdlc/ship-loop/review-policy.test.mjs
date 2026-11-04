@@ -97,3 +97,30 @@ test("open findings remain prominent and cannot use a clean headline", async () 
     assert.doesNotMatch(prompt, /say "No new actionable findings; previously reported findings remain open"/);
   }
 });
+
+
+test("skill provenance records actual method use without allowing backfill or extra posts", async () => {
+  const { CONFORMANCE_SKILL } = await import(
+    "./src/lib/agentic-sdlc/review-policy.ts"
+  );
+  const prompt = reviewPrompt("example/repository", "trusted-task");
+  for (const value of [
+    CONFORMANCE_SKILL,
+    reviewSystem("example/repository"),
+    prompt,
+  ]) {
+    assert.match(value, /Never infer skill use or discovery/);
+    assert.match(value, /only attach provenance to a review or new finding/);
+    assert.match(
+      value,
+      /Never edit or repost old reviews\/findings to backfill/,
+    );
+    assert.match(
+      value,
+      /Every listed method must also appear in that review's used array/,
+    );
+    assert.match(value, /not proof of a separate skill invocation/);
+  }
+  assert.match(prompt, /caipe-pr-skills:v1 {"task":"trusted-task"/);
+  assert.match(prompt, /caipe-pr-finding-skills:v1 {"task":"trusted-task"/);
+});

@@ -5,6 +5,7 @@ import { ChevronDown, Loader2, Search, Tag } from "lucide-react";
 import type { PrDashboardItem } from "@/lib/agentic-sdlc/pr-dashboard";
 
 import { ReReviewButton } from "./ReReviewButton";
+import { ReviewSkills, FindingSkills } from "./ReviewSkills";
 
 type Snapshot = {
   generated_at: string;
@@ -466,7 +467,7 @@ export function PrReviewDashboard({
   );
 }
 
-function PrCard({ pr, owner, repo }: { pr: PrDashboardItem; owner: string; repo: string }) {
+export function PrCard({ pr, owner, repo }: { pr: PrDashboardItem; owner: string; repo: string }) {
   const [history, setHistory] = useState(false);
   const [detail, setDetail] = useState<
     "checks" | "reviews" | "comments" | null
@@ -547,6 +548,7 @@ function PrCard({ pr, owner, repo }: { pr: PrDashboardItem; owner: string; repo:
             )}
           </span>
         </div>
+        <ReviewSkills report={pr.agent_review.skills} />
         {pr.missing_signals.length > 0 && (
           <p className="text-sm text-amber-200">
             Incomplete evidence: {pr.missing_signals.join(", ")}
@@ -680,6 +682,9 @@ function PrCard({ pr, owner, repo }: { pr: PrDashboardItem; owner: string; repo:
                       </a>
                     </p>
                   )}
+                  {review.skills && (
+                    <div className="mt-3"><ReviewSkills report={review.skills} /></div>
+                  )}
                   {review.body && (
                     <p className="mt-3 whitespace-pre-wrap break-words leading-relaxed">
                       {review.body}
@@ -728,6 +733,7 @@ function PrCard({ pr, owner, repo }: { pr: PrDashboardItem; owner: string; repo:
                   <p className="mt-3 whitespace-pre-wrap break-words leading-relaxed">
                     {comment.body}
                   </p>
+                  <FindingSkills report={comment.skills} />
                 </div>
               ))}
             </div>

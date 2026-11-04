@@ -46,3 +46,10 @@ Inspect invalid-format responses and errors instead of silently discarding them.
 The replacement uses adapted discovery/security/verification skills plus only
 CAIPE runtime and publication constraints. No upstream plugin or publication
 tools are invoked by this evaluation.
+
+For simulated skill-report metadata, add `--provenance --variant=candidate` and
+select `--case=tenant-query-unscoped`, `tenant-query-guarded`, or
+`unverified-prior-finding-is-incomplete`. The simulation uses task
+`calibration-task` and a fixed 40-character `a` SHA; outputs are never posted.
+The portable runner keeps strict JSON failures visible instead of repairing
+formatting. See SKILL-PROVENANCE-RESULTS.md for the captured model run and limits.

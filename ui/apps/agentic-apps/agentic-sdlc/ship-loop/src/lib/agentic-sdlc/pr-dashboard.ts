@@ -1,3 +1,8 @@
+import {
+  reviewSkillReport,
+  findingSkillReport,
+  stripSkillMetadata,
+} from "./review-skills.mjs";
 import { reviewBindings } from "./review-bindings";
 import { Octokit } from "@octokit/rest";
 import { getGitHubAccessToken } from "./agentic-sdlc-auth";
@@ -21,6 +26,7 @@ export type PrDashboardItem = {
       | "unverified"
       | "unknown";
     url: string | null;
+    skills: ReturnType<typeof reviewSkillReport>;
   };
   state: string;
   draft: boolean;
@@ -46,6 +52,7 @@ export type PrDashboardItem = {
     body: string;
     body_truncated: boolean;
     submitted_at: string | null;
+    skills: ReturnType<typeof reviewSkillReport> | null;
   }>;
   comments: Array<{
     id: number;
@@ -55,6 +62,7 @@ export type PrDashboardItem = {
     line: number | null;
     outdated: boolean;
     url: string;
+    skills: ReturnType<typeof findingSkillReport> | null;
   }>;
   missing_signals: string[];
 };
@@ -173,10 +181,21 @@ export async function getPrDashboard(
               return true;
             return Boolean(
               marker &&
-              trustedReviewers.has((r.user?.login || "").toLowerCase()) &&
-              trustedTasks.has(marker[1]),
+                trustedReviewers.has((r.user?.login || "").toLowerCase()) &&
+                trustedTasks.has(marker[1]),
             );
           };
+          const skillContext = (r: (typeof reviews)[number] | undefined) => ({
+            trusted: Boolean(
+              r &&
+                isTrustedAgent(r) &&
+                r.state === "COMMENTED" &&
+                ((r.body || "").match(/<!-- caipe-pr-review:task=/g) || [])
+                  .length === 1,
+            ),
+            taskId: r ? taskMarker(r)?.[1] || null : null,
+            headSha: r?.commit_id || "",
+          });
           // Keep non-agent GitHub decisions distinct from COMMENT-only agent reports and
           // from approvals on an older head. A dismissed decision revokes it.
           const latestByReviewer = new Map<string, string>();
@@ -240,7 +259,9 @@ export async function getPrDashboard(
               verdicts[0][2] === pr.head.sha
             )
               agentStatus = verdicts[0][3] as
-                "no_findings" | "findings" | "incomplete";
+                | "no_findings"
+                | "findings"
+                | "incomplete";
           }
           let ciStatus =
             checkResult.status === "rejected"
@@ -305,6 +326,13 @@ export async function getPrDashboard(
             ],
             agent_review: {
               status: agentStatus,
+              skills:
+                reviews.length >= 100
+                  ? { status: "unverified", used: [] }
+                  : reviewSkillReport(
+                      latestAgent?.body || "",
+                      skillContext(latestAgent),
+                    ),
               url:
                 (latestAgent || trustedAgentReviews.at(-1))?.html_url || null,
             },
@@ -340,33 +368,63 @@ export async function getPrDashboard(
               .filter((r) => r.state !== "PENDING")
               .map((r) => {
                 const marker = taskMarker(r);
+                const visibleBody = stripSkillMetadata(r.body || "")
+                    .replace(
+                      /<!-- caipe-pr-(?:review:task=[a-zA-Z0-9_-]+;head=[a-f0-9]{40}|verdict:v1;task=[a-zA-Z0-9_-]+;head=[a-f0-9]{40};result=(?:no_findings|findings|incomplete)) -->/g,
+                      "",
+                    )
+                    .trim();
                 return {
+                  skills: marker
+                    ? reviewSkillReport(r.body || "", skillContext(r))
+                    : null,
                   author: r.user?.login || "unknown",
                   state: r.state,
                   head_sha: r.commit_id || "",
                   current_head: r.commit_id === pr.head.sha,
                   url: r.html_url,
                   task_id: marker?.[1] || null,
-                  body: (r.body || "")
-                    .replace(
-                      /<!-- caipe-pr-(?:review:task=[a-zA-Z0-9_-]+;head=[a-f0-9]{40}|verdict:v1;task=[a-zA-Z0-9_-]+;head=[a-f0-9]{40};result=(?:no_findings|findings|incomplete)) -->/g,
-                      "",
-                    )
-                    .trim()
-                    .slice(0, 6000),
-                  body_truncated: (r.body || "").length > 6000,
+                  body: visibleBody.slice(0, 6000),
+                  body_truncated: visibleBody.length > 6000,
                   submitted_at: r.submitted_at || null,
                 };
               }),
-            comments: comments.map((c) => ({
-              id: c.id,
-              author: c.user?.login || "unknown",
-              body: c.body.slice(0, 3000),
-              path: c.path,
-              line: c.line ?? null,
-              outdated: c.line === null,
-              url: c.html_url,
-            })),
+            comments: comments.map((c) => {
+              // GitHub may update commit_id when mapping an old comment onto a new
+              // diff. Bind attribution to its submitted review/original commit.
+              const parent = reviews.find(
+                (r) => r.id === c.pull_request_review_id,
+              );
+              const marker = parent ? taskMarker(parent) : null;
+              const context = {
+                trusted: Boolean(
+                  skillContext(parent).trusted &&
+                    parent &&
+                    c.original_commit_id === parent.commit_id &&
+                    c.user?.login?.toLowerCase() ===
+                      parent.user?.login?.toLowerCase(),
+                ),
+                taskId: marker?.[1] || null,
+                headSha: parent?.commit_id || "",
+              };
+              const parentSkills = reviewSkillReport(
+                parent?.body || "",
+                context,
+              );
+              return {
+                id: c.id,
+                author: c.user?.login || "unknown",
+                body: stripSkillMetadata(c.body).slice(0, 3000),
+                path: c.path,
+                line: c.line ?? null,
+                outdated: c.line === null,
+                url: c.html_url,
+                skills:
+                  marker || c.body.includes("<!-- caipe-pr-finding-skills:")
+                    ? findingSkillReport(c.body, context, parentSkills)
+                    : null,
+              };
+            }),
             missing_signals: missing,
           } satisfies PrDashboardItem;
         }),
