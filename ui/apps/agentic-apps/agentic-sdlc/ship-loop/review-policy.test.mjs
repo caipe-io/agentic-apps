@@ -57,15 +57,14 @@ test("manual re-review inspects an already reviewed commit without repeating pub
 });
 
 
-test("adapted methods reach all default reviewer prompts without weakening publication guards", async () => {
+test("gateway methods replace inline method copies without weakening publication guards", async () => {
   const { CONFORMANCE_SKILL, REVIEW_METHODS_POLICY } = await import("./src/lib/agentic-sdlc/review-policy.ts");
   for (const prompt of [CONFORMANCE_SKILL, reviewSystem("example/repository"), reviewPrompt("example/repository", "task")]) {
-    assert.equal(prompt.split(REVIEW_METHODS_POLICY).length - 1, 1);
-    assert.match(prompt, /exact trigger, attacker privileges/);
-    assert.match(prompt, /do not claim independent-agent agreement/);
-    assert.match(prompt, /Pre-existing variants.*not new PR findings/);
-    assert.match(prompt, /https:\/\/github.com\/getsentry\/skills\/blob\/[a-f0-9]{40}/);
-    assert.match(prompt, /CC-BY-SA-4.0/);
+    assert.ok(!prompt.includes(REVIEW_METHODS_POLICY));
+    assert.doesNotMatch(prompt, /Privately inventory every changed file/);
+    assert.match(prompt, /use read_file to read all five attached method/);
+    assert.match(prompt, /do not fall back to an old inline method copy/i);
+    assert.match(prompt, /missing, blocked, unreadable or truncated/);
     assert.match(prompt, /Incomplete inspection is not a clean result/);
     assert.match(prompt, /at most five new inline findings/);
   }
@@ -78,7 +77,7 @@ test("skills replace the legacy methodology in all runtime prompt copies", async
     assert.doesNotMatch(prompt, /caipe-pr-inspection-policy:v2/);
     assert.doesNotMatch(prompt, /Focus on two kinds of actionable findings/);
     assert.match(prompt, /caipe-pr-review-runtime:v1/);
-    assert.match(prompt, /caipe-pr-review-methods:v1/);
+    assert.match(prompt, /caipe-pr-gateway-skills:v1/);
     assert.match(prompt, /code search is discovery/);
   }
 });

@@ -24,6 +24,7 @@ import {
   reviewSystem,
 } from "./review-policy";
 import { reviewTriggerFilter } from "./review-eligibility";
+import { ensureReviewGatewaySkills } from "./review-gateway-skills.mjs";
 
 export async function repositoryContext(
   req: Request,
@@ -223,7 +224,8 @@ export async function configureRepositoryReviews(
           description:
             "PR logic and security review; publish only new actionable findings.",
           category: "GitHub Operations",
-          visibility: "private",
+          visibility: "team",
+          shared_with_teams: [teamSlug],
           difficulty: "intermediate",
           is_quick_start: false,
           metadata: { version: "2.0.0", source: "agentic-sdlc" },
@@ -248,6 +250,11 @@ export async function configureRepositoryReviews(
       req,
       `/api/skills/configs?id=${encodeURIComponent(binding.skill_id!)}`,
     );
+    if (skill.skill_content !== CONFORMANCE_SKILL)
+      throw new SetupError(
+        "This saved reviewer needs a scoped gateway-skill migration. Its customized skill will not be overwritten by setup.",
+        409,
+      );
     if (skill.scan_status === "unscanned") {
       await platformRequest(
         req,
@@ -265,6 +272,15 @@ export async function configureRepositoryReviews(
         "The conformance skill's security scan has not passed. Reviews remain off; ask your CAIPE administrator to inspect the skill scan.",
         409,
       );
+    const methodSkillIds = await ensureReviewGatewaySkills({
+      request: (path, method, body) => platformRequest(req, path, method, body),
+      save: async (ids) => save({ method_skill_ids: ids }),
+      ids: binding.method_skill_ids,
+      fullName: meta.full_name,
+      bindingKey: binding.binding_key,
+      teamSlug,
+    });
+    const attachedSkills = [binding.skill_id!, ...methodSkillIds];
     if (!binding.agent_id) {
       const name = `SDLC review ${meta.full_name} ${binding.binding_key}`;
       const expectedId = `agent-${name
@@ -308,7 +324,7 @@ export async function configureRepositoryReviews(
             owner_team_slug: teamSlug,
             shared_with_teams: [],
             subagents: [],
-            skills: [binding.skill_id],
+            skills: attachedSkills,
             enabled: true,
           });
       if (!created.data?._id)
@@ -318,13 +334,17 @@ export async function configureRepositoryReviews(
         );
       await save({ agent_id: created.data._id });
     } else {
-      // An explicit re-enable can repair a renamed repository's prompt without
-      // changing tools, model or the owner team.
+      const current = (await platformRequest(
+        req,
+        `/api/dynamic-agents/agents/${encodeURIComponent(binding.agent_id)}`,
+      )).data;
+      if (current?.system_prompt !== reviewSystem(meta.full_name))
+        throw new SetupError("This customized reviewer needs a scoped migration before re-enabling.", 409);
       await platformRequest(
         req,
         `/api/dynamic-agents?id=${encodeURIComponent(binding.agent_id)}`,
         "PUT",
-        { system_prompt: reviewSystem(meta.full_name) },
+        { skills: [...new Set([...(current.skills || []), ...attachedSkills])] },
       );
     }
     const bindingMarker = `[sdlc-binding:${binding.binding_key}]`;

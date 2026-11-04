@@ -1,6 +1,7 @@
 // Explicit, read-only evaluation. No production agent, repository or publication tools.
 import { readFile } from "node:fs/promises";
 import { CONFORMANCE_SKILL } from "../src/lib/agentic-sdlc/review-policy.ts";
+import { REVIEW_GATEWAY_SKILLS } from "../src/lib/agentic-sdlc/review-gateway-skills.mjs";
 
 if (!process.env.REVIEW_API_BASE_URL) throw new Error("Set REVIEW_API_BASE_URL explicitly.");
 const base = new URL(process.env.REVIEW_API_BASE_URL);
@@ -26,6 +27,7 @@ const outputSchema = provenance
   ? `Return JSON only: {"outcome":"findings|no_findings|incomplete","review_body":"simulated review text with the single-line skill report marker, or empty if incomplete","findings":[{"path":"...","trigger":"...","impact":"...","fix":"...","body":"simulated new inline comment including finding-skill attribution marker"}],"limits":["..."]}. For this simulation the trusted task is calibration-task and the reviewed SHA is ${"a".repeat(40)}. Output strings only; do not publish anything. Record applied methods honestly. For incomplete inspection do not simulate a public review body.`
   : 'Return JSON only: {"outcome":"findings|no_findings|incomplete","findings":[{"path":"...","trigger":"...","impact":"...","fix":"..."}],"limits":["..."]}.';
 const tools = [
+  { type: "function", function: { name: "read_file", description: "Read an attached gateway skill file from the immutable calibration snapshot.", parameters: { type: "object", properties: { file_path: { type: "string" } }, required: ["file_path"], additionalProperties: false } } },
   { type: "function", function: { name: "read_source", description: "Read one supplied repository file at the reviewed head.", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"], additionalProperties: false } } },
   { type: "function", function: { name: "search_source", description: "Discover references in the supplied search index; only read_source proves head contents.", parameters: { type: "object", properties: { pattern: { type: "string" } }, required: ["pattern"], additionalProperties: false } } },
 ];
@@ -35,6 +37,10 @@ function resultContent(content) {
   catch { return { result: { outcome: "invalid", raw: text }, format_valid: false }; }
 }
 async function evaluate(item, name) {
+  const gatewayFiles = Object.fromEntries(REVIEW_GATEWAY_SKILLS.flatMap(skill => {
+    const prefix = `/skills/agent-skills/calibration-${skill.id}/`;
+    return [[prefix + "SKILL.md", skill.content], ...Object.entries(skill.ancillary_files).map(([path, content]) => [prefix + path, content])];
+  }));
   const selectedPolicy = policyName === "inspection"
     ? (name === "baseline" ? legacySkill.replace(legacyInspection, "") : legacySkill)
     : (name === "baseline" ? legacySkill : CONFORMANCE_SKILL);
@@ -42,10 +48,10 @@ async function evaluate(item, name) {
   // Deliberately omit expected outcomes and implementations from the initial request.
   const messages = [
     { role: "system", content: `${policy}\n\nOFFLINE READ-ONLY CALIBRATION: This is an open non-draft PR in example/repository at the reviewed head. Only the supplied snapshot tools exist. Do not publish or execute code. ${outputSchema} Missing essential evidence is incomplete.` },
-    { role: "user", content: JSON.stringify({ change: item.change, diff: item.diff, files: Object.keys(item.files) }) },
+    { role: "user", content: JSON.stringify({ change: item.change, diff: item.diff, files: Object.keys(item.files), attachedGatewaySkillPaths: policyName === "methods" && name === "candidate" ? Object.keys(gatewayFiles) : [] }) },
   ];
   const trace = [];
-  for (let turn = 0; turn < 12; turn++) {
+  for (let turn = 0; turn < 24; turn++) {
     const response = await fetch(endpoint, {
       method: "POST", redirect: "error", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
       body: JSON.stringify({ model, messages, tools, max_tokens: 4096,
@@ -61,7 +67,9 @@ async function evaluate(item, name) {
       let value = "TOOL_NOT_AVAILABLE", args = {};
       try {
         args = JSON.parse(call.function.arguments);
-        if (call.function.name === "read_source") {
+        if (call.function.name === "read_file" && policyName === "methods" && name === "candidate") {
+          value = gatewayFiles[String(args.file_path || "")] ?? "SKILL_UNAVAILABLE";
+        } else if (call.function.name === "read_source") {
           const path = String(args.path || "").replace(/^\.\//, "");
           value = Object.hasOwn(item.files, path) ? item.files[path] : "SOURCE_UNAVAILABLE";
         } else if (call.function.name === "search_source") {
