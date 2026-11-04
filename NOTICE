@@ -20,3 +20,12 @@ The Ship Loop UI, projection and route code derives from the Apache-2.0-licensed
 CAIPE mirror implementation. SOURCE.json records the original repository and
 exact commit. Original notices and source comments are retained; app-specific
 identity, credential and runtime boundaries are implemented in this repository.
+
+Agentic Review methods
+---------------------
+Sentry find-bugs: Copyright 2025 Functional Software, Inc. dba Sentry; Apache-2.0.
+Anthropic code-review plugin: Apache-2.0.
+Trail of Bits differential-review, fp-check and variant-analysis adaptations:
+CC-BY-SA-4.0 (exception for review-methods/trail-of-bits.mjs and its prompt text).
+Pinned sources, modification notices and full license texts are in
+ui/apps/agentic-apps/agentic-sdlc/ship-loop/src/lib/agentic-sdlc/review-methods/.
