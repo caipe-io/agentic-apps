@@ -55,3 +55,18 @@ test("manual re-review inspects an already reviewed commit without repeating pub
     assert.match(policy, /never an unchanged clean status or repeated finding/);
   }
 });
+
+
+test("adapted methods reach all default reviewer prompts without weakening publication guards", async () => {
+  const { CONFORMANCE_SKILL, REVIEW_METHODS_POLICY } = await import("./src/lib/agentic-sdlc/review-policy.ts");
+  for (const prompt of [CONFORMANCE_SKILL, reviewSystem("example/repository"), reviewPrompt("example/repository", "task")]) {
+    assert.equal(prompt.split(REVIEW_METHODS_POLICY).length - 1, 1);
+    assert.match(prompt, /exact trigger, attacker privileges/);
+    assert.match(prompt, /do not claim independent-agent agreement/);
+    assert.match(prompt, /Pre-existing variants.*not new PR findings/);
+    assert.match(prompt, /https:\/\/github.com\/getsentry\/skills\/blob\/[a-f0-9]{40}/);
+    assert.match(prompt, /CC-BY-SA-4.0/);
+    assert.match(prompt, /Incomplete inspection is not a clean result/);
+    assert.match(prompt, /at most five new inline findings/);
+  }
+});

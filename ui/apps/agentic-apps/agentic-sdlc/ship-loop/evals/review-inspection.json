@@ -116,6 +116,32 @@
         "outcome": "no_findings",
         "issue": "Creation and assistance both require steward rights, and the button follows those rights."
       }
+    },
+    {
+      "id": "tenant-query-unscoped",
+      "change": "Replace the project gist-listing query. The request is authenticated and authorized only for project A. The Mongo collection holds private gists for multiple projects. Treat requireProjectRead as the correctly implemented authoritative access check; collection.find has standard MongoDB filter semantics.",
+      "diff": "- const rows = await collection.find({project_id: project.id}).toArray();\n+ const rows = await collection.find({}).toArray();",
+      "files": {
+        "api/gists.js": "export async function GET(request) {\n const project = await requireProjectRead(request);\n const rows = await collection.find({}).toArray();\n return Response.json(rows);\n}",
+        "storage/project-gists.js": "export function projectGists(projectId, collection) { return collection.find({project_id: projectId}).toArray(); }"
+      },
+      "expected": {
+        "outcome": "findings",
+        "issue": "Project A reader receives private gists from other projects because the new query has no project filter."
+      }
+    },
+    {
+      "id": "tenant-query-guarded",
+      "change": "Replace the project gist-listing query. The request is authenticated and authorized only for project A. The Mongo collection holds private gists for multiple projects. Treat requireProjectRead as the correctly implemented authoritative access check; collection.find has standard MongoDB filter semantics.",
+      "diff": "- const rows = await collection.find({project_id: project.id}).toArray();\n+ const rows = await projectGists(project.id, collection);",
+      "files": {
+        "api/gists.js": "export async function GET(request) {\n const project = await requireProjectRead(request);\n const rows = await projectGists(project.id, collection);\n return Response.json(rows);\n}",
+        "storage/project-gists.js": "export function projectGists(projectId, collection) { return collection.find({project_id: projectId}).toArray(); }"
+      },
+      "expected": {
+        "outcome": "no_findings",
+        "issue": "Project scope remains enforced by the called storage helper."
+      }
     }
   ]
 }

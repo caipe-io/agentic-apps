@@ -36,3 +36,7 @@ when supported by the chosen model. The runner emits JSONL and permits only
 fixture-backed reads/searches. It never sends the expected rubric to the model,
 and cannot invoke a repository, write a review or execute suggested code.
 Inspect invalid-format responses and errors instead of silently discarding them.
+
+For the adapted review methods, use `--policy=methods --variant=both`. This
+retains inspection v2 in both variants and removes only REVIEW_METHODS_POLICY
+from the baseline. No upstream plugin or publication tools are invoked.
