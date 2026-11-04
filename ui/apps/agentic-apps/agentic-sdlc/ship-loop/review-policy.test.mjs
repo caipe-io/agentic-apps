@@ -82,3 +82,18 @@ test("skills replace the legacy methodology in all runtime prompt copies", async
     assert.match(prompt, /code search is discovery/);
   }
 });
+
+
+test("open findings remain prominent and cannot use a clean headline", async () => {
+  const { CONFORMANCE_SKILL } = await import("./src/lib/agentic-sdlc/review-policy.ts");
+  for (const prompt of [CONFORMANCE_SKILL, reviewSystem("example/repository"), reviewPrompt("example/repository", "task")]) {
+    assert.match(prompt, /M previously reported findings remain · 0 new/);
+    assert.match(prompt, /This is a findings outcome, not a clean review/);
+    assert.match(prompt, /Use this clean headline only after required prior findings were verified fixed or absent/);
+    assert.match(prompt, /Do not call a finding fixed because its thread is resolved or outdated/);
+    assert.match(prompt, /If an earlier finding cannot be rechecked.*incomplete privately/);
+    assert.match(prompt, /link.*existing threads/);
+    assert.doesNotMatch(prompt, /start with \*\*🔎 Agentic SDLC review · No new actionable findings/);
+    assert.doesNotMatch(prompt, /say "No new actionable findings; previously reported findings remain open"/);
+  }
+});
