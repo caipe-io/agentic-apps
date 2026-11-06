@@ -1,3 +1,4 @@
+import { reviewRunState } from "./review-run-state.mjs";
 export type PreparedReview = {
   task_id: string;
   agent_id: string;
@@ -59,7 +60,8 @@ export async function startPreparedReview(
     throw new Error(
       "The configured reviewer is disabled or its scope changed.",
     );
-  if (task.manual_run_context_version !== 1)
+  const scoped = task.metadata?.review_execution_version === 1;
+  if (!scoped && task.manual_run_context_version !== 1)
     throw new Error(
       "Re-review is not available on this deployment yet. The review service needs an update.",
     );
@@ -68,9 +70,14 @@ export async function startPreparedReview(
       "This saved reviewer needs an update before it can re-review existing commits.",
     );
   const result = await hostRequest(
-    `${path}/run`,
+    scoped ? `${path}/reviews/run` : `${path}/run`,
     signal,
-    prepared.run_body,
+    scoped ? {
+      request_id: prepared.run_body.request_id,
+      repository: (prepared.run_body.context.repository as any)?.full_name,
+      pull_request_number: (prepared.run_body.context.pull_request as any)?.number,
+      head_sha: (prepared.run_body.context.pull_request as any)?.head?.sha,
+    } : prepared.run_body,
     request,
   );
   if (!/^[a-f0-9-]{36}$/i.test(result?.run_id || ""))
@@ -94,4 +101,25 @@ export async function reviewRunStatus(
     runs.find((run: { run_id: string }) => run.run_id === runId)?.status ||
     "queued"
   );
+}
+
+export async function reviewRunProgress(
+  taskId: string, runId: string, head: string, signal: AbortSignal, request: Fetch = fetch,
+) {
+  const runs = await hostRequest(`${taskPath(taskId)}/runs?limit=100`, signal, undefined, request);
+  if (!Array.isArray(runs)) throw new Error("Invalid review run history.");
+  return reviewRunState(runs.find((run: any) => run.run_id === runId), taskId, head);
+}
+
+export async function resumeReviewRun(taskId: string, runId: string, signal: AbortSignal, request: Fetch = fetch) {
+  if (!/^[a-f0-9-]{36}$/i.test(runId)) throw new Error("Invalid review run.");
+  const result = await hostRequest(`${taskPath(taskId)}/runs/${runId}/resume-review`, signal, {}, request);
+  if (!/^[a-f0-9-]{36}$/i.test(result?.run_id || "")) throw new Error("No resumed run was returned.");
+  return { taskId, runId: result.run_id as string };
+}
+
+export async function reviewTaskProgress(taskId: string, signal: AbortSignal, request: Fetch = fetch) {
+  const rows = await hostRequest(`${taskPath(taskId)}/review-status`, signal, undefined, request);
+  if (!Array.isArray(rows)) throw new Error("Invalid review status response.");
+  return rows;
 }

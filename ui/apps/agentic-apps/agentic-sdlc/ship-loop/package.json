@@ -6,7 +6,7 @@
     "build": "npm run test:ui && next build --webpack",
     "start": "next start -p 3030",
     "typecheck": "tsc --noEmit",
-    "test:ui": "node --test review-skills.ui-check.mjs"
+    "test:ui": "node --test review-skills.ui-check.mjs review-body.ui-check.mjs"
   },
   "dependencies": {
     "next": "16.4.3",

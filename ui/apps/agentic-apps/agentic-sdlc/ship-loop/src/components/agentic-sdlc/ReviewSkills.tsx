@@ -13,7 +13,7 @@ function Badges({ skills }: { skills: Skill[] }) {
           href={skill.url}
           target="_blank"
           rel="noreferrer"
-          title={`${skill.role}. Adapted review method; attribution is reported by the reviewer.`}
+          title={`${skill.role}. Reviewer-reported method; exact package evidence is recorded in private run history.`}
           className="rounded-md border border-border bg-secondary/40 px-2 py-1 text-xs text-foreground hover:border-primary hover:text-primary"
         >
           {skill.name}

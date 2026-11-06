@@ -25,7 +25,9 @@ Agentic Review methods
 ---------------------
 Sentry find-bugs: Copyright 2025 Functional Software, Inc. dba Sentry; Apache-2.0.
 Anthropic code-review plugin: Apache-2.0.
-Trail of Bits differential-review, fp-check and variant-analysis adaptations:
-CC-BY-SA-4.0 (exception for review-methods/trail-of-bits.mjs and its prompt text).
-Pinned sources, modification notices and full license texts are in
+Trail of Bits differential-review, fp-check and variant-analysis:
+CC-BY-SA-4.0. The shortened runtime adapters have been removed; current
+reviewers import original files through the gateway, retaining upstream terms.
+Pinned sources are recorded in review-upstream-lock.json alongside the review
+policy. Full license texts and historical attribution are retained in
 ui/apps/agentic-apps/agentic-sdlc/ship-loop/src/lib/agentic-sdlc/review-methods/.

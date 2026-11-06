@@ -4,12 +4,16 @@ import { useEffect, useId, useState } from "react";
 import { ChevronDown, Loader2, Search, Tag } from "lucide-react";
 import type { PrDashboardItem } from "@/lib/agentic-sdlc/pr-dashboard";
 
+import { reviewTaskProgress } from "@/lib/agentic-sdlc/manual-review-client";
+import { reviewRunState, reviewStatePresentation, type ReviewRunState } from "@/lib/agentic-sdlc/review-run-state.mjs";
+import { ReviewBody } from "./ReviewBody";
 import { ReReviewButton } from "./ReReviewButton";
 import { ReviewSkills, FindingSkills } from "./ReviewSkills";
 
 type Snapshot = {
   generated_at: string;
   viewer_login: string | null;
+  review_task_id?: string | null;
   items: PrDashboardItem[];
   note: string;
 };
@@ -75,6 +79,23 @@ export function PrReviewDashboard({
   const loading = request.key !== requestKey || request.loading;
   const error = request.key === requestKey ? request.error : "";
   const [tick, setTick] = useState(0);
+  const [executions, setExecutions] = useState<{key: string; rows: any[]}>({key:"", rows:[]});
+  useEffect(() => {
+    const task = data?.review_task_id;
+    if (!task) return;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    async function poll() {
+      try {
+        const rows = await reviewTaskProgress(task!, controller.signal);
+        if (controller.signal.aborted) return;
+        setExecutions({key: requestKey, rows});
+        timer = setTimeout(poll, 10000);
+      } catch { /* Private task progress may be unavailable to this viewer; GitHub evidence remains visible. */ }
+    }
+    void poll();
+    return () => { controller.abort(); clearTimeout(timer); };
+  }, [data?.review_task_id, requestKey, revision]);
   useEffect(() => {
     setLabel("");
     setChecks("");
@@ -460,14 +481,19 @@ export function PrReviewDashboard({
         aria-busy={loading}
       >
         {visible.map((pr) => (
-          <PrCard key={`${owner}/${repo}:${pr.number}:${pr.head_sha}`} pr={pr} owner={owner} repo={repo} />
+          <PrCard key={`${owner}/${repo}:${pr.number}:${pr.head_sha}`} pr={pr} owner={owner} repo={repo}
+            execution={executions.key === requestKey ? (() => {
+              const run = executions.rows.find(row => row.review_execution?.head === pr.head_sha &&
+                row.review_execution?.number === pr.number && row.review_execution?.repository?.toLowerCase() === `${owner}/${repo}`.toLowerCase());
+              return run ? reviewRunState(run, data?.review_task_id || "", pr.head_sha) : null;
+            })() : null} />
         ))}
       </div>
     </section>
   );
 }
 
-export function PrCard({ pr, owner, repo }: { pr: PrDashboardItem; owner: string; repo: string }) {
+export function PrCard({ pr, owner, repo, execution }: { pr: PrDashboardItem; owner: string; repo: string; execution?: ReviewRunState | null }) {
   const [history, setHistory] = useState(false);
   const [detail, setDetail] = useState<
     "checks" | "reviews" | "comments" | null
@@ -548,9 +574,14 @@ export function PrCard({ pr, owner, repo }: { pr: PrDashboardItem; owner: string
             )}
           </span>
         </div>
+        {execution && <p className="text-xs" aria-live="polite"><span className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 ${reviewStatePresentation[execution.state].tone}`}>
+          <span aria-hidden="true">{reviewStatePresentation[execution.state].icon}</span>
+          Latest run: {reviewStatePresentation[execution.state].label}
+          {execution.total ? ` · ${execution.completed}/${execution.total} groups` : ""}
+        </span></p>}
         <ReviewSkills report={pr.agent_review.skills} />
         {pr.missing_signals.length > 0 && (
-          <p className="text-sm text-amber-200">
+          <p className="text-sm review-status-warning">
             Incomplete evidence: {pr.missing_signals.join(", ")}
           </p>
         )}
@@ -686,12 +717,10 @@ export function PrCard({ pr, owner, repo }: { pr: PrDashboardItem; owner: string
                     <div className="mt-3"><ReviewSkills report={review.skills} /></div>
                   )}
                   {review.body && (
-                    <p className="mt-3 whitespace-pre-wrap break-words leading-relaxed">
-                      {review.body}
-                    </p>
+                    <ReviewBody body={review.body} />
                   )}
                   {review.body_truncated && (
-                    <p className="mt-2 text-xs text-amber-200">
+                    <p className="mt-2 text-xs review-status-warning">
                       Summary shortened. Open the GitHub review for the full
                       text.
                     </p>
@@ -730,9 +759,7 @@ export function PrCard({ pr, owner, repo }: { pr: PrDashboardItem; owner: string
                     {comment.author}
                     {comment.outdated ? " · outdated diff" : ""}
                   </p>
-                  <p className="mt-3 whitespace-pre-wrap break-words leading-relaxed">
-                    {comment.body}
-                  </p>
+                  <ReviewBody body={comment.body} />
                   <FindingSkills report={comment.skills} />
                 </div>
               ))}

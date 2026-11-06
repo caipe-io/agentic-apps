@@ -1,7 +1,7 @@
 // Explicit, read-only evaluation. No production agent, repository or publication tools.
 import { readFile } from "node:fs/promises";
 import { CONFORMANCE_SKILL } from "../src/lib/agentic-sdlc/review-policy.ts";
-import { REVIEW_GATEWAY_SKILLS } from "../src/lib/agentic-sdlc/review-gateway-skills.mjs";
+import { resolveReviewHubSkills } from "../src/lib/agentic-sdlc/review-gateway-skills.mjs";
 
 if (!process.env.REVIEW_API_BASE_URL) throw new Error("Set REVIEW_API_BASE_URL explicitly.");
 const base = new URL(process.env.REVIEW_API_BASE_URL);
@@ -36,11 +36,20 @@ function resultContent(content) {
   try { return { result: JSON.parse(text), format_valid: true }; }
   catch { return { result: { outcome: "invalid", raw: text }, format_valid: false }; }
 }
+let gatewayFiles = {}, methodBindings = {};
+if (policyName === "methods" && variant !== "baseline") {
+  const snapshotPath = process.argv.find(arg => arg.startsWith("--gateway-snapshot="))?.slice("--gateway-snapshot=".length);
+  if (!snapshotPath) throw new Error("Supply --gateway-snapshot=<catalog.json> with the scanned original Hub packages; adaptations are not a fallback.");
+  const snapshot = JSON.parse(await readFile(snapshotPath, "utf8"));
+  const resolved = await resolveReviewHubSkills({ request: async () => snapshot });
+  methodBindings = resolved.ids;
+  for (const row of snapshot.skills.filter(row => Object.values(resolved.ids).includes(row.id))) {
+    const prefix = `/skills/hub-${row.source_id}/${row.id.toLowerCase().replace(/[^a-z0-9-]/g, "-")}/`;
+    gatewayFiles[prefix + "SKILL.md"] = row.content;
+    for (const [path, content] of Object.entries(row.ancillary_files || {})) gatewayFiles[prefix + path] = content;
+  }
+}
 async function evaluate(item, name) {
-  const gatewayFiles = Object.fromEntries(REVIEW_GATEWAY_SKILLS.flatMap(skill => {
-    const prefix = `/skills/agent-skills/calibration-${skill.id}/`;
-    return [[prefix + "SKILL.md", skill.content], ...Object.entries(skill.ancillary_files).map(([path, content]) => [prefix + path, content])];
-  }));
   const selectedPolicy = policyName === "inspection"
     ? (name === "baseline" ? legacySkill.replace(legacyInspection, "") : legacySkill)
     : (name === "baseline" ? legacySkill : CONFORMANCE_SKILL);
@@ -48,7 +57,7 @@ async function evaluate(item, name) {
   // Deliberately omit expected outcomes and implementations from the initial request.
   const messages = [
     { role: "system", content: `${policy}\n\nOFFLINE READ-ONLY CALIBRATION: This is an open non-draft PR in example/repository at the reviewed head. Only the supplied snapshot tools exist. Do not publish or execute code. ${outputSchema} Missing essential evidence is incomplete.` },
-    { role: "user", content: JSON.stringify({ change: item.change, diff: item.diff, files: Object.keys(item.files), attachedGatewaySkillPaths: policyName === "methods" && name === "candidate" ? Object.keys(gatewayFiles) : [] }) },
+    { role: "user", content: JSON.stringify({ change: item.change, diff: item.diff, files: Object.keys(item.files), methodBindings: name === "candidate" ? methodBindings : {}, attachedGatewaySkillPaths: policyName === "methods" && name === "candidate" ? Object.keys(gatewayFiles) : [] }) },
   ];
   const trace = [];
   for (let turn = 0; turn < 24; turn++) {

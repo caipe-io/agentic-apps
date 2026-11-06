@@ -435,6 +435,7 @@ export async function getPrDashboard(
     repository: `${owner}/${repo}`,
     generated_at: new Date().toISOString(),
     viewer_login: viewer,
+    review_task_id: binding?.task_id || null,
     items,
     limits: {
       pull_requests: 20,

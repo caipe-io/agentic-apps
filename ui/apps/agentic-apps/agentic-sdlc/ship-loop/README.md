@@ -366,31 +366,65 @@ version in actual run evidence. Preserve custom instructions, tools and models.
 
 ## Review skill provenance
 
-New review connections provision five separate gateway method skills shared with
-the review agent's selected owner team,
-each with pinned attribution, license files and `PROVENANCE.json` containing its
-method version and content digest. Each skill must pass the gateway scanner
-before its ID is attached. The existing conformance skill contains orchestration
-and publication rules; method bodies are no longer copied into system/task prompts.
-The runtime exposes the attached files through its normal skill loader. Reviews
-must read all five method files and their provenance before inspection; missing
-or unreadable skills produce an incomplete result, never an inline fallback.
+New review connections attach **original upstream files unchanged** from GitHub
+Skill Hubs. No shortened method bodies are copied into prompts or a per-repository
+skill. `review-upstream-lock.json` records exact repository commits, entry paths
+and Git blob IDs for every original method and supporting file. The gateway
+imports and scans the full packages; onboarding checks those bytes before
+attaching stable Hub IDs. Agent-owned SHA-256 pins make changed, missing or
+unscanned packages fail closed at runtime. URLs are attribution, not a request
+for the model to download instructions during a review.
 
-Creation checkpoints IDs for retry and rejects changed content or a mismatched
-connection. Existing/customized reviewers require an explicit scoped migration;
-setup never silently replaces their saved skills. Keep owner visibility and tool,
-model, trigger and signing-key settings. Verify actual runtime file reads in a
-fresh live calibration after migration, rather than treating attachments as use.
+Register these GitHub hubs through the gateway's Skills administration, pinning
+the revisions in the lock file and granting the reviewer owner team access:
 
-The read-only evaluation harness supplies the same method files through a virtual
-`read_file` snapshot tool, separately from repository source tools. It cannot
-access the local filesystem, gateway credentials or publication tools.
+- `getsentry/skills`: include `skills/find-bugs/`.
+- `trailofbits/skills`: include `plugins/differential-review/skills/`,
+  `plugins/fp-check/skills/`, and `plugins/variant-analysis/skills/`.
+- `anthropics/claude-plugins-official`: include `plugins/code-review/commands/`;
+  additionally select the original entry `plugins/code-review/commands/code-review.md`.
+  This is command Markdown upstream, not a rewritten SKILL.md.
+
+Refresh and scan before enabling reviews. Required references, CodeQL templates
+and SVG text assets remain unchanged and are included in the package pins.
+Native plugin dependencies and tool names do not grant new execution authority;
+record an incomplete pass when essential verification is unavailable. CAIPE's
+repository, read-only phase and publication guards remain a separate wrapper.
+
+Existing/customized reviewers need an explicit scoped migration. Preserve
+ownership, tools, model and trigger/signing key. Verify actual original-file
+reads in a fresh read-only calibration, then detach and delete only the old
+adapted methods that have no remaining agent references. Keep the orchestration
+skill and historical evaluation records. An image rollout alone does not update
+saved reviewer attachments or policies.
+
+### Bounded execution and review presentation
+
+The review service must advertise `review_execution_version=1` before new
+connections activate. They opt into inventory, token-sized related-file groups,
+cross-group verification and a single publication phase. Inspection phases have
+narrowed read-only tools and fresh contexts. Failed multi-file groups split;
+completed groups are persisted and can resume without repeating them. Every
+phase has a time/report budget; large files are read in pages and incomplete
+coverage never becomes a clean result. Checkpoints expire after seven days.
+
+The UI distinguishes completed, incomplete, skipped, failed and unavailable
+outcomes, including legacy transport-success runs with incomplete verdicts.
+**Resume review** uses the authenticated task owner's checkpoint and is disabled
+after an uncertain publication. A new Re-review request inspects again.
+
+GitHub findings use Unicode severity and text labels, short titles, and optional
+collapsed evidence/details. The dashboard renders a safe Markdown subset with
+light/dark semantic colors, without executing comment HTML or embedded images.
+
+The calibration runner now requires an exported, scanned original Hub catalog
+snapshot. It never falls back to local adapted prompts. See `evals/README.md`.
 
 Each PR card lists **Skills used · reviewer reported** for its latest trusted
 current-head review. Individual review details keep historical reports, and
 inline findings separate attributed discovery from verification. Links point to
-an allowlisted catalog of the five pinned adapted Sentry, Trail of Bits and
-Anthropic methods. These are methods within a combined reviewer, not independent
+an allowlisted catalog of the five pinned original Sentry, Trail of Bits and
+Anthropic skills. These are methods within a combined reviewer, not independent
 plugin invocations; the metadata does not prove causal ownership of an issue.
 
 The reviewer records a compact visible skill line plus a hidden JSON marker:

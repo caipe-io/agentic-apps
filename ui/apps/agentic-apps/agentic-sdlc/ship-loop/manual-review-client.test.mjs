@@ -53,3 +53,11 @@ test("polling uses the same authorized host session and exact run ID", async () 
   });
   assert.equal(status,"running"); assert.equal(options.credentials,"same-origin");
 });
+
+test("bounded reviewers use the scoped endpoint without the legacy context extension", async () => {
+  const {calls, request} = fixture({metadata:{review_execution_version:1},manual_run_context_version:undefined});
+  const context = {repository:{full_name:"example/repo"},pull_request:{number:1,head:{sha:"a".repeat(40)}},ignored:"value"};
+  await startPreparedReview({...prepared,run_body:{...prepared.run_body,context}},signal,request);
+  assert.equal(calls[1].path,"/api/autonomous/tasks/review-task/reviews/run");
+  assert.deepEqual(JSON.parse(calls[1].options.body),{request_id:prepared.run_body.request_id,repository:"example/repo",pull_request_number:1,head_sha:"a".repeat(40)});
+});

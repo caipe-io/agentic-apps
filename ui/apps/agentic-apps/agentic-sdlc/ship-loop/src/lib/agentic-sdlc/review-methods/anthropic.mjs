@@ -1,6 +1,0 @@
-// SPDX-License-Identifier: Apache-2.0
-// Adapted from Anthropic's code-review plugin; modified for CAIPE's runtime,
-// current-head publication and concrete input/state-dependent defects. See SOURCES.md.
-export const ANTHROPIC_REVIEW_METHOD = `Separate validation pass (adapted from Anthropic code-review):
-After discovery, challenge each candidate in a separate pass against exact code and the intended contract, without relying on the discovery conclusion. If an independently isolated reviewer is not available, perform this as a distinct evidence check and do not claim independent-agent agreement. Validate the quoted repository rule and its directory scope when it is relevant to a concrete defect. Reject unsupported guesses and style-only concerns; keep reproducible defects that require specific inputs or state. A prior review or an automated PR author does not exempt a new eligible head from inspection. Do not copy upstream runtime-specific tool/model commands, approval behavior, or its skip-already-reviewed rule. Use only CAIPE's authorized tools and publication protocol.
-Attribution: Anthropic code-review plugin, Apache-2.0; https://github.com/anthropics/claude-plugins-official/blob/a2e251d9b97b909bf728b3e84fc8d17e6aba0063/plugins/code-review/commands/code-review.md (CAIPE adaptation).`;

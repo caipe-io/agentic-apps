@@ -1,4 +1,4 @@
-// This catalog describes the adapted methods; it never loads external plugins.
+// Reporting aliases for original upstream Hub skills; URLs are source attribution.
 /** @typedef {{id: string, name: string, role: string, url: string}} ReviewSkill */
 /** @typedef {"reported" | "not_recorded" | "unverified"} SkillReportStatus */
 /** @typedef {{status: SkillReportStatus, used: ReviewSkill[]}} ReviewSkillReport */
@@ -17,19 +17,19 @@ export const REVIEW_SKILL_CATALOG = Object.freeze(
       id: "trailofbits-differential-review",
       name: "Trail of Bits · Differential Review",
       role: "Security review",
-      url: "https://github.com/trailofbits/skills/tree/711af095215ad4ecde5b90cd1d0124b3f1c4ca9e/plugins/differential-review",
+      url: "https://github.com/trailofbits/skills/blob/711af095215ad4ecde5b90cd1d0124b3f1c4ca9e/plugins/differential-review/skills/differential-review/SKILL.md",
     },
     {
       id: "trailofbits-fp-check",
       name: "Trail of Bits · FP Check",
       role: "Verification",
-      url: "https://github.com/trailofbits/skills/tree/711af095215ad4ecde5b90cd1d0124b3f1c4ca9e/plugins/fp-check",
+      url: "https://github.com/trailofbits/skills/blob/711af095215ad4ecde5b90cd1d0124b3f1c4ca9e/plugins/fp-check/skills/fp-check/SKILL.md",
     },
     {
       id: "trailofbits-variant-analysis",
       name: "Trail of Bits · Variant Analysis",
       role: "Related-pattern analysis",
-      url: "https://github.com/trailofbits/skills/tree/711af095215ad4ecde5b90cd1d0124b3f1c4ca9e/plugins/variant-analysis",
+      url: "https://github.com/trailofbits/skills/blob/711af095215ad4ecde5b90cd1d0124b3f1c4ca9e/plugins/variant-analysis/skills/variant-analysis/SKILL.md",
     },
     {
       id: "anthropic-code-review",

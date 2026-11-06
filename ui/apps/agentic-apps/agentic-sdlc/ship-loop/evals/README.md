@@ -34,7 +34,7 @@ OpenAI-compatible model endpoint. Set `REVIEW_API_BASE_URL`, `REVIEW_API_KEY`
 and `REVIEW_MODEL` in the environment, then run:
 
 ```sh
-node ui/apps/agentic-apps/agentic-sdlc/ship-loop/evals/evaluate.mjs --variant=both
+node ui/apps/agentic-apps/agentic-sdlc/ship-loop/evals/evaluate.mjs --variant=both --gateway-snapshot=/path/to/scanned-original-catalog.json
 ```
 
 Use `--case=<id>` for one case and optionally `REVIEW_REASONING_EFFORT` only
@@ -43,8 +43,11 @@ fixture-backed reads/searches. It never sends the expected rubric to the model,
 and cannot invoke a repository, write a review or execute suggested code.
 Inspect invalid-format responses and errors instead of silently discarding them.
 
-The replacement uses adapted discovery/security/verification skills plus only
-CAIPE runtime and publication constraints. No upstream plugin or publication
+The replacement reads original discovery/security/verification files unchanged
+from an exported, scanned GitHub Hub catalog. Supply all five packages with
+content, ancillary files, scan state and source metadata. The runner validates
+the pinned upstream bytes; a missing or altered package aborts. CAIPE runtime
+and publication constraints remain separate. No upstream plugin or publication
 tools are invoked by this evaluation.
 
 For simulated skill-report metadata, add `--provenance --variant=candidate` and
