@@ -24,7 +24,7 @@ import {
   reviewSystem,
 } from "./review-policy";
 import { reviewTriggerFilter } from "./review-eligibility";
-import { ensureReviewGatewaySkills } from "./review-gateway-skills.mjs";
+import { resolveReviewHubSkills } from "./review-gateway-skills.mjs";
 
 export async function repositoryContext(
   req: Request,
@@ -145,6 +145,9 @@ export async function configureRepositoryReviews(
       "Use this connection's original owner team, or manage the agent in CAIPE.",
       409,
     );
+  const capabilities = await platformRequest(req, "/api/autonomous/settings");
+  if (capabilities.review_execution_version !== 1)
+    throw new SetupError("Update the review service before enabling checkpointed repository reviews.", 409);
   const { data: githubUser } = await client.users.getAuthenticated();
   if (!binding) {
     const row: ReviewBinding = {
@@ -272,15 +275,11 @@ export async function configureRepositoryReviews(
         "The conformance skill's security scan has not passed. Reviews remain off; ask your CAIPE administrator to inspect the skill scan.",
         409,
       );
-    const methodSkillIds = await ensureReviewGatewaySkills({
+    const methodSkills = await resolveReviewHubSkills({
       request: (path, method, body) => platformRequest(req, path, method, body),
-      save: async (ids) => save({ method_skill_ids: ids }),
-      ids: binding.method_skill_ids,
-      fullName: meta.full_name,
-      bindingKey: binding.binding_key,
-      teamSlug,
     });
-    const attachedSkills = [binding.skill_id!, ...methodSkillIds];
+    await save({ method_skill_ids: methodSkills.ids });
+    const attachedSkills = [binding.skill_id!, ...Object.values(methodSkills.ids)];
     if (!binding.agent_id) {
       const name = `SDLC review ${meta.full_name} ${binding.binding_key}`;
       const expectedId = `agent-${name
@@ -310,7 +309,7 @@ export async function configureRepositoryReviews(
         : await platformRequest(req, "/api/dynamic-agents", "POST", {
             name,
             description: `Repository-scoped COMMENT reviewer. App connection ${binding.binding_key}.`,
-            system_prompt: reviewSystem(meta.full_name),
+            system_prompt: reviewSystem(meta.full_name, undefined, methodSkills.ids),
             model: {
               id: model.model_id,
               provider: model.provider || "openai",
@@ -325,6 +324,7 @@ export async function configureRepositoryReviews(
             shared_with_teams: [],
             subagents: [],
             skills: attachedSkills,
+            skill_pins: methodSkills.pins,
             enabled: true,
           });
       if (!created.data?._id)
@@ -338,13 +338,13 @@ export async function configureRepositoryReviews(
         req,
         `/api/dynamic-agents/agents/${encodeURIComponent(binding.agent_id)}`,
       )).data;
-      if (current?.system_prompt !== reviewSystem(meta.full_name))
+      if (current?.system_prompt !== reviewSystem(meta.full_name, undefined, methodSkills.ids))
         throw new SetupError("This customized reviewer needs a scoped migration before re-enabling.", 409);
       await platformRequest(
         req,
         `/api/dynamic-agents?id=${encodeURIComponent(binding.agent_id)}`,
         "PUT",
-        { skills: [...new Set([...(current.skills || []), ...attachedSkills])] },
+        { skills: [...new Set([...(current.skills || []), ...attachedSkills])], skill_pins: { ...current.skill_pins, ...methodSkills.pins } },
       );
     }
     const bindingMarker = `[sdlc-binding:${binding.binding_key}]`;
@@ -370,7 +370,7 @@ export async function configureRepositoryReviews(
           name: `SDLC PR review ${meta.full_name}`,
           description: `Opted-in COMMENT reviews and inline findings on new PR heads. ${bindingMarker}`,
           dynamic_agent_id: binding.agent_id,
-          prompt: reviewPrompt(meta.full_name, "pending-task-id"),
+          prompt: reviewPrompt(meta.full_name, "pending-task-id", undefined, methodSkills.ids),
           enabled: false,
           trigger: {
             type: "webhook",
@@ -380,6 +380,9 @@ export async function configureRepositoryReviews(
           },
           metadata: {
             source: "agentic-sdlc",
+            review_execution_version: 1,
+            review_method_bindings: methodSkills.ids,
+            review_skill_sources: methodSkills.sourceRevisions,
             sdlc_binding_key: binding.binding_key,
             repo_id: repoId,
             repository: meta.full_name,
@@ -418,13 +421,16 @@ export async function configureRepositoryReviews(
         ...task,
         metadata: {
           source: "agentic-sdlc",
+          review_execution_version: 1,
+            review_method_bindings: methodSkills.ids,
+            review_skill_sources: methodSkills.sourceRevisions,
           sdlc_binding_key: binding.binding_key,
           repo_id: repoId,
           repository: meta.full_name,
         },
         dynamic_agent_id: binding.agent_id,
         enabled: true,
-        prompt: reviewPrompt(meta.full_name, task.id),
+        prompt: reviewPrompt(meta.full_name, task.id, undefined, methodSkills.ids),
         trigger,
       },
     );

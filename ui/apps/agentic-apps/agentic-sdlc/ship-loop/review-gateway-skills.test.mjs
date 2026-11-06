@@ -1,85 +1,47 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHash } from "node:crypto";
-import { REVIEW_GATEWAY_SKILLS, ensureReviewGatewaySkills } from "./src/lib/agentic-sdlc/review-gateway-skills.mjs";
-
-function fixture({ failScan = false } = {}) {
-  const docs = new Map(), calls = [], saved = [];
-  const options = { fullName: "example/repository", bindingKey: "connection", teamSlug: "review-team", ids: {},
-    save: async ids => { saved.push(ids); options.ids = ids; },
-    request: async (path, method = "GET", body) => {
-      calls.push({ path, method });
-      if (method === "POST" && path === "/api/skills/configs") {
-        const id = `skill-${docs.size}`;
-        docs.set(id, { ...body, id, scan_status: "unscanned" });
-        return { data: { id } };
-      }
-      if (path.endsWith("/scan")) {
-        const id = path.split("/").at(-2);
-        docs.get(id).scan_status = failScan ? "flagged" : "passed";
-        return {};
-      }
-      return docs.get(new URL(path, "https://example.test").searchParams.get("id"));
-    },
-  };
-  return { options, docs, calls, saved };
+import { resolveReviewHubSkills } from "./src/lib/agentic-sdlc/review-gateway-skills.mjs";
+const hubId = "a".repeat(24), revision = "b".repeat(40);
+const original = "---\nname: review\n---\nOriginal upstream instructions, unchanged.\n";
+const reference = "Original supporting reference.\n";
+const blob = text => createHash("sha1").update(`blob ${Buffer.byteLength(text)}\0`).update(text).digest("hex");
+const source = { id: "example-review", repo: "example/skills", revision, root: "skills/review", path: "skills/review/SKILL.md",
+  files: { "SKILL.md": blob(original), "references/check.md": blob(reference) } };
+function catalog() {
+  return [{ id: `hub-${hubId}-review`, source: "hub", source_id: hubId,
+    metadata: { hub_type: "github", hub_location: source.repo, hub_skill_id: "review", hub_revision: revision,
+      upstream_revision: revision, original_content: true, upstream_entry_path: source.path, path: source.path },
+    content: original, ancillary_files: {"references/check.md": reference}, scan_status: "passed", runnable: true }];
 }
-
-test("each gateway method has separate content, pinned attribution, license and content digest", () => {
-  assert.equal(REVIEW_GATEWAY_SKILLS.length, 5);
-  assert.equal(new Set(REVIEW_GATEWAY_SKILLS.map(s => s.id)).size, 5);
-  for (const skill of REVIEW_GATEWAY_SKILLS) {
-    assert.equal(skill.sha256, createHash("sha256").update(skill.content).digest("hex"));
-    assert.ok(skill.content.includes(`method_id: ${skill.id}`));
-    assert.match(skill.content, /Attribution:/);
-    assert.match(skill.url, /[a-f0-9]{40}/);
-    assert.ok(skill.ancillary_files["LICENSE.txt"].length > 1000);
-  }
-  const security = REVIEW_GATEWAY_SKILLS[1], verification = REVIEW_GATEWAY_SKILLS[2];
-  assert.match(security.content, /Security regression pass/);
-  assert.doesNotMatch(security.content, /Finding verification pass/);
-  assert.match(verification.content, /Finding verification pass/);
-  assert.doesNotMatch(verification.content, /Bounded variant pass/);
+const resolve = request => resolveReviewHubSkills({request, sources:[source]});
+test("onboarding attaches original scanned Hub bytes and pins the complete package without creating copies", async () => {
+  const rows = catalog(), calls = [];
+  const result = await resolve(async (...args) => { calls.push(args); return {skills: rows}; });
+  assert.deepEqual(Object.values(result.ids), [rows[0].id]);
+  assert.equal(result.pins[rows[0].id].content_sha256, createHash("sha256").update(original).digest("hex"));
+  assert.equal(Object.keys(result.pins[rows[0].id].ancillary_sha256).length, 1);
+  assert.ok(calls.every(([path, method]) => path.startsWith("/api/skills?source=github") && !method));
+  assert.equal(rows[0].content, original);
 });
-
-test("all five methods are scanned, checkpointed and reused without duplicate writes", async () => {
-  const f = fixture();
-  const ids = await ensureReviewGatewaySkills(f.options);
-  assert.equal(ids.length, 5);
-  assert.equal(f.saved.length, 5);
-  assert.ok([...f.docs.values()].every(s => s.visibility === "team" && s.shared_with_teams[0] === "review-team" && s.scan_status === "passed"));
-  const creates = () => f.calls.filter(c => c.method === "POST" && c.path === "/api/skills/configs").length;
-  const writes = creates();
-  assert.deepEqual(await ensureReviewGatewaySkills(f.options), ids);
-  assert.equal(creates(), writes);
-});
-
-test("a scan failure never returns attachment IDs and preserves the ID for retry", async () => {
-  const f = fixture({ failScan: true });
-  await assert.rejects(ensureReviewGatewaySkills(f.options), /security scan/);
-  assert.equal(f.docs.size, 1);
-  assert.equal(f.saved.length, 1);
-  await assert.rejects(ensureReviewGatewaySkills(f.options), /security scan/);
-  assert.equal(f.docs.size, 1);
-});
-
-test("changed method content or an unrelated binding fails closed", async () => {
-  for (const edit of [s => { s.skill_content += "changed"; }, s => { s.metadata.binding_key = "other"; }, s => { s.ancillary_files = {}; }]) {
-    const f = fixture();
-    await ensureReviewGatewaySkills(f.options);
-    edit(f.docs.get("skill-0"));
-    await assert.rejects(ensureReviewGatewaySkills(f.options), /changed or belongs/);
-  }
-});
-
-
-test("content changed during a scan cannot become an attachment", async () => {
-  const f = fixture();
-  const request = f.options.request;
-  f.options.request = async (...args) => {
-    const result = await request(...args);
-    if (args[0].endsWith("/scan")) f.docs.get("skill-0").skill_content += "changed during scan";
-    return result;
-  };
-  await assert.rejects(ensureReviewGatewaySkills(f.options), /changed or belongs/);
+for (const kind of ["blocked", "unscanned", "shortened", "ancillary", "missing-file", "missing", "duplicate", "wrong-revision", "identity", "shadow-entry"]) {
+  test(`original Hub resolution fails closed for ${kind}`, async () => {
+    const rows = catalog(), row = rows[0];
+    if (kind === "blocked") row.runnable = false;
+    if (kind === "unscanned") row.scan_status = "unscanned";
+    if (kind === "shortened") row.content = "Shortened adaptation with the same source URL";
+    if (kind === "ancillary") row.ancillary_files["references/check.md"] = "changed";
+    if (kind === "missing-file") row.ancillary_files = {};
+    if (kind === "missing") rows.shift();
+    if (kind === "duplicate") rows.push(row);
+    if (kind === "wrong-revision") row.metadata.upstream_revision = "c".repeat(40);
+    if (kind === "identity") row.id = "different";
+    if (kind === "shadow-entry") { row.content = "Changed"; row.ancillary_files["SKILL.md"] = original; }
+    await assert.rejects(resolve(async () => ({skills: rows})));
+  });
+}
+test("lookup handles pagination and refuses truncated catalogs", async () => {
+  let page = 0;
+  assert.equal(Object.keys((await resolve(async () => ++page === 1 ? {skills:[],meta:{has_more:true}} : {skills:catalog()})).ids).length, 1);
+  await assert.rejects(resolve(async () => ({skills:[],meta:{has_more:true}})), /truncated/);
 });

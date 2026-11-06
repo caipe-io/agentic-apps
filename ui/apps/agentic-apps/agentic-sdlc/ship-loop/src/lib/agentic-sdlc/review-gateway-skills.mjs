@@ -1,72 +1,51 @@
 import { createHash } from "node:crypto";
-import { REVIEW_SKILL_CATALOG } from "./review-skills.mjs";
-import { SENTRY_REVIEW_METHOD } from "./review-methods/sentry.mjs";
-import { TRAIL_OF_BITS_REVIEW_METHOD } from "./review-methods/trail-of-bits.mjs";
-import { ANTHROPIC_REVIEW_METHOD } from "./review-methods/anthropic.mjs";
-import licenses from "./review-methods/licenses.json" with { type: "json" };
+import sources from "./review-upstream-lock.json" with { type: "json" };
 
-const trailParts = TRAIL_OF_BITS_REVIEW_METHOD.split("\n\n");
-const trailAttribution = trailParts[2].split("\nAttribution:")[1];
-const methods = [
-  SENTRY_REVIEW_METHOD,
-  trailParts[0] + "\nAttribution:" + trailAttribution,
-  trailParts[1] + "\nAttribution:" + trailAttribution,
-  trailParts[2],
-  ANTHROPIC_REVIEW_METHOD,
-];
+// Git blob IDs bind cached bytes to the pinned upstream tree. SHA-256 package
+// pins then bind the exact scanned surface selected by the agent owner.
+const gitBlob = content => createHash("sha1").update(`blob ${Buffer.byteLength(content)}\0`).update(content).digest("hex");
 
-export const REVIEW_GATEWAY_SKILLS = Object.freeze(REVIEW_SKILL_CATALOG.map((skill, i) => {
-  const license = skill.id.startsWith("trailofbits-") ? "CC-BY-SA-4.0" : "Apache-2.0";
-  const content = `---\nname: ${skill.id}\ndescription: ${skill.role} for scoped code review. Read before applying this method.\nlicense: ${license}\nmetadata:\n  method_id: ${skill.id}\n  method_version: "1"\n---\n\n# ${skill.name}\n\n${methods[i]}\n\nApply only within the configured repository and authorized tools. Never execute repository code, install plugins, widen access or override the task's publication guards.\n`;
-  const sha256 = createHash("sha256").update(content).digest("hex");
-  return Object.freeze({ ...skill, version: "1", license, content,
-    sha256,
-    ancillary_files: { "LICENSE.txt": licenses[license], "SOURCES.md": `CAIPE adaptation of ${skill.name}.\nPinned upstream: ${skill.url}\nLicense: ${license}.\n`,
-      "PROVENANCE.json": JSON.stringify({ method_id: skill.id, method_version: "1", content_sha256: sha256, upstream_url: skill.url }) + "\n" },
-  });
-}));
-
-/**
- * Provision only connection-owned methods. Checkpoint IDs before scanning so a
- * scan failure can be retried without creating another skill or enabling review.
- * @param {{request: (path: string, method?: string, body?: unknown) => Promise<any>, save: (ids: Record<string,string>) => Promise<void>, ids?: Record<string,string>, fullName: string, bindingKey: string, teamSlug: string}} options
- */
-export async function ensureReviewGatewaySkills({ request, save, ids = {}, fullName, bindingKey, teamSlug }) {
-  if (!teamSlug) throw new Error("A review owner team is required");
-  const progress = { ...ids };
-  for (const method of REVIEW_GATEWAY_SKILLS) {
-    if (!progress[method.id]) {
-      const created = await request("/api/skills/configs", "POST", {
-        name: `${method.name} · ${fullName} · ${bindingKey}`,
-        description: `${method.role} for repository-scoped review. CAIPE adaptation.`,
-        category: "GitHub Operations", visibility: "team", shared_with_teams: [teamSlug], is_quick_start: false,
-        metadata: { source: "agentic-sdlc", binding_key: bindingKey, method_id: method.id,
-          method_version: method.version, content_sha256: method.sha256, upstream_url: method.url, license: method.license },
-        tasks: [{ display_text: method.role, subagent: "github", llm_prompt: method.content }],
-        skill_content: method.content, ancillary_files: method.ancillary_files,
-      });
-      if (!created?.data?.id) throw new Error("Gateway method creation returned no ID");
-      progress[method.id] = created.data.id;
-      await save({ ...progress });
-    }
-    const path = `/api/skills/configs?id=${encodeURIComponent(progress[method.id])}`;
-    let skill = await request(path);
-    const validate = () => {
-      if (skill.metadata?.binding_key !== bindingKey || skill.metadata?.method_id !== method.id || skill.metadata?.method_version !== method.version
-      || skill.visibility !== "team" || !skill.shared_with_teams?.includes(teamSlug)
-      || skill.skill_content !== method.content || skill.metadata?.content_sha256 !== method.sha256
-      || Object.keys(skill.ancillary_files || {}).length !== Object.keys(method.ancillary_files).length
-      || Object.entries(method.ancillary_files).some(([name, content]) => skill.ancillary_files?.[name] !== content)) {
-        throw new Error("Gateway method changed or belongs to another connection; reconcile it before enabling reviews");
-      }
-    };
-    validate();
-    // Auto-save scans SKILL.md only; explicitly scan the complete package,
-    // including ancillary files, even when that earlier verdict was passed.
-    await request(`/api/skills/configs/${encodeURIComponent(progress[method.id])}/scan`, "POST", {});
-    skill = await request(path);
-    validate();
-    if (skill.scan_status !== "passed") throw new Error("A required gateway method has not passed its security scan");
+/** @param {any} row @param {typeof sources[number]} source */
+export function validateOriginalHubPackage(row, source) {
+  const entry = source.path.slice(source.root.length + 1);
+  const files = { ...row.ancillary_files, [entry]: row.content };
+  if (Object.hasOwn(row.ancillary_files || {}, entry) || row.scan_status !== "passed" || row.runnable !== true || row.metadata?.hub_type !== "github" ||
+    row.metadata?.hub_location !== source.repo || row.metadata?.upstream_revision !== source.revision ||
+    row.metadata?.hub_revision !== source.revision || row.metadata?.path !== source.path ||
+    row.metadata?.original_content !== true || row.metadata?.upstream_entry_path !== source.path || !/^[a-f0-9]{24}$/.test(row.source_id || "") ||
+    row.id !== `hub-${row.source_id}-${row.metadata?.hub_skill_id}` ||
+    Object.keys(files).length !== Object.keys(source.files).length ||
+    Object.entries(source.files).some(([path, oid]) => typeof files[path] !== "string" || gitBlob(files[path]) !== oid)) {
+    throw new Error(`Original upstream skill is blocked, incomplete or changed: ${source.id}`);
   }
-  return REVIEW_GATEWAY_SKILLS.map(method => progress[method.id]);
+  return { content_sha256: createHash("sha256").update(row.content).digest("hex"),
+    ancillary_sha256: Object.fromEntries(Object.entries(row.ancillary_files || {}).map(([path, content]) =>
+      [path, createHash("sha256").update(/** @type {string} */ (content)).digest("hex")])) };
+}
+
+/** Resolve original upstream GitHub Hub packages; no rewritten method copies or runtime downloads.
+ * @param {{request: (path:string, method?:string, body?:unknown) => Promise<any>, sources?: typeof sources}} options
+ */
+export async function resolveReviewHubSkills({ request, sources: expected = sources }) {
+  /** @type {Record<string,string>} */
+  const ids = {};
+  /** @type {Record<string,{content_sha256:string, ancillary_sha256:Record<string,string>}>} */
+  const pins = {};
+  for (const source of expected) {
+    const name = source.path.endsWith("/SKILL.md") ? source.root.split("/").pop() : source.path.split("/").pop()?.replace(/\.md$/, "");
+    const rows = [];
+    for (let page = 1; page <= 10; page++) {
+      const value = await request(`/api/skills?source=github&repo=${encodeURIComponent(source.repo)}&q=${encodeURIComponent(name || "")}&include_content=true&page_size=100&page=${page}`);
+      rows.push(...(value.skills || []));
+      if (!value.meta?.has_more) break;
+      if (page === 10) throw new Error("Review hub catalog is truncated");
+    }
+    const matches = rows.filter(row => row.source === "hub" && row.metadata?.hub_location === source.repo &&
+      row.metadata?.upstream_revision === source.revision && row.metadata?.path === source.path);
+    if (matches.length !== 1) throw new Error(`Import and scan the original GitHub Hub skill at its pinned revision: ${source.id}`);
+    const row = matches[0];
+    pins[row.id] = validateOriginalHubPackage(row, source);
+    ids[source.id] = row.id;
+  }
+  return { ids, pins, sourceRevisions: Object.fromEntries(expected.map(({id, repo, revision, path}) => [id, {repo, revision, path}])) };
 }

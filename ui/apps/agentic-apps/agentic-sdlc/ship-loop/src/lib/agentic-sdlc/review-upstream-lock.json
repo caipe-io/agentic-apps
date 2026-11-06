@@ -1,0 +1,83 @@
+[
+  {
+    "id": "sentry-find-bugs",
+    "repo": "getsentry/skills",
+    "revision": "0c464f411bdfb8d4c12314b36264d06cb2f60270",
+    "path": "skills/find-bugs/SKILL.md",
+    "root": "skills/find-bugs",
+    "files": {
+      "SKILL.md": "490a181b1a47537cd19eacbdd8f2c46740a268db"
+    }
+  },
+  {
+    "id": "trailofbits-differential-review",
+    "repo": "trailofbits/skills",
+    "revision": "711af095215ad4ecde5b90cd1d0124b3f1c4ca9e",
+    "path": "plugins/differential-review/skills/differential-review/SKILL.md",
+    "root": "plugins/differential-review/skills/differential-review",
+    "files": {
+      "SKILL.md": "536e9258092876017b098f1712a92e7d06bb1480",
+      "adversarial.md": "0176d374bc2d9d59f114b647cb21f0685bc7e9f3",
+      "agents/openai.yaml": "ba287073f8a5f482350b8149cf55a7ce101b2d68",
+      "assets/trail-of-bits-mark.svg": "7cd6e7ca7348897984f2498f301a888bb2f3ca71",
+      "methodology.md": "71d9dc0babf1417ee79ec8d5214ea690d0c2fe6b",
+      "patterns.md": "71078a725d986c90d014cceff0cc54414ad3b1a1",
+      "reporting.md": "cb5e37b4eab89c429bf6f968d3e3482adaa39faa"
+    }
+  },
+  {
+    "id": "trailofbits-fp-check",
+    "repo": "trailofbits/skills",
+    "revision": "711af095215ad4ecde5b90cd1d0124b3f1c4ca9e",
+    "path": "plugins/fp-check/skills/fp-check/SKILL.md",
+    "root": "plugins/fp-check/skills/fp-check",
+    "files": {
+      "SKILL.md": "b7e7278cbae101f948f39890e5dcc088248d789d",
+      "agents/openai.yaml": "11ca7562160b5787f9231bbf318010ba9451e672",
+      "assets/trail-of-bits-mark.svg": "7cd6e7ca7348897984f2498f301a888bb2f3ca71",
+      "references/bug-class-verification.md": "3eb666d646b4c6071b82012d4911ba0650665078",
+      "references/deep-verification.md": "1b2499d03627b0d8a025f115f2137292766abdf7",
+      "references/evidence-templates.md": "c0227e56238eb856d9d4efc6d2bde6c85ebd3339",
+      "references/false-positive-patterns.md": "7ad448441b882e1f801f31550f9528f7ff7d9310",
+      "references/gate-reviews.md": "b9dd2f4eaf118ca5206ef94ecf12c6b826d4fded",
+      "references/standard-verification.md": "c9e5b901ad4b3008950c31f24806f7bacdbf6cfe"
+    }
+  },
+  {
+    "id": "trailofbits-variant-analysis",
+    "repo": "trailofbits/skills",
+    "revision": "711af095215ad4ecde5b90cd1d0124b3f1c4ca9e",
+    "path": "plugins/variant-analysis/skills/variant-analysis/SKILL.md",
+    "root": "plugins/variant-analysis/skills/variant-analysis",
+    "files": {
+      "SKILL.md": "8f58f54b1883110f1a38a51c9360d4b9d1b195a8",
+      "agents/openai.yaml": "75b6c065b501fb4d7e92f33fedbc8dde9a3fa440",
+      "assets/trail-of-bits-mark.svg": "7cd6e7ca7348897984f2498f301a888bb2f3ca71",
+      "references/reporting.md": "61633f837c8a0e918b47af26fd5623224a623620",
+      "references/root-cause.md": "243834f6bab0ad7bbc8cdd7a39cba6f565415f27",
+      "references/searching.md": "b9427a66ce3005246e4db89a575e250b993837d4",
+      "references/triage.md": "80f36ab221ac9b367f0226098bf30910014c4012",
+      "resources/codeql/cpp.ql": "5371f374a1ea7ec0ce95a904f7b39da62957abdd",
+      "resources/codeql/go.ql": "7e6efaf65d2791e1958835b4392bf7fc434b4508",
+      "resources/codeql/java.ql": "88fb0814dd6590d356745011e74aba4c34c4e685",
+      "resources/codeql/javascript.ql": "c40054374b78cbb745a29ddace8e1187f5755099",
+      "resources/codeql/python.ql": "2faaa4b9725c0a9a249df5afe85be256a34d05e0",
+      "resources/semgrep/cpp.yaml": "da6f2c5e6b32b640c9e14869a1dfe2cbaa90b2f6",
+      "resources/semgrep/go.yaml": "61d5ae0ef75140b20ea6c6bc0f5751563e54e024",
+      "resources/semgrep/java.yaml": "a52c86a3664f029eb349e10bc50d1e5c7181050b",
+      "resources/semgrep/javascript.yaml": "4e233ba32e278dc490ddad36e296ddacae070b7e",
+      "resources/semgrep/python.yaml": "70d61aafab24efc30455bf341a173e5f88e0724e",
+      "resources/variant-report-template.md": "42c78cc4dda57b619ebfdc02cc5f64d047bd67b6"
+    }
+  },
+  {
+    "id": "anthropic-code-review",
+    "repo": "anthropics/claude-plugins-official",
+    "revision": "a2e251d9b97b909bf728b3e84fc8d17e6aba0063",
+    "path": "plugins/code-review/commands/code-review.md",
+    "root": "plugins/code-review/commands",
+    "files": {
+      "code-review.md": "8d1533fa424c89a2790541fd7687270be3993397"
+    }
+  }
+]
