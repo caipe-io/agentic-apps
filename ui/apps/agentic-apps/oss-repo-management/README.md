@@ -65,6 +65,8 @@ npm run smoke
 
 ## Report URLs
 
+- Opening the app without `repo`, `report`, or `staleDays` resumes the last successfully generated report saved in this browser. The address bar is replaced with its exact snapshot URL; it does not fetch new GitHub data or add a Back-history entry. A selected tab and assistant URL state are preserved. With no saved history, the welcome screen (or configured default repository) is used.
+
 - `?repo=example/project` opens the current report using the server cache when available.
 - `?repo=example/project&report=latest` opens the newest saved snapshot in this browser.
 - `?repo=example/project&report=<snapshot-id>` opens that exact saved snapshot; selecting or generating a report updates the address bar.

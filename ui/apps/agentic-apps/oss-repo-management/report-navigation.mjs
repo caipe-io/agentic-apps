@@ -1,6 +1,6 @@
 export const OSS_REPORT_SECTIONS = { overview: "overview", priorities: "actionsPanel", activity: "trendsPanel", community: "healthPanel" };
 
-/** Bookmark exact browser snapshots without substituting a newer live report. */
+/** Resume browser snapshots while preserving explicit report links. */
 export function createOssReportNavigation({ host = window, appPath, initialRepo = "", getRuns, onLive, onSnapshot, onUnavailable, onSection = () => {} }, createNavigation) {
   let currentDataSelection = null;
   const dataKey = query => JSON.stringify([query.repo, query.report, query.staleDays]);
@@ -23,8 +23,24 @@ export function createOssReportNavigation({ host = window, appPath, initialRepo 
       search = params.toString();
       navigation.commit(search, "replace");
     }
-    const query = selection(search);
+    let query = selection(search);
     if (!query) { onUnavailable("This report link contains an invalid repository or stale-issue threshold."); return; }
+    const params = new URLSearchParams(search);
+    // A plain app visit resumes saved evidence; explicit data links keep their meaning.
+    if (!["repo", "report", "staleDays"].some(key => params.has(key))) {
+      for (const run of getRuns()) {
+        if (typeof run?.id !== "string" || !run.id || typeof run?.dashboard?.repo !== "string") continue;
+        params.set("repo", run.dashboard.repo);
+        params.set("report", run.id);
+        const staleDays = Number.isInteger(run.staleDays) && run.staleDays >= 1 && run.staleDays <= 365 ? run.staleDays : 30;
+        if (staleDays !== 30) params.set("staleDays", String(staleDays)); else params.delete("staleDays");
+        const saved = selection(params.toString());
+        if (!saved?.repo) continue;
+        query = saved;
+        navigation.commit(params.toString(), "replace");
+        break;
+      }
+    }
     onSection(query.tab);
     if (dataKey(query) === currentDataSelection) return;
     currentDataSelection = dataKey(query);
