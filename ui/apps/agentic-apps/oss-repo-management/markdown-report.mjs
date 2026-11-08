@@ -7,6 +7,7 @@ export function buildOssRepoMarkdownReport(dashboard, { reportOrigin = "live" } 
   const issues = value.issues || {};
   const pullRequests = value.pullRequests || {};
   const community = value.community || {};
+  const adoption = value.adoption || {};
   const ownership = value.ownership || {};
   const readiness = value.readiness || {};
   const security = value.security || {};
@@ -42,6 +43,8 @@ export function buildOssRepoMarkdownReport(dashboard, { reportOrigin = "live" } 
     row("Default branch", repository.defaultBranch || "Unknown"),
     row("Stars", number(repository.stars)),
     row("Forks", number(repository.forks)),
+    row("Pull requests opened (all time)", number(adoption.pullRequestsOpened)),
+    row("Pull requests merged (all time)", number(adoption.pullRequestsMerged)),
     row("Watchers", number(repository.watchers)),
     row("Contributors", `${community.totalContributorsIsLowerBound ? "At least " : ""}${number(community.totalContributors)}`),
     row("Active contributors", number(community.activeContributors)),
@@ -68,6 +71,21 @@ export function buildOssRepoMarkdownReport(dashboard, { reportOrigin = "live" } 
     row3("Issue engagement", sumTrend(value.trends?.engagementPerWeek), value.trends?.coverage?.engagement),
     row3("Current stars", number(repository.stars), value.trends?.coverage?.stars),
     "",
+    "### Monthly pull requests opened",
+    "",
+    "| UTC month | Pull requests opened |",
+    "| :-- | --: |",
+    ...(adoption.monthlyPullRequestsOpened || []).map(point => row(`${point.month}${point.partial ? " (partial)" : ""}`, number(point.value))),
+    "",
+    escapeMarkdown(adoption.coverage || "Monthly adoption counts unavailable."),
+    "",
+    ...(adoption.snapshot ? [
+      "### Historical adoption snapshot", "",
+      `As of ${escapeMarkdown(adoption.snapshot.asOf)}. Source: ${escapeMarkdown(adoption.snapshot.source)}. Separate from the current GitHub snapshot.`, "",
+      "| Reported metric | Historical count |", "| :-- | --: |",
+      ...Object.entries({ stars: "Stars", forks: "Forks", contributorIdentities: "Contributor identities", pullRequestsOpened: "PRs opened", pullRequestsMerged: "PRs merged", packageDownloads: "Package downloads", legacyPackageDownloads: "Legacy package downloads", currentPackageDownloads: "Current package downloads" }).filter(([key]) => adoption.snapshot.metrics?.[key] != null).map(([key, label]) => row(label, number(adoption.snapshot.metrics[key]))),
+      "", ...(adoption.snapshot.caveats || []).map(caveat => `- ${escapeMarkdown(caveat)}`), "",
+    ] : []),
     "## Maintainers and Ownership",
     "",
     `- **Declared maintainers:** ${formatHandles(ownership.maintainers?.handles, ownership.maintainers?.path)}`,
@@ -161,6 +179,7 @@ export function buildOssRepoMarkdownReport(dashboard, { reportOrigin = "live" } 
   }
 
   function number(input) {
+    if (input == null) return "Unavailable";
     const parsed = Number(input);
     return Number.isFinite(parsed) ? parsed.toLocaleString("en-US") : "Unavailable";
   }

@@ -20,6 +20,7 @@ import {
   normalizeRepoName,
 } from "./github-dashboard.mjs";
 import { buildOssRepoMarkdownReport } from "./markdown-report.mjs";
+import { adoptionSnapshotForRepo, loadAdoptionSnapshots } from "./adoption-metrics.mjs";
 import { registerOssReportCardMcpTools } from "./mcp.mjs";
 
 const port = Number(process.env.OSS_REPO_MANAGEMENT_APP_PORT ?? "3040");
@@ -31,6 +32,7 @@ const githubApiBase = process.env.OSS_REPO_MANAGEMENT_GITHUB_API_URL ?? "https:/
 const configuredReportCacheTtlMs = Number(process.env.OSS_REPO_MANAGEMENT_REPORT_CACHE_TTL_MS || 900_000);
 const reportCacheTtlMs = Number.isFinite(configuredReportCacheTtlMs) ? Math.max(60_000, configuredReportCacheTtlMs) : 900_000;
 const reportCache = new Map();
+const adoptionSnapshots = loadAdoptionSnapshots(process.env.OSS_REPO_MANAGEMENT_ADOPTION_SNAPSHOTS_FILE);
 
 const verifier = createRequiredAgenticAppJwtVerifier({
   appId: "oss-repo-management",
@@ -183,6 +185,7 @@ async function loadRepoReportCard({ repo, staleDays = 30, refresh = false }) {
     token: githubToken,
     apiBase: githubApiBase,
   });
+  dashboard.adoption.snapshot = adoptionSnapshotForRepo(adoptionSnapshots, dashboard.repo);
   const cachedAt = Date.now();
   reportCache.set(cacheKey, { cachedAt, dashboard });
   return {
@@ -284,12 +287,12 @@ function renderDashboard({ compact, basePath, authorization }) {
   <body class="${compact ? "compact" : "standalone"}">
     <main>
       <header class="page-header">
-        <div><h1>OSS Repo Report Card</h1><p class="subtitle">Explore repository adoption, delivery, community health, and security controls.</p></div>
-        <div class="actions"><button id="downloadMarkdown" type="button" disabled>Download Markdown</button><button id="settingsToggle" type="button" aria-expanded="false" aria-controls="fontCustomizer">View settings</button><button id="openAssistantChat" type="button">Ask GitHub</button></div>
+        <div><p class="eyebrow">Repository intelligence</p><h1>OSS Report Card</h1><p class="subtitle">A clearer view of your project's momentum, community, and security.</p></div>
+        <div class="actions"><button id="downloadMarkdown" type="button" disabled>Export Markdown</button><button id="settingsToggle" type="button" aria-expanded="false" aria-controls="fontCustomizer">View settings</button><button id="openAssistantChat" class="assistant-launch" type="button">Ask Report Card <span aria-hidden="true">↗</span></button></div>
       </header>
       <section class="panel scope-panel" aria-label="Repository scope">
-        <div class="controls"><label class="grow">Repository<input id="repoInput" value="${escapeHtml(defaultRepoName)}" aria-label="Repository owner/repo" placeholder="owner/repo or GitHub URL" /></label><button id="runAnalysis" class="primary">Refresh repository</button><a class="button" href="${basePath}/example">Static example</a></div>
-        <div class="data-status" id="dataStatus" role="status" aria-live="polite"><span class="status-chip good">Access verified</span><span class="status-chip ${githubToken ? "good" : "warn"}">GitHub ${githubToken ? "connected" : "public API"}</span><span>Enter a repository to load a live snapshot.</span></div>
+        <div class="controls"><label class="grow">GitHub repository<input id="repoInput" value="${escapeHtml(defaultRepoName)}" aria-label="Repository owner/repo" placeholder="owner/repo or GitHub URL" /></label><button id="runAnalysis" class="primary">Generate report card</button><a class="button example-link" href="${basePath}/example">Explore an example <span aria-hidden="true">↗</span></a></div>
+        <div class="data-status" id="dataStatus" role="status" aria-live="polite"><span class="status-chip ${githubToken ? "good" : "warn"}">GitHub ${githubToken ? "connected" : "public API"}</span><span>Read-only insights, backed by source evidence.</span></div>
         <details class="view-settings"><summary>Saved report cards</summary><div class="run-history"><select id="runHistory" aria-label="Cached OSS repo report cards"><option value="">No cached report cards yet</option></select></div></details>
       </section>
       <div class="font-customizer" id="fontCustomizer" aria-label="Font customization" hidden>
@@ -298,15 +301,21 @@ function renderDashboard({ compact, basePath, authorization }) {
         <label>Size<select id="fontScaleSelect" aria-label="Text size"><option value="small">Small</option><option value="default">Default</option><option value="large">Large</option><option value="xl">XL</option></select></label>
       </div>
 
-      <section class="summary-section">
-        <h2>Report card summary</h2>
+      <nav class="report-nav" id="reportNav" aria-label="Report sections" hidden><a href="#overview">Overview</a><a href="#actionsPanel">Maintainer priorities</a><a href="#trendsPanel">Activity</a><a href="#healthPanel">Community &amp; security</a></nav>
+      <section class="summary-section" id="overview" aria-label="Repository overview">
+        <div class="repo-profile" id="repoProfile" hidden></div>
         <div class="kpi-strip" id="summaryCards"></div>
         <div class="insights-strip" id="insightsStrip" hidden></div>
-        <div class="repo-profile" id="repoProfile" hidden></div>
+      </section>
+
+      <section class="panel priorities-panel" id="actionsPanel" hidden>
+        <div class="section-heading"><div><p class="eyebrow">What needs attention</p><h2>Maintainer priorities</h2></div><span class="section-note">Grounded in the current snapshot</span></div><div class="action-grid" id="actionCards"></div>
       </section>
 
       <div class="panel" id="trendsPanel" hidden>
-        <h2>12-week trends</h2>
+        <div class="section-heading"><div><p class="eyebrow">Project momentum</p><h2>Activity over time</h2></div><span class="section-note">12-week reporting window · coverage shown per chart</span></div>
+        <article class="repo-health-card monthly-card" id="monthlyPrTrend"></article>
+        <details class="snapshot-panel" id="adoptionSnapshot" hidden><summary>Historical adoption snapshot</summary><div id="adoptionSnapshotContent"></div></details>
         <div class="report-grid">
           <article class="repo-health-card chart-card" id="starTrend"></article>
           <article class="repo-health-card chart-card" id="engagementTrend"></article>
@@ -316,7 +325,7 @@ function renderDashboard({ compact, basePath, authorization }) {
       </div>
 
       <div class="panel" id="healthPanel" hidden>
-        <h2>Community &amp; security posture</h2>
+        <div class="section-heading"><div><p class="eyebrow">Project resilience</p><h2>Community &amp; security</h2></div><span class="section-note">Missing evidence is shown explicitly</span></div>
         <div class="practice-grid" id="healthPractices"></div>
         <div class="readiness-head"><strong>OSS foundation readiness criteria</strong><span id="readinessSummary"></span></div>
         <p class="coverage" id="readinessCaveat"></p>
@@ -324,19 +333,16 @@ function renderDashboard({ compact, basePath, authorization }) {
         <div class="framework-links" id="frameworkLinks"></div>
       </div>
 
-      <section class="panel">
-        <h2>Maintainer actions</h2><div class="action-grid" id="actionCards"></div>
-      </section>
       <details class="panel assistant">
         <summary>Repository analysis</summary>
         <p class="subtitle">Ask about triage, review queues, or release readiness using the current repository snapshot.</p>
         <div class="assistant-fields"><label>Question<textarea id="questionInput" aria-label="Repository question" placeholder="What needs maintainer attention in this repository?"></textarea></label></div>
         <details class="advanced"><summary>Advanced options</summary><label>Agent identifier<input id="githubAgentId" aria-label="GitHub agent id" value="${escapeHtml(defaultGithubAgentId)}" /></label></details>
         <div class="actions"><button id="askRepoCopilot" ${defaultGithubAgentId ? "" : "hidden"}>Generate optional agent brief</button></div>
-        <div class="message" id="copilotMessage">${defaultGithubAgentId ? "Optional GitHub agent is configured." : "Open Ask GitHub to discuss the current repository snapshot."}</div>
+        <div class="message" id="copilotMessage">${defaultGithubAgentId ? "Optional GitHub agent is configured." : "Open Ask Report Card to discuss the current repository snapshot."}</div>
       </details>
 
-      <footer class="activity-footer" id="activityFooter" ${defaultGithubAgentId ? "" : "hidden"}>
+      <footer class="activity-footer" id="activityFooter" hidden>
         <details id="activityDrawer">
           <summary>
             <span class="run-status" id="runStatus"><span class="status-dot"></span>Ready</span>
@@ -500,6 +506,8 @@ function renderDashboard({ compact, basePath, authorization }) {
         renderReportCardPanels(state.dashboard);
         renderActionCards(state.dashboard);
         renderDataStatus(state.dashboard);
+        document.getElementById("reportNav").hidden = false;
+        document.getElementById("actionsPanel").hidden = false;
         document.getElementById("downloadMarkdown").disabled = false;
         if (options.persist !== false) persistRun(state.dashboard);
         publishAssistantContext("dashboard");
@@ -509,7 +517,9 @@ function renderDashboard({ compact, basePath, authorization }) {
         state.dashboard = null;
         state.loadedAt = null;
         document.getElementById("downloadMarkdown").disabled = true;
-        document.getElementById("summaryCards").innerHTML = '<div class="empty-state"><strong>Start with a repository</strong><p>' + escapeHtml(message) + ' The GitHub credential remains on the server.</p></div>';
+        document.getElementById("summaryCards").innerHTML = '<div class="report-welcome"><span class="welcome-mark" aria-hidden="true">&lt;/&gt;</span><p class="eyebrow">Know where your project stands</p><h2>One repository. A more complete picture.</h2><p>' + escapeHtml(message) + '</p><div class="welcome-topics"><span>Adoption &amp; activity</span><span>Community health</span><span>Security evidence</span></div><span class="welcome-hint">Enter a GitHub repository above to get started.</span></div>';
+        document.getElementById("reportNav").hidden = true;
+        document.getElementById("actionsPanel").hidden = true;
         document.getElementById("insightsStrip").hidden = true;
         document.getElementById("repoProfile").hidden = true;
         document.getElementById("trendsPanel").hidden = true;
@@ -518,6 +528,8 @@ function renderDashboard({ compact, basePath, authorization }) {
       }
 
       function renderLoadingDashboard(repo) {
+        document.getElementById("reportNav").hidden = true;
+        document.getElementById("actionsPanel").hidden = true;
         document.getElementById("summaryCards").innerHTML = '<div class="empty-state"><strong>Loading ' + escapeHtml(repo) + '</strong><p>Reading source-backed issue and pull request signals from GitHub.</p></div>';
         document.getElementById("insightsStrip").hidden = true;
         document.getElementById("repoProfile").hidden = true;
@@ -527,6 +539,8 @@ function renderDashboard({ compact, basePath, authorization }) {
       }
 
       function renderLoadError(repo, message) {
+        document.getElementById("reportNav").hidden = true;
+        document.getElementById("actionsPanel").hidden = true;
         state.dashboard = null;
         state.loadedAt = null;
         document.getElementById("downloadMarkdown").disabled = true;
@@ -584,61 +598,43 @@ function renderDashboard({ compact, basePath, authorization }) {
       }
 
       function renderSummaryCards(dashboard) {
-        const repo = dashboard.repo || "owner/repo";
         const repository = dashboard.repository || {};
         const community = dashboard.community || {};
-        const securityScore = dashboard.security?.scorecard?.score;
+        const adoption = dashboard.adoption || {};
+        const snapshot = adoption.snapshot;
+        const downloads = snapshot?.metrics?.packageDownloads;
         const openPRs = dashboard.pullRequests.open ?? 0;
         const awaitingReview = dashboard.pullRequests.awaitingReview ?? 0;
-        const confidence = dashboard.confidence || "unknown";
         document.getElementById("summaryCards").innerHTML = [
-          kpiTile({
-            label: "Repository",
-            value: repo,
-            sub: "Confidence: " + escapeHtml(confidence),
-            accent: "attention",
-            valueClass: "kpi-repo",
-          }),
           kpiTile({
             label: "Stars",
             value: formatCount(repository.stars),
-            sub: formatCount(repository.forks) + " forks",
+            sub: "Current GitHub snapshot",
             accent: "good",
           }),
           kpiTile({
-            label: "Contributors",
-            value: (community.totalContributorsIsLowerBound ? "≥" : "") + formatCount(community.totalContributors),
-            sub: formatCount(community.activeContributors) + " active in trend sample",
+            label: "PRs merged · all time",
+            value: adoption.pullRequestsMerged == null ? "N/A" : formatCount(adoption.pullRequestsMerged),
+            sub: adoption.pullRequestsMerged == null ? "Search count unavailable" : "GitHub Search count",
             accent: "attention",
           }),
           kpiTile({
-            label: "Engagement",
-            value: formatCount(community.engagementInteractions),
-            sub: "issues + comments in " + formatCount(community.engagementSampleSize) + " sampled issues",
+            label: "Contributor identities",
+            value: community.totalContributors == null ? "N/A" : (community.totalContributorsIsLowerBound ? "≥" : "") + formatCount(community.totalContributors),
+            sub: "Includes bots and anonymous accounts",
             accent: "attention",
           }),
+          kpiTile({ label: "Package downloads · reported", value: downloads == null ? "N/A" : new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 2 }).format(downloads), sub: snapshot && downloads != null ? "Snapshot " + escapeHtml(snapshot.asOf) + " · automated/repeated pulls included" : "No registry download source configured", accent: "attention" }),
+          kpiTile({ label: "PRs opened · all time", value: adoption.pullRequestsOpened == null ? "N/A" : formatCount(adoption.pullRequestsOpened), sub: adoption.pullRequestsOpened == null ? "Search count unavailable" : "GitHub Search count", accent: "attention" }),
+          kpiTile({ label: "Forks", value: formatCount(repository.forks), sub: "Current GitHub snapshot", accent: "attention" }),
+          kpiTile({ label: "Open issues", value: formatCount(dashboard.issues.open), sub: formatCount(dashboard.issues.stale) + " stale · " + formatCount(dashboard.issues.needsTriage) + " need triage", accent: dashboard.issues.stale ? "warn" : "good" }),
           kpiTile({
             label: "Open PRs",
             value: formatCount(openPRs),
             sub: formatCount(awaitingReview) + " need review attention",
             accent: awaitingReview ? "warn" : "good",
           }),
-          kpiTile({
-            label: "OpenSSF score",
-            value: securityScore == null ? "N/A" : Number(securityScore).toFixed(1),
-            sub: securityScore == null ? "Not available" : "0–10 security practices",
-            accent: securityScore == null ? "attention" : securityScore >= 7 ? "good" : securityScore >= 5 ? "warn" : "danger",
-            bar: securityScore == null ? null : Number(securityScore) * 10,
-          }),
         ].join("");
-
-        const repoLabel = document.querySelector(".kpi-repo");
-        if (repoLabel) {
-          repoLabel.style.fontSize = "1.05rem";
-          repoLabel.style.overflow = "hidden";
-          repoLabel.style.textOverflow = "ellipsis";
-          repoLabel.style.whiteSpace = "nowrap";
-        }
       }
 
       function renderRepoProfile(dashboard) {
@@ -650,12 +646,7 @@ function renderDashboard({ compact, basePath, authorization }) {
           return;
         }
         profile.hidden = false;
-        profile.innerHTML = [
-          '<article class="repo-health-card"><div class="label">Repository</div><strong><a class="repo-link" href="' + escapeAttribute(repository.htmlUrl) + '" target="_blank" rel="noreferrer">' + escapeHtml(dashboard.repo) + '</a></strong><p>' + escapeHtml(repository.description || "") + '</p></article>',
-          '<article class="repo-health-card"><div class="label">Visibility</div><strong>' + escapeHtml(repository.visibility || "unknown") + '</strong><p>Default branch: ' + escapeHtml(repository.defaultBranch || "unknown") + '</p></article>',
-          '<article class="repo-health-card"><div class="label">Community</div><strong>' + formatCount(repository.stars) + ' stars</strong><p>' + formatCount(repository.forks) + ' forks</p></article>',
-          '<article class="repo-health-card"><div class="label">Latest push</div><strong>' + escapeHtml(repository.pushedAt ? new Date(repository.pushedAt).toLocaleDateString() : "Unknown") + '</strong><p>' + (repository.archived ? "Archived repository" : "Active repository") + '</p></article>',
-        ].join("");
+        profile.innerHTML = '<div class="repo-identity"><span class="repo-avatar" aria-hidden="true">' + escapeHtml((dashboard.repo || '').slice(0, 1).toUpperCase()) + '</span><div><p class="eyebrow">Repository overview</p><h2><a class="repo-link" href="' + escapeAttribute(repository.htmlUrl) + '" target="_blank" rel="noreferrer">' + escapeHtml(dashboard.repo) + ' <span aria-hidden="true">↗</span></a></h2><p>' + escapeHtml(repository.description || "") + '</p></div></div><div class="repo-meta"><span>' + escapeHtml(repository.visibility || "unknown") + '</span><span>Branch: ' + escapeHtml(repository.defaultBranch || "unknown") + '</span><span>' + (repository.archived ? 'Archived' : 'Last push ' + escapeHtml(repository.pushedAt ? new Date(repository.pushedAt).toLocaleDateString() : 'unknown')) + '</span></div>';
       }
 
       function renderReportCardPanels(dashboard) {
@@ -663,6 +654,7 @@ function renderDashboard({ compact, basePath, authorization }) {
         const coverage = trends.coverage || {};
         const starPoints = mergeCachedStarHistory(dashboard);
         document.getElementById("trendsPanel").hidden = false;
+        renderAdoptionPanel(dashboard.adoption || {});
         document.getElementById("starTrend").innerHTML = renderLineChart("Star history", starPoints, coverage.stars || "Timestamped report-card snapshots.");
         document.getElementById("engagementTrend").innerHTML = renderBarChart("Issue engagement", trends.engagementPerWeek || [], coverage.engagement || "No issue engagement coverage.");
         document.getElementById("prTrend").innerHTML = renderBarChart("PRs per week", trends.pullRequestsPerWeek || [], coverage.pullRequests || "No pull request trend coverage.");
@@ -715,6 +707,25 @@ function renderDashboard({ compact, basePath, authorization }) {
             '<p>' + escapeHtml(check.evidence || "No evidence available.") + '<br>Source: ' + escapeHtml(check.source || "unknown") + '</p>' +
           '</article>'
         ).join("");
+      }
+
+      function renderAdoptionPanel(adoption) {
+        const points = adoption.monthlyPullRequestsOpened || [];
+        const maximum = Math.max(1, ...points.map(point => Number(point.value || 0)));
+        const bars = points.map(point => {
+          const date = new Date(point.month + "-01T00:00:00Z");
+          const label = date.toLocaleDateString(undefined, { month: "short", year: "2-digit", timeZone: "UTC" });
+          const value = point.value == null ? "N/A" : formatCount(point.value);
+          return '<div class="month-column"><span class="month-value">' + value + '</span><span class="month-bar' + (point.partial ? ' partial' : '') + (point.value == null ? ' unavailable' : '') + '" style="height:' + (point.value == null ? 3 : Math.max(3, point.value / maximum * 130)) + 'px" title="' + escapeAttribute(label + ': ' + value + (point.partial ? ' (partial month)' : '')) + '"></span><span class="month-label">' + escapeHtml(label) + (point.partial ? '*' : '') + '</span></div>';
+        }).join('');
+        document.getElementById("monthlyPrTrend").innerHTML = '<div class="chart-head"><strong>Monthly pull requests opened</strong><span>Calendar months · UTC</span></div>' + (points.length ? '<div class="monthly-chart">' + bars + '</div>' : '<div class="empty-state"><strong>Monthly activity unavailable</strong><p>A connected GitHub credential and Search API access are required.</p></div>') + '<p class="coverage">' + escapeHtml(adoption.coverage || 'No monthly count source available.') + '</p>';
+        const snapshot = adoption.snapshot;
+        document.getElementById("adoptionSnapshot").hidden = !snapshot;
+        if (!snapshot) return;
+        const metrics = snapshot.metrics || {};
+        const labels = {stars:'Stars',pullRequestsMerged:'PRs merged',contributorIdentities:'Contributor identities',packageDownloads:'Package downloads (reported)',pullRequestsOpened:'PRs opened',forks:'Forks',legacyPackageDownloads:'Legacy package downloads',currentPackageDownloads:'Current package downloads'};
+        const rows = Object.entries(labels).filter(([key]) => metrics[key] != null).map(([key,label]) => '<tr><th scope="row">' + label + '</th><td>' + formatCount(metrics[key]) + '</td></tr>').join('');
+        document.getElementById("adoptionSnapshotContent").innerHTML = '<p class="coverage">As of ' + escapeHtml(snapshot.asOf) + ' · Source: ' + escapeHtml(snapshot.source) + '. These historical counts are separate from the live snapshot.</p><table class="snapshot-table"><tbody>' + rows + '</tbody></table><ul class="snapshot-caveats">' + (snapshot.caveats || []).map(value => '<li>' + escapeHtml(value) + '</li>').join('') + '</ul>';
       }
 
       function practiceCard(label, value, healthy) {
@@ -846,8 +857,7 @@ function renderDashboard({ compact, basePath, authorization }) {
       function formatCount(value) {
         const num = Number(value || 0);
         if (!isFinite(num)) return "0";
-        if (Math.abs(num) >= 1000) return (num / 1000).toFixed(num >= 10000 ? 0 : 1) + "k";
-        return String(num);
+        return num.toLocaleString();
       }
 
       function renderActionCards(dashboard) {
@@ -862,6 +872,7 @@ function renderDashboard({ compact, basePath, authorization }) {
       }
 
       function initializeActivityFeed() {
+        document.getElementById("activityFooter").hidden = false;
         state.activityEventCount = 0;
         document.getElementById("agentProgress").innerHTML = "";
         document.getElementById("streamedContent").textContent = "";

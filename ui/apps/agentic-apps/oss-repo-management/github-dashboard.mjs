@@ -1,3 +1,5 @@
+import { fetchAdoptionMetrics } from "./adoption-metrics.mjs";
+
 const DEFAULT_GITHUB_API_BASE = "https://api.github.com";
 const DEFAULT_SCORECARD_API_BASE = "https://api.scorecard.dev";
 const TREND_WEEKS = 12;
@@ -41,11 +43,12 @@ export async function fetchGitHubRepoDashboard({
     client.tryGet(`/repos/${encodedRepo}/git/trees/${encodeURIComponent(repository.default_branch || "HEAD")}?recursive=1`),
     fetchOpenSsfScorecard({ repo: canonicalRepo, apiBase: scorecardApiBase, fetchImpl }),
   ]);
-  const [stargazersResult, githubSecurity] = await Promise.all([
+  const [stargazersResult, githubSecurity, adoption] = await Promise.all([
     token
       ? client.tryGet(`/repos/${encodedRepo}/stargazers?per_page=100`, { accept: "application/vnd.github.star+json" })
       : Promise.resolve(unavailable("server credential required")),
     token ? fetchGitHubSecurity(client, encodedRepo) : Promise.resolve({ status: "credential-required", dependabotOpen: null, codeScanningOpen: null }),
+    fetchAdoptionMetrics({ client, repo: canonicalRepo, createdAt: repository.created_at, now: currentTime, authenticated: Boolean(token) }),
   ]);
 
   const { issues, pullRequests } = result;
@@ -71,6 +74,7 @@ export async function fetchGitHubRepoDashboard({
     repo: canonicalRepo,
     summary: buildSummary(canonicalRepo, issues, pullRequests),
     confidence: result.confidence,
+    adoption,
     issues,
     pullRequests,
     risks: buildRisks({ issues, pullRequests, staleDays: boundedStaleDays, bounded: result.confidence === "bounded" }),
@@ -216,7 +220,7 @@ function buildCommunity({ commits, contributors, contributorsResult, communityPr
   }
   const files = communityProfile.files || {};
   return {
-    totalContributors: contributors.length,
+    totalContributors: contributorsResult.status === "available" ? contributors.length : null,
     totalContributorsIsLowerBound: contributors.length >= 100,
     activeContributors: active.size,
     watchers: repository.subscribers_count ?? repository.watchers_count ?? 0,
@@ -438,7 +442,7 @@ function createGitHubClient({ token, apiBase, fetchImpl }) {
   async function request(path, options = {}) {
     let response;
     try {
-      response = await fetchImpl(`${base}${path}`, { headers: { ...defaultHeaders, ...(options.accept ? { accept: options.accept } : {}) } });
+      response = await fetchImpl(`${base}${path}`, { headers: { ...defaultHeaders, ...(options.accept ? { accept: options.accept } : {}) }, signal: AbortSignal.timeout(10_000) });
     } catch (error) {
       throw new GitHubDashboardError(`GitHub could not be reached: ${error instanceof Error ? error.message : "network error"}`, { code: "github_unreachable" });
     }
@@ -460,6 +464,23 @@ function createGitHubClient({ token, apiBase, fetchImpl }) {
       catch (error) { return unavailable(error instanceof Error ? error.message : "request failed"); }
     },
     search(query) { return request(`/search/issues?per_page=1&q=${encodeURIComponent(query)}`); },
+    async searchCounts(queries) {
+      const unavailableCounts = (error) => ({ counts: queries.map(() => null), error });
+      const query = "query AdoptionCounts { " + queries.map((value, index) => `count${index}: search(type: ISSUE, query: ${JSON.stringify(value)}) { issueCount }`).join(" ") + " }";
+      try {
+        const response = await fetchImpl(`${base.replace(/\/api\/v3$/, "/api")}/graphql`, {
+          method: "POST", headers: { ...defaultHeaders, "content-type": "application/json" }, body: JSON.stringify({ query }), signal: AbortSignal.timeout(10_000),
+        });
+        if (!response.ok) return unavailableCounts(`Adoption counts unavailable (HTTP ${response.status}).`);
+        const payload = await response.json();
+        const errors = Array.isArray(payload.errors) ? payload.errors : [];
+        if (errors.some(error => !Array.isArray(error.path) || !error.path.length)) return unavailableCounts("GitHub could not complete the adoption query.");
+        const failed = new Set(errors.map(error => error.path[0]));
+        return { counts: queries.map((_, index) => failed.has(`count${index}`) ? null : payload.data?.[`count${index}`]?.issueCount ?? null), error: errors.length ? "Some adoption counts are unavailable." : null };
+      } catch (error) {
+        return unavailableCounts(error instanceof SyntaxError ? "GitHub returned an invalid adoption response." : "The adoption count request could not be completed.");
+      }
+    },
   };
 }
 
