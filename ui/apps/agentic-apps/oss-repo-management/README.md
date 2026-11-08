@@ -60,3 +60,12 @@ npm run smoke
 - `staleDays=60` preserves the stale-issue threshold (1–365; default 30).
 - Back/Forward restores report selection. Existing assistant parameters and section anchors survive report changes.
 - Saved snapshots are browser-local and limited to 20 reports. An unavailable snapshot displays a message without substituting fresh data. These URLs identify snapshots; they do not grant repository access or transfer the report to another browser.
+
+
+### Report sections
+
+The report uses accessible tab panels, without anchor scrolling inside the Grid iframe.
+`tab=priorities`, `tab=activity`, and `tab=community` restore the selected section;
+no `tab` parameter opens Overview. The repository, exact saved report and other URL state
+remain intact across tab changes and Back/Forward. Legacy report-section fragments
+are migrated to the corresponding tab query without scrolling the host layout.

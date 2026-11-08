@@ -2,7 +2,6 @@ export const ossRepoStyles = `
   :root { --bg: var(--caipe-background, hsl(230 25% 5%)); --surface: var(--caipe-card, hsl(230 25% 7%)); --accent: var(--caipe-primary, hsl(173 80% 40%)); --on-accent: var(--caipe-primary-foreground, hsl(230 25% 5%)); --line: var(--caipe-border, hsl(230 20% 18%)); --muted: var(--caipe-muted-foreground, hsl(215 20% 65%)); --track: color-mix(in srgb, var(--text) 8%, var(--surface)); }
   :root[data-caipe-theme=light] { --bg: var(--caipe-background, hsl(220 18% 94%)); --surface: var(--caipe-card, white); --accent: var(--caipe-primary, hsl(173 80% 35%)); --on-accent: var(--caipe-primary-foreground, white); --line: var(--caipe-border, hsl(220 16% 84%)); --muted: var(--caipe-muted-foreground, hsl(215 16% 42%)); }
   [hidden] { display: none !important; }
-  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
   main { max-width: 1480px; padding: 36px clamp(20px, 3vw, 48px) 48px; }
   .eyebrow { color: var(--muted); text-transform: uppercase; letter-spacing: .12em; font-size: .68rem; font-weight: 650; margin: 0 0 8px; }
   .page-header { align-items: flex-start; gap: 24px; margin-bottom: 28px; }
@@ -19,9 +18,10 @@ export const ossRepoStyles = `
   .scope-panel .status-chip { font-size: .7rem; padding: 3px 7px; }
   .scope-panel .view-settings { border-top: 1px solid var(--line); padding-top: 12px; font-size: .75rem; color: var(--muted); }
   .report-nav { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); margin: 28px 0 0; padding-bottom: 10px; }
-  .report-nav a { color: var(--muted); text-decoration: none; font-size: .8rem; padding: 7px 12px; border-radius: 7px; }
-  .report-nav a:first-child { color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, transparent); }
-  .report-nav a:hover { color: var(--text); background: var(--track); }
+  .report-nav [role="tab"] { color: var(--muted); border: 0; background: transparent; box-shadow: none; min-height: 36px; font-size: .8rem; padding: 7px 12px; border-radius: 7px; }
+  .report-nav [aria-selected="true"] { color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, transparent); }
+  .report-nav [role="tab"]:hover { color: var(--text); background: var(--track); }
+  .report-nav [role="tab"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .summary-section { margin-top: 24px; }
   .kpi-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
   .kpi { border-radius: 12px; padding: 18px 20px; position: relative; }
@@ -100,6 +100,5 @@ export const ossRepoStyles = `
     .practice-grid, .criteria-grid, .action-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .report-grid { grid-template-columns: 1fr; }
   }
-  @media (max-width: 600px) { main { padding: 24px 16px 36px; } .practice-grid, .criteria-grid, .action-grid { grid-template-columns: 1fr; } .scope-panel { padding: 16px; } .controls { gap: 10px; } .scope-panel .grow { flex-basis: 100%; } .kpi { padding: 14px; } .repo-meta { padding-left: 0; } .report-nav { gap: 0; } .report-nav a { padding: 7px 8px; font-size: .72rem; } }
-  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  @media (max-width: 600px) { main { padding: 24px 16px 36px; } .practice-grid, .criteria-grid, .action-grid { grid-template-columns: 1fr; } .scope-panel { padding: 16px; } .controls { gap: 10px; } .scope-panel .grow { flex-basis: 100%; } .kpi { padding: 14px; } .repo-meta { padding-left: 0; } .report-nav { gap: 0; } .report-nav [role="tab"] { padding: 7px 8px; font-size: .72rem; } }
 `;
