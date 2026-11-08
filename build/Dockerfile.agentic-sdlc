@@ -18,6 +18,7 @@ RUN apk upgrade --no-cache \
  && adduser --system --uid 1001 --ingroup appgroup appuser
 COPY --from=build --chown=appuser:appgroup /app/.next/standalone ./
 COPY --from=build --chown=appuser:appgroup /app/.next/static ./.next/static
+COPY --from=build --chown=appuser:appgroup /app/public ./public
 COPY --chown=appuser:appgroup ui/apps/agentic-apps/agentic-sdlc/ship-loop/src/lib/agentic-sdlc/review-methods/*.txt /app/third-party/agentic-review/
 COPY --chown=appuser:appgroup ui/apps/agentic-apps/agentic-sdlc/ship-loop/src/lib/agentic-sdlc/review-methods/SOURCES.md /app/third-party/agentic-review/
 USER appuser

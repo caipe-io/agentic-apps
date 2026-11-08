@@ -255,25 +255,7 @@ export function AgenticSdlcAnimation({
               transform={`translate(${x} ${y})`}
               data-stage={stage}
             >
-              {/* Halo -- subtle, low-amplitude pulse to suggest live
-                  activity without competing with the main animation.
-                  Opacity is intentionally faint so the icon disc
-                  always wins for visual hierarchy. */}
-              <circle
-                r="26"
-                fill={`hsl(${visual.hsl} / 0.12)`}
-                className="motion-safe:animate-ship-loop-halo-soft origin-center"
-                style={{ animationDelay: `${(i * 0.25).toFixed(2)}s` }}
-              />
-              {/* Disc backdrop -- gives the icon a solid plate so it
-                  reads against the page's gradient mesh. The disc
-                  uses the stage's HSL token at high opacity, the
-                  icon strokes white so it's legible on every disc. */}
-              <circle
-                r="18"
-                fill={`hsl(${visual.hsl})`}
-                filter={`url(#${glowFilterId})`}
-              />
+              <circle r="22" fill="hsl(var(--card))" stroke="hsl(var(--primary) / .3)" strokeWidth="1.5" />
               {/* Lucide icon. The component renders an <svg> root;
                   nesting <svg> inside <svg> is valid SVG2 and is
                   positioned via x/y on the inner svg element. We
@@ -284,8 +266,8 @@ export function AgenticSdlcAnimation({
                 y={-12}
                 width={24}
                 height={24}
-                strokeWidth={2.25}
-                color="white"
+                strokeWidth={1.8}
+                color="hsl(var(--primary))"
                 aria-hidden
               />
               {/* Alternate label position above/below to avoid the
