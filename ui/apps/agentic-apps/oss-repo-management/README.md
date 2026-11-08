@@ -70,6 +70,7 @@ npm run smoke
 - `?repo=example/project&report=<snapshot-id>` opens that exact saved snapshot; selecting or generating a report updates the address bar.
 - `staleDays=60` preserves the stale-issue threshold (1–365; default 30).
 - Back/Forward restores report selection. Existing assistant parameters and section anchors survive report changes.
+- The compact report toolbar keeps the generated timestamp visible. Expand **Report details** for access, source, and cache evidence, or **Saved reports** to select a snapshot. Source errors remain visible and open the details automatically.
 - Saved snapshots are browser-local and limited to 20 reports. An unavailable snapshot displays a message without substituting fresh data. These URLs identify snapshots; they do not grant repository access or transfer the report to another browser.
 
 
