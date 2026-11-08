@@ -1,4 +1,5 @@
 // assisted-by Codex
+import { artifactDownloadsMarkdown } from "./artifact-download-view.mjs";
 
 export function buildOssRepoMarkdownReport(dashboard, { reportOrigin = "live" } = {}) {
   const value = dashboard || {};
@@ -79,6 +80,7 @@ export function buildOssRepoMarkdownReport(dashboard, { reportOrigin = "live" } 
     "",
     escapeMarkdown(adoption.coverage || "Monthly adoption counts unavailable."),
     "",
+    ...artifactDownloadsMarkdown(value.artifactDownloads),
     ...(adoption.snapshot ? [
       "### Historical adoption snapshot", "",
       `As of ${escapeMarkdown(adoption.snapshot.asOf)}. Source: ${escapeMarkdown(adoption.snapshot.source)}. Separate from the current GitHub snapshot.`, "",

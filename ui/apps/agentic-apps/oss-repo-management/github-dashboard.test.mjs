@@ -123,7 +123,7 @@ test("uses bounded core REST data without consuming the public Search API limit"
     fetchImpl,
   });
 
-  assert.equal(urls.length, 10);
+  assert.equal(urls.length, 11);
   assert.equal(urls.some((url) => url.includes("/search/issues")), false);
   assert.equal(dashboard.confidence, "bounded");
   assert.deepEqual(dashboard.issues, { open: 5, stale: 1, p0: 1, needsTriage: 1 });
