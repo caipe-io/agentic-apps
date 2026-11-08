@@ -25,6 +25,8 @@ import { createQueryNavigation } from "../../_lib/query-navigation.mjs";
 import { createOssReportNavigation, OSS_REPORT_SECTIONS } from "./report-navigation.mjs";
 import { createReportSections } from "./report-sections.mjs";
 import { registerOssReportCardMcpTools } from "./mcp.mjs";
+import { createGhcrDownloadReader } from "./artifact-downloads.mjs";
+import { artifactDownloadsMarkdown, renderArtifactDownloadTrend } from "./artifact-download-view.mjs";
 
 const port = Number(process.env.OSS_REPO_MANAGEMENT_APP_PORT ?? "3040");
 const configuredBasePath = normalizeBasePath(process.env.OSS_REPO_MANAGEMENT_APP_BASE_PATH ?? "/apps/oss-repo-management");
@@ -35,6 +37,7 @@ const githubApiBase = process.env.OSS_REPO_MANAGEMENT_GITHUB_API_URL ?? "https:/
 const configuredReportCacheTtlMs = Number(process.env.OSS_REPO_MANAGEMENT_REPORT_CACHE_TTL_MS || 900_000);
 const reportCacheTtlMs = Number.isFinite(configuredReportCacheTtlMs) ? Math.max(60_000, configuredReportCacheTtlMs) : 900_000;
 const reportCache = new Map();
+const readGhcrDownloads = createGhcrDownloadReader();
 const adoptionSnapshots = loadAdoptionSnapshots(process.env.OSS_REPO_MANAGEMENT_ADOPTION_SNAPSHOTS_FILE);
 
 const verifier = createRequiredAgenticAppJwtVerifier({
@@ -189,6 +192,9 @@ async function loadRepoReportCard({ repo, staleDays = 30, refresh = false }) {
     apiBase: githubApiBase,
   });
   dashboard.adoption.snapshot = adoptionSnapshotForRepo(adoptionSnapshots, dashboard.repo);
+  dashboard.artifactDownloads.ghcr = new URL(githubApiBase).origin === "https://api.github.com"
+    ? await readGhcrDownloads(dashboard.repo, dashboard.repository?.ownerType)
+    : { status: "unavailable", points: [], packages: [], coverage: "Public GHCR history is not queried for a custom GitHub API host." };
   const cachedAt = Date.now();
   reportCache.set(cacheKey, { cachedAt, dashboard });
   return {
@@ -321,7 +327,8 @@ function renderDashboard({ compact, basePath, authorization }) {
       </section>
 
       <div class="panel" id="trendsPanel" role="tabpanel" aria-labelledby="report-tab-activity" hidden>
-        <div class="section-heading"><div><p class="eyebrow">Project momentum</p><h2>Activity over time</h2></div><span class="section-note">12-week reporting window · coverage shown per chart</span></div>
+        <div class="section-heading"><div><p class="eyebrow">Project momentum</p><h2>Activity over time</h2></div><span class="section-note">Coverage and dates shown per chart</span></div>
+        <article class="repo-health-card artifact-download-card" id="artifactDownloadTrend"></article>
         <article class="repo-health-card monthly-card" id="monthlyPrTrend"></article>
         <details class="snapshot-panel" id="adoptionSnapshot" hidden><summary>Historical adoption snapshot</summary><div id="adoptionSnapshotContent"></div></details>
         <div class="report-grid">
@@ -374,6 +381,8 @@ function renderDashboard({ compact, basePath, authorization }) {
       const OSS_REPORT_SECTIONS = ${JSON.stringify(OSS_REPORT_SECTIONS)};
       ${createOssReportNavigation.toString()}
       ${createReportSections.toString()}
+      ${renderArtifactDownloadTrend.toString()}
+      ${artifactDownloadsMarkdown.toString()}
       const fontStorageKey = "agentic-app.fontPreferences";
       const repoInput = document.getElementById("repoInput");
       const questionInput = document.getElementById("questionInput");
@@ -606,7 +615,7 @@ function renderDashboard({ compact, basePath, authorization }) {
 
       function renderDataStatus(dashboard) {
         const node = document.getElementById("dataStatus");
-        const source = dashboard?.source === "github-api" ? "GitHub REST API" : "Not loaded";
+        const source = dashboard?.source === "github-api" ? (dashboard.artifactDownloads?.ghcr?.points?.length ? "GitHub API + package pages" : "GitHub REST API") : "Not loaded";
         const freshness = state.loadedAt
           ? (state.reportOrigin === "cached" ? "Cached report generated " : "Generated ") + state.loadedAt.toLocaleString()
           : "Freshness: not loaded";
@@ -686,6 +695,7 @@ function renderDashboard({ compact, basePath, authorization }) {
         const coverage = trends.coverage || {};
         const starPoints = mergeCachedStarHistory(dashboard);
         renderAdoptionPanel(dashboard.adoption || {});
+        document.getElementById("artifactDownloadTrend").innerHTML = renderArtifactDownloadTrend(dashboard.artifactDownloads);
         document.getElementById("starTrend").innerHTML = renderLineChart("Star history", starPoints, coverage.stars || "Timestamped report-card snapshots.");
         document.getElementById("engagementTrend").innerHTML = renderBarChart("Issue engagement", trends.engagementPerWeek || [], coverage.engagement || "No issue engagement coverage.");
         document.getElementById("prTrend").innerHTML = renderBarChart("PRs per week", trends.pullRequestsPerWeek || [], coverage.pullRequests || "No pull request trend coverage.");

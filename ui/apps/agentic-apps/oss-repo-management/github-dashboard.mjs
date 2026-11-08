@@ -1,4 +1,5 @@
 import { fetchAdoptionMetrics } from "./adoption-metrics.mjs";
+import { fetchReleaseAssetDownloads } from "./artifact-downloads.mjs";
 
 const DEFAULT_GITHUB_API_BASE = "https://api.github.com";
 const DEFAULT_SCORECARD_API_BASE = "https://api.scorecard.dev";
@@ -43,12 +44,13 @@ export async function fetchGitHubRepoDashboard({
     client.tryGet(`/repos/${encodedRepo}/git/trees/${encodeURIComponent(repository.default_branch || "HEAD")}?recursive=1`),
     fetchOpenSsfScorecard({ repo: canonicalRepo, apiBase: scorecardApiBase, fetchImpl }),
   ]);
-  const [stargazersResult, githubSecurity, adoption] = await Promise.all([
+  const [stargazersResult, githubSecurity, adoption, releaseDownloads] = await Promise.all([
     token
       ? client.tryGet(`/repos/${encodedRepo}/stargazers?per_page=100`, { accept: "application/vnd.github.star+json" })
       : Promise.resolve(unavailable("server credential required")),
     token ? fetchGitHubSecurity(client, encodedRepo) : Promise.resolve({ status: "credential-required", dependabotOpen: null, codeScanningOpen: null }),
     fetchAdoptionMetrics({ client, repo: canonicalRepo, createdAt: repository.created_at, now: currentTime, authenticated: Boolean(token) }),
+    fetchReleaseAssetDownloads({ client, repo: canonicalRepo, now: currentTime }),
   ]);
 
   const { issues, pullRequests } = result;
@@ -75,6 +77,7 @@ export async function fetchGitHubRepoDashboard({
     summary: buildSummary(canonicalRepo, issues, pullRequests),
     confidence: result.confidence,
     adoption,
+    artifactDownloads: { releases: releaseDownloads },
     issues,
     pullRequests,
     risks: buildRisks({ issues, pullRequests, staleDays: boundedStaleDays, bounded: result.confidence === "bounded" }),
@@ -83,6 +86,7 @@ export async function fetchGitHubRepoDashboard({
     repository: {
       description: repository.description || "No repository description is available.",
       visibility: repository.visibility || (repository.private ? "private" : "public"),
+      ownerType: repository.owner?.type || "Organization",
       defaultBranch: repository.default_branch || "unknown",
       stars,
       forks: repository.forks_count ?? 0,

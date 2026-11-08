@@ -67,6 +67,20 @@ export const ossRepoStyles = `
   .repo-link { text-decoration: none; overflow-wrap: anywhere; }
   .repo-link:hover { text-decoration: underline; }
   .report-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .artifact-download-card { padding: 20px; margin-bottom: 18px; }
+  .download-panels { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; }
+  .download-panels h4 { margin: 0; font-size: .95rem; }
+  .artifact-download-card .download-total { color: var(--text); font-size: 1.65rem; font-weight: 600; margin: 12px 0 2px; font-variant-numeric: tabular-nums; }
+  .download-total span { display: block; color: var(--muted); font-size: .78rem; font-weight: 400; }
+  .download-chart { display: block; width: 100%; height: 150px; border-bottom: 1px solid var(--line); }
+  .download-bar { fill: var(--accent); }
+  .download-bar.incomplete { fill-opacity: .45; stroke: var(--accent); stroke-dasharray: 3 2; }
+  .download-details { margin-top: 16px; font-size: .8rem; }
+  .download-details summary { cursor: pointer; color: var(--accent); }
+  .download-table { max-height: 320px; overflow: auto; overscroll-behavior: contain; }
+  .download-table caption { text-align: left; padding-top: 16px; font-weight: 600; }
+  .download-table th { overflow-wrap: anywhere; }
+  @media(max-width:800px) { .download-panels { grid-template-columns: 1fr; } }
   .chart-card { min-height: 240px; padding: 18px; }
   .chart-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
   .chart-head strong { margin: 0; font-size: 1rem; font-weight: 600; }
