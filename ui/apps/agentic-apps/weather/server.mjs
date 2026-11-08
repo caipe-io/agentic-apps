@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 // assisted-by Codex Codex-sonnet-4-6
+import { createQueryNavigation } from "../../_lib/query-navigation.mjs";
+import { bindQueryControls } from "../../_lib/query-controls.mjs";
 import { createServer } from "node:http";
 
 import { handleAppMcpRequest } from "../../_lib/app-mcp-server.mjs";
@@ -412,6 +414,8 @@ function renderDashboard({ compact, basePath, appPath }) {
         debugEventCount: 0,
         unit: "fahrenheit",
       };
+      ${createQueryNavigation.toString()}
+      ${bindQueryControls.toString()}
       const fontStorageKey = "agentic-app.fontPreferences";
 
       const cityInput = document.getElementById("cityInput");
@@ -443,6 +447,7 @@ function renderDashboard({ compact, basePath, appPath }) {
         if (state.forecast) renderForecast(state.forecast);
       });
       window.addEventListener("caipe:microfrontend-initialize", (event) => {
+        if (new URLSearchParams(location.search).has("unit")) return;
         const preferredUnits = event.detail?.preferences?.units;
         if (preferredUnits !== "us" && preferredUnits !== "metric") return;
         state.unit = preferredUnits === "metric" ? "celsius" : "fahrenheit";
@@ -453,8 +458,14 @@ function renderDashboard({ compact, basePath, appPath }) {
         if (event.key === "Enter") runWeatherAgent();
       });
 
+      bindQueryControls({ appId: "weather", appPath: basePath, fields: [
+        { name: "city", id: "cityInput" }, { name: "unit", id: "unitToggle" }, { name: "intent", id: "intent" },
+      ], onRestore: ({ initial, valid }) => { if (!initial && valid) void loadWeather(cityInput.value); },
+        onInvalid: message => { copilotMessage.textContent = message; },
+      }, createQueryNavigation);
       applyFontPreferences();
-      loadCachedWeather().then((loaded) => {
+      if (new URLSearchParams(location.search).has("city")) void loadWeather(cityInput.value);
+      else loadCachedWeather().then((loaded) => {
         if (!loaded) loadWeather(cityInput.value);
       });
 

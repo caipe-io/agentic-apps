@@ -1,3 +1,5 @@
+import { createQueryNavigation } from "../../_lib/query-navigation.mjs";
+import { bindQueryControls } from "../../_lib/query-controls.mjs";
 import { renderAgenticAppConversationClient } from "../../_lib/conversation-client.mjs";
 import { renderMicrofrontendClient } from "../../_lib/microfrontend-client.mjs";
 
@@ -11,7 +13,7 @@ export function renderSecopsDashboard({ configuration, basePath, appPath }) {
   <section class="panel"><div class="row"><div><h2>IAM users</h2><p class="small muted">All users in the selected account. Last observed credential use covers only console passwords and access keys; missing data is unknown, and it does not establish complete user activity. Key age includes active and inactive keys.</p></div><span id="iamCount" class="small muted"></span></div><div class="filters"><label><input id="olderUsers" type="checkbox"> User created over 180 days ago</label><label><input id="olderUse" type="checkbox"> Last observed use over 180 days ago</label><label><input id="olderKeys" type="checkbox"> Key created over 180 days ago</label></div><label>Find IAM user<input id="iamSearch" type="search" placeholder="User name" maxlength="128" autocomplete="off"></label><p id="iamStatus" class="small notice" role="status">Run an AWS review to list users.</p><div class="table"><table><thead><tr><th>User</th><th>Created</th><th>User age</th><th>Last observed credential use</th><th>Oldest access key</th><th>Key data</th></tr></thead><tbody id="iamRows"></tbody></table></div><nav class="row pagination" aria-label="IAM user pages"><span id="iamPage" class="small muted"></span><div><button id="iamPrevious" disabled>Previous</button> <button id="iamNext" disabled>Next</button></div></nav></section>
   <section class="panel"><div class="row"><div><h2>GitHub repository controls</h2><p class="small muted">Checks the default branch and applicable active rules. Missing permissions and unassessed bypasses are not treated as safe.</p></div><div><button id="askGithub" disabled>Investigate with GitHub agent</button> <button id="chatGithubPermissions" disabled>Chat about permissions with GitHub Agent</button></div></div><p id="githubStatus" class="small notice" role="status">Run a repository review to load evidence.</p><p id="githubChatStatus" class="small muted notice" role="status"></p><div id="githubFindings" class="cards"></div></section>
   <section id="agentSection" class="panel" hidden><div class="row"><h2>Agent investigation</h2><button id="cancelAgent">Stop waiting</button></div><p id="agentStatus" class="small muted notice" role="status"></p><p id="agentReport" class="report"></p></section>
-  </main>${renderMicrofrontendClient("secops")}${renderAgenticAppConversationClient()}<script>(${initializeSecops.toString()})(${config},(${buildGithubPermissionsRequest.toString()}),(${buildSecopsAwsSelection.toString()}));</script></body></html>`;
+  </main>${renderMicrofrontendClient("secops")}${renderAgenticAppConversationClient()}<script>(${initializeSecops.toString()})(${config},(${buildGithubPermissionsRequest.toString()}),(${buildSecopsAwsSelection.toString()}),${createQueryNavigation.toString()},${bindQueryControls.toString()});</script></body></html>`;
 }
 
 export function buildGithubPermissionsRequest({ repository, snapshot, error, agentId }) {
@@ -41,7 +43,7 @@ export function buildSecopsAwsSelection({ configuration, profile, region, snapsh
   };
 }
 
-function initializeSecops({ configuration, basePath, appPath }, buildGithubPermissionsRequest, buildSecopsAwsSelection) {
+function initializeSecops({ configuration, basePath, appPath }, buildGithubPermissionsRequest, buildSecopsAwsSelection, createNavigation, bindControls) {
   const byId = (id) => document.getElementById(id);
   const text = (id, value) => { byId(id).textContent = value; };
   const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character]);
@@ -114,5 +116,10 @@ function initializeSecops({ configuration, basePath, appPath }, buildGithubPermi
     finally { if (githubChatController === controller) { githubChatController = null; byId("chatGithubPermissions").disabled = !configuration.githubAgentId || !state.githubReviewed || !byId("repo").value; } }
   });
   byId("askAws").addEventListener("click", () => void investigate("aws")); byId("askGithub").addEventListener("click", () => void investigate("github")); byId("cancelAgent").addEventListener("click", () => { agentController?.abort(); text("agentStatus", "Stopped waiting. Work already started may continue."); });
+  bindControls({ appId: "secops", appPath, fields: [
+    {name:"profile",id:"account"}, {name:"region",id:"region"}, {name:"repo",id:"repo"},
+    {name:"search",id:"iamSearch",maxLength:128}, {name:"olderUsers",id:"olderUsers"},
+    {name:"olderUse",id:"olderUse"}, {name:"olderKeys",id:"olderKeys"},
+  ], onInvalid: message => text("scopeStatus", message) }, createNavigation);
   window.addEventListener("caipe:microfrontend-initialize", publishContext); renderIam(); updateGithubChat(); publishContext();
 }
