@@ -296,13 +296,17 @@ function renderDashboard({ compact, basePath, authorization }) {
   <body class="${compact ? "compact" : "standalone"}">
     <main>
       <header class="page-header">
-        <div><p class="eyebrow">Repository intelligence</p><h1>OSS Report Card</h1><p class="subtitle">A clearer view of your project's momentum, community, and security.</p></div>
+        <div><h1>OSS Report Card</h1></div>
         <div class="actions"><button id="downloadMarkdown" type="button" disabled>Export Markdown</button><button id="settingsToggle" type="button" aria-expanded="false" aria-controls="fontCustomizer">View settings</button><button id="openAssistantChat" class="assistant-launch" type="button">Ask Report Card <span aria-hidden="true">↗</span></button></div>
       </header>
       <section class="panel scope-panel" aria-label="Repository scope">
-        <div class="controls"><label class="grow">GitHub repository<input id="repoInput" value="${escapeHtml(defaultRepoName)}" aria-label="Repository owner/repo" placeholder="owner/repo or GitHub URL" /></label><button id="runAnalysis" class="primary">Generate report card</button><a class="button example-link" href="${basePath}/example">Explore an example <span aria-hidden="true">↗</span></a></div>
-        <div class="data-status" id="dataStatus" role="status" aria-live="polite"><span class="status-chip ${githubToken ? "good" : "warn"}">GitHub ${githubToken ? "connected" : "public API"}</span><span>Read-only insights, backed by source evidence.</span></div>
-        <details class="view-settings"><summary>Saved report cards</summary><div class="run-history"><select id="runHistory" aria-label="Cached OSS repo report cards"><option value="">No cached report cards yet</option></select></div></details>
+        <div class="controls"><label class="grow">GitHub repository<input id="repoInput" value="${escapeHtml(defaultRepoName)}" aria-label="Repository owner/repo" placeholder="owner/repo or GitHub URL" /></label><button id="runAnalysis" class="primary">Generate report</button></div>
+        <div class="scope-meta">
+          <p class="report-freshness" id="reportFreshness" role="status" aria-live="polite">Choose a repository to get started.</p>
+          <details class="report-details" id="reportDetails"><summary>Report details</summary><div class="data-status" id="dataStatus"><span class="status-chip ${githubToken ? "good" : "warn"}">GitHub ${githubToken ? "connected" : "public API"}</span><span>Read-only insights, backed by source evidence.</span></div></details>
+          <details class="saved-reports"><summary>Saved reports <span id="savedReportCount"></span></summary><div class="run-history"><select id="runHistory" aria-label="Cached OSS repo report cards"><option value="">No cached report cards yet</option></select></div></details>
+          <a class="example-link" href="${basePath}/example">Example <span aria-hidden="true">↗</span></a>
+        </div>
       </section>
       <div class="font-customizer" id="fontCustomizer" aria-label="Font customization" hidden>
         <span class="font-dock-title">View settings</span>
@@ -566,6 +570,7 @@ function renderDashboard({ compact, basePath, authorization }) {
       function renderEmptyDashboard(message = "Choose a repository to see live issue and pull request health.") {
         state.dashboard = null;
         state.loadedAt = null;
+        renderDataStatus(null);
         document.getElementById("downloadMarkdown").disabled = true;
         document.getElementById("summaryCards").innerHTML = '<div class="report-welcome"><span class="welcome-mark" aria-hidden="true">&lt;/&gt;</span><p class="eyebrow">Know where your project stands</p><h2>One repository. A more complete picture.</h2><p>' + escapeHtml(message) + '</p><div class="welcome-topics"><span>Adoption &amp; activity</span><span>Community health</span><span>Security evidence</span></div><span class="welcome-hint">Enter a GitHub repository above to get started.</span></div>';
         reportSections.setAvailable(false);
@@ -575,6 +580,8 @@ function renderDashboard({ compact, basePath, authorization }) {
       }
 
       function renderLoadingDashboard(repo) {
+        document.getElementById("reportFreshness").textContent = "Loading report…";
+        document.getElementById("reportFreshness").classList.remove("warning");
         reportSections.setAvailable(false);
         document.getElementById("summaryCards").innerHTML = '<div class="empty-state"><strong>Loading ' + escapeHtml(repo) + '</strong><p>Reading source-backed issue and pull request signals from GitHub.</p></div>';
         document.getElementById("insightsStrip").hidden = true;
@@ -591,7 +598,10 @@ function renderDashboard({ compact, basePath, authorization }) {
         document.getElementById("insightsStrip").hidden = true;
         document.getElementById("repoProfile").hidden = true;
         document.getElementById("actionCards").innerHTML = '<div class="empty-state"><strong>Source access needs attention</strong><p>Check the repository name and server-side GitHub credential, then retry.</p></div>';
-        document.getElementById("dataStatus").innerHTML = '<span class="status-chip good">Access verified</span><span class="status-chip warn">GitHub request failed</span><span>' + escapeHtml(message) + '</span>';
+        document.getElementById("dataStatus").innerHTML = '<span class="status-chip warn">GitHub request failed</span><span>' + escapeHtml(message) + '</span>';
+        document.getElementById("reportFreshness").textContent = "GitHub request failed";
+        document.getElementById("reportFreshness").classList.add("warning");
+        document.getElementById("reportDetails").open = true;
         copilotMessage.textContent = "Repository context was not published because the GitHub source could not be verified.";
       }
 
@@ -615,6 +625,15 @@ function renderDashboard({ compact, basePath, authorization }) {
 
       function renderDataStatus(dashboard) {
         const node = document.getElementById("dataStatus");
+        const caption = document.getElementById("reportFreshness");
+        caption.classList.remove("warning");
+        caption.textContent = state.loadedAt
+          ? (state.reportOrigin === "cached" ? "Saved report · " : "Report generated · ") + state.loadedAt.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+          : "Choose a repository to get started.";
+        if (!dashboard) {
+          node.innerHTML = '<span class="status-chip">No report loaded</span><span>Read-only insights, backed by source evidence.</span>';
+          return;
+        }
         const source = dashboard?.source === "github-api" ? (dashboard.artifactDownloads?.ghcr?.points?.length ? "GitHub API + package pages" : "GitHub REST API") : "Not loaded";
         const freshness = state.loadedAt
           ? (state.reportOrigin === "cached" ? "Cached report generated " : "Generated ") + state.loadedAt.toLocaleString()
@@ -941,7 +960,7 @@ function renderDashboard({ compact, basePath, authorization }) {
       function setRunButtonBusy(isBusy) {
         const button = document.getElementById("runAnalysis");
         button.disabled = isBusy;
-        button.textContent = isBusy ? "Generating report card..." : "Generate report card";
+        button.textContent = isBusy ? "Generating…" : "Generate report";
       }
 
       async function consumeAgentStream(response) {
@@ -1127,6 +1146,7 @@ function renderDashboard({ compact, basePath, authorization }) {
       }
 
       function renderRunHistory() {
+        document.getElementById("savedReportCount").textContent = "(" + state.runs.length + ")";
         const runHistory = document.getElementById("runHistory");
         runHistory.innerHTML = '<option value="">Cached report cards · ' + state.runs.length + '</option>' + state.runs.map((run) => '<option value="' + escapeAttribute(run.id) + '">' + escapeHtml(run.dashboard?.repo || "repo") + " · " + new Date(run.updatedAt).toLocaleString() + '</option>').join("");
       }
