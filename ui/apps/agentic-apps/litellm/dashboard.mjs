@@ -462,7 +462,12 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
     const active = state.pickerOpen && options[state.activeOption];
     if (active) {
       byId("keyFilter").setAttribute("aria-activedescendant", active.id);
-      if (scroll) active.scrollIntoView({ block: "nearest" });
+      if (scroll) {
+        // Scroll only this listbox; scrollIntoView also moves ancestor frames.
+        const viewport = byId("userOptions"), bounds = viewport.getBoundingClientRect(), item = active.getBoundingClientRect();
+        if (item.top < bounds.top) viewport.scrollTop += item.top - bounds.top;
+        else if (item.bottom > bounds.bottom) viewport.scrollTop += item.bottom - bounds.bottom;
+      }
     } else byId("keyFilter").removeAttribute("aria-activedescendant");
   }
   function chooseUserOption(index) {
@@ -603,7 +608,11 @@ function initializeLiteLlmDashboard({ basePath, appPath, agentId, anomalyRespons
   for (const id of ["modelScope", "catalogModelSort"]) byId(id).addEventListener("change", () => { state.modelPage = 1; renderAvailableModels(); });
   byId("previousModelPage").addEventListener("click", () => { state.modelPage -= 1; renderAvailableModels(); });
   byId("nextModelPage").addEventListener("click", () => { state.modelPage += 1; renderAvailableModels(); });
-  byId("addCalculatorModel").addEventListener("click", () => { byId("modelSearch").scrollIntoView({ block: "center" }); byId("modelSearch").focus(); });
+  byId("addCalculatorModel").addEventListener("click", () => {
+    const input = byId("modelSearch");
+    window.scrollTo({ top: Math.max(0, window.scrollY + input.getBoundingClientRect().top - (window.innerHeight - input.offsetHeight) / 2) });
+    input.focus({ preventScroll: true });
+  });
   byId("clearCalculator").addEventListener("click", () => { state.calculatorRows = []; renderCalculator(); byId("addCalculatorModel").focus(); });
   byId("availableModelRows").addEventListener("click", (event) => {
     const button = event.target.closest("button[data-add-model]");
