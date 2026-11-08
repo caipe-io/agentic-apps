@@ -52,6 +52,19 @@ try {
       for (const messageType of messageTypes) {
         if (!html.includes(messageType)) failures.push(`${entry.name}: missing ${messageType}`);
       }
+      if (entry.name === "oss-repo-management") {
+        if (html.includes('class="example-link"')) failures.push("oss-repo-management: sample entry is still exposed");
+        const legacy = await fetch(`http://127.0.0.1:${entry.port}/example?repo=example/project&tab=activity`, { redirect: "manual" });
+        if (legacy.status !== 303 || legacy.headers.get("location") !== "./?repo=example/project&tab=activity") {
+          failures.push("oss-repo-management: legacy example does not redirect to the real report with its query intact");
+        } else {
+          const real = await fetch(new URL(legacy.headers.get("location"), legacy.url));
+          const content = await real.text();
+          if (!real.ok || !content.includes('id="reportNav"') || content.includes("STATIC EXAMPLE") || content.includes("CAS authorization path")) {
+            failures.push("oss-repo-management: legacy example still renders sample content");
+          }
+        }
+      }
       if (entry.name === "weather" && /\bagentId:\s*defaultAgentId\b/.test(html)) {
         failures.push("weather: rendered browser script references server-only defaultAgentId");
       }

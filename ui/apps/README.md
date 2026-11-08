@@ -27,8 +27,9 @@ not an instruction channel. CAIPE gateway and CAS/OpenFGA remain the policy enfo
 | OSS Repo Report Card | `agent-oss-repo-report-card` | `oss_repo_report_card` | 3040 |
 | Jira Project Dashboard | `agent-jira-agent` | host-configured integration | 3041 |
 
-The `/example` route is a static, network-free fixture for design and contract checks. It must not
-be used for operational decisions.
+Where provided, the `/example` route is a static, network-free fixture for design and contract checks.
+It must not be used for operational decisions. OSS Repo Report Card has no sample page; its legacy
+`/example` URL redirects to the real report.
 
 ## Assistant popup contract
 

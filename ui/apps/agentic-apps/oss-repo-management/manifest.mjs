@@ -16,7 +16,7 @@ export const OSS_REPO_MANAGEMENT_MANIFEST = {
   ui: {
     contractVersion: "1.0",
     surface: "hosted",
-    routes: ["/", "/example"],
+    routes: ["/"],
     preferences: {
       schemaVersion: "1.0",
       fields: [

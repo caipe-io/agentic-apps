@@ -13,7 +13,6 @@ import {
   resolveAgenticAppRuntimeBasePath,
   resolveAgenticAppSurface,
 } from "../../_lib/runtime-base-path.mjs";
-import { renderStaticDashboardExample } from "../../_lib/static-dashboard-examples.mjs";
 import {
   fetchGitHubRepoDashboard,
   GitHubDashboardError,
@@ -157,12 +156,13 @@ const server = createServer(async (request, response) => {
   }
 
   if (url.pathname === "/example") {
-    sendHtml(response, renderStaticDashboardExample("oss-repo-management", authorization.summary), "no-store");
+    response.writeHead(303, { location: "./" + url.search, "cache-control": "no-store" });
+    response.end();
     return;
   }
 
   if (url.pathname === "/" || url.pathname === "/dashboard") {
-    sendHtml(response, renderDashboard({ compact: surface === "hosted", basePath, authorization: authorization.summary }));
+    sendHtml(response, renderDashboard({ compact: surface === "hosted", basePath }));
     return;
   }
 
@@ -284,7 +284,7 @@ function buildLocalRepoAgentResponse(body) {
   };
 }
 
-function renderDashboard({ compact, basePath, authorization }) {
+function renderDashboard({ compact, basePath }) {
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -305,7 +305,6 @@ function renderDashboard({ compact, basePath, authorization }) {
           <p class="report-freshness" id="reportFreshness" role="status" aria-live="polite">Choose a repository to get started.</p>
           <details class="report-details" id="reportDetails"><summary>Report details</summary><div class="data-status" id="dataStatus"><span class="status-chip ${githubToken ? "good" : "warn"}">GitHub ${githubToken ? "connected" : "public API"}</span><span>Read-only insights, backed by source evidence.</span></div></details>
           <details class="saved-reports"><summary>Saved reports <span id="savedReportCount"></span></summary><div class="run-history"><select id="runHistory" aria-label="Cached OSS repo report cards"><option value="">No cached report cards yet</option></select></div></details>
-          <a class="example-link" href="${basePath}/example">Example <span aria-hidden="true">↗</span></a>
         </div>
       </section>
       <div class="font-customizer" id="fontCustomizer" aria-label="Font customization" hidden>

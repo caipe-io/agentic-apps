@@ -65,28 +65,7 @@ const examples = {
     rows: [["Model A", "$8.4k", "1.1B"], ["Model B", "$5.9k", "760M"], ["Model C", "$3.1k", "410M"]],
     columns: ["Model", "Spend", "Tokens"],
   },
-  "oss-repo-management": {
-    readScope: "oss-repo-management:read",
-    invokeScope: "oss-repo-management:agent:invoke",
-    eyebrow: "OSS REPO REPORT CARD · STATIC EXAMPLE",
-    title: "example-org/example-repo",
-    summary: "A sample OSS health report spanning adoption, engagement, delivery, contributors, and security posture.",
-    metrics: [
-      ["Stars", "2.4k", "+8% sample trend"],
-      ["Contributors", "126", "18 active in 12 weeks"],
-      ["PRs / week", "14", "12-week sample average"],
-      ["OpenSSF", "8.1", "Sample security posture"],
-    ],
-    trendTitle: "Weekly repository activity",
-    trend: [["Commits", 78], ["Pull requests", 62], ["Issue engagement", 51], ["New stars", 36]],
-    actions: [
-      ["Review", "Assign the three oldest pull requests."],
-      ["Triage", "Confirm owners for eight untriaged issues."],
-      ["Release", "Resolve the example blocker before cutting a release."],
-    ],
-    rows: [["PR review", "3", "High"], ["Issue triage", "8", "Medium"], ["Stale cleanup", "7", "Low"]],
-    columns: ["Queue", "Items", "Priority"],
-  },
+
 };
 
 export function renderStaticDashboardExample(kind, authorization = null) {
