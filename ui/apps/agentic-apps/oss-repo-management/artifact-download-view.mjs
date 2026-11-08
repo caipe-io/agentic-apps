@@ -55,7 +55,7 @@ export function renderArtifactDownloadTrend(data) {
 }
 
 export function artifactDownloadsMarkdown(data) {
-  const safe = value => String(value ?? "Unavailable").replace(/[|\r\n]/g, " ");
+  const safe = value => String(value ?? "Unavailable").replace(/[&<>]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[char])).replace(/[|\r\n]/g, " ");
   const number = value => Number.isSafeInteger(value) && value >= 0 ? String(value) : "Unavailable";
   if (!data) return ['## Artifact downloads', '', 'Not included in this saved report. Generate a new report to include download evidence.', ''];
   const ghcr = data.ghcr || {};
