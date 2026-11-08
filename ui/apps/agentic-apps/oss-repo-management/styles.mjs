@@ -13,8 +13,6 @@ export const ossRepoStyles = `
   .scope-panel label { gap: 4px; font-size: .72rem; }
   .scope-panel input { background: var(--bg); min-height: 38px; padding: 7px 10px; font-size: .85rem; }
   .scope-panel .primary { min-height: 38px; border-radius: 7px; padding: 7px 16px; font-size: .8rem; }
-  .example-link { color: var(--muted); text-decoration: none; }
-  .example-link:hover { color: var(--accent); text-decoration: underline; }
   .scope-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-top: 10px; font-size: .73rem; color: var(--muted); }
   .report-freshness { flex: 1 1 auto; }
   .scope-meta details { min-width: 0; }
@@ -123,5 +121,5 @@ export const ossRepoStyles = `
     .report-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 600px) { main { padding: 16px 16px 36px; } .practice-grid, .criteria-grid, .action-grid { grid-template-columns: 1fr; } .scope-panel { padding: 12px; } .page-header .actions { gap: 6px; } .page-header button { font-size: .73rem; padding: 7px 9px; } .scope-meta { gap: 8px 16px; } .report-freshness { flex-basis: 100%; } .controls { gap: 10px; } .scope-panel .grow { flex-basis: 100%; } .kpi { padding: 14px; } .repo-meta { padding-left: 0; } .report-nav { gap: 0; } .report-nav [role="tab"] { padding: 7px 8px; font-size: .72rem; } }
-  @media (pointer: coarse) { .scope-panel input, .scope-panel .primary, .page-header button, .report-nav [role="tab"], .scope-meta summary, .scope-meta .example-link { min-height: 44px; } .scope-meta summary, .scope-meta .example-link { align-content: center; } }
+  @media (pointer: coarse) { .scope-panel input, .scope-panel .primary, .page-header button, .report-nav [role="tab"], .scope-meta summary { min-height: 44px; } .scope-meta summary { align-content: center; } }
 `;

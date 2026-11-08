@@ -65,6 +65,8 @@ npm run smoke
 
 ## Report URLs
 
+- The report controls contain no static-example entry. Legacy `/example` URLs redirect to the actual report page, preserving query parameters; sample values and authorization diagnostics are not rendered.
+
 - Opening the app without `repo`, `report`, or `staleDays` resumes the last successfully generated report saved in this browser. The address bar is replaced with its exact snapshot URL; it does not fetch new GitHub data or add a Back-history entry. A selected tab and assistant URL state are preserved. With no saved history, the welcome screen (or configured default repository) is used.
 
 - `?repo=example/project` opens the current report using the server cache when available.

@@ -205,7 +205,7 @@ test("applies host density and text-scale preferences before notifying the app",
   ]);
 });
 
-for (const kind of ["finops", "weather", "litellm", "oss-repo-management"]) {
+for (const kind of ["finops", "weather", "litellm"]) {
   test(`renders a clearly labeled, network-free ${kind} static example`, () => {
     const html = renderStaticDashboardExample(kind);
     assert.match(html, /STATIC EXAMPLE · SAMPLE DATA · NO LIVE CONNECTION/);
