@@ -22,7 +22,8 @@ import {
 import { buildOssRepoMarkdownReport } from "./markdown-report.mjs";
 import { adoptionSnapshotForRepo, loadAdoptionSnapshots } from "./adoption-metrics.mjs";
 import { createQueryNavigation } from "../../_lib/query-navigation.mjs";
-import { createOssReportNavigation } from "./report-navigation.mjs";
+import { createOssReportNavigation, OSS_REPORT_SECTIONS } from "./report-navigation.mjs";
+import { createReportSections } from "./report-sections.mjs";
 import { registerOssReportCardMcpTools } from "./mcp.mjs";
 
 const port = Number(process.env.OSS_REPO_MANAGEMENT_APP_PORT ?? "3040");
@@ -303,18 +304,23 @@ function renderDashboard({ compact, basePath, authorization }) {
         <label>Size<select id="fontScaleSelect" aria-label="Text size"><option value="small">Small</option><option value="default">Default</option><option value="large">Large</option><option value="xl">XL</option></select></label>
       </div>
 
-      <nav class="report-nav" id="reportNav" aria-label="Report sections" hidden><a href="#overview">Overview</a><a href="#actionsPanel">Maintainer priorities</a><a href="#trendsPanel">Activity</a><a href="#healthPanel">Community &amp; security</a></nav>
-      <section class="summary-section" id="overview" aria-label="Repository overview">
+      <div class="report-nav" id="reportNav" role="tablist" aria-label="Report sections" hidden>
+        <button type="button" role="tab" id="report-tab-overview" data-section="overview" aria-controls="overview" aria-selected="true">Overview</button>
+        <button type="button" role="tab" id="report-tab-priorities" data-section="priorities" aria-controls="actionsPanel" aria-selected="false" tabindex="-1">Maintainer priorities</button>
+        <button type="button" role="tab" id="report-tab-activity" data-section="activity" aria-controls="trendsPanel" aria-selected="false" tabindex="-1">Activity</button>
+        <button type="button" role="tab" id="report-tab-community" data-section="community" aria-controls="healthPanel" aria-selected="false" tabindex="-1">Community &amp; security</button>
+      </div>
+      <section class="summary-section" id="overview" role="tabpanel" aria-labelledby="report-tab-overview">
         <div class="repo-profile" id="repoProfile" hidden></div>
         <div class="kpi-strip" id="summaryCards"></div>
         <div class="insights-strip" id="insightsStrip" hidden></div>
       </section>
 
-      <section class="panel priorities-panel" id="actionsPanel" hidden>
+      <section class="panel priorities-panel" id="actionsPanel" role="tabpanel" aria-labelledby="report-tab-priorities" hidden>
         <div class="section-heading"><div><p class="eyebrow">What needs attention</p><h2>Maintainer priorities</h2></div><span class="section-note">Grounded in the current snapshot</span></div><div class="action-grid" id="actionCards"></div>
       </section>
 
-      <div class="panel" id="trendsPanel" hidden>
+      <div class="panel" id="trendsPanel" role="tabpanel" aria-labelledby="report-tab-activity" hidden>
         <div class="section-heading"><div><p class="eyebrow">Project momentum</p><h2>Activity over time</h2></div><span class="section-note">12-week reporting window · coverage shown per chart</span></div>
         <article class="repo-health-card monthly-card" id="monthlyPrTrend"></article>
         <details class="snapshot-panel" id="adoptionSnapshot" hidden><summary>Historical adoption snapshot</summary><div id="adoptionSnapshotContent"></div></details>
@@ -326,7 +332,7 @@ function renderDashboard({ compact, basePath, authorization }) {
         </div>
       </div>
 
-      <div class="panel" id="healthPanel" hidden>
+      <div class="panel" id="healthPanel" role="tabpanel" aria-labelledby="report-tab-community" hidden>
         <div class="section-heading"><div><p class="eyebrow">Project resilience</p><h2>Community &amp; security</h2></div><span class="section-note">Missing evidence is shown explicitly</span></div>
         <div class="practice-grid" id="healthPractices"></div>
         <div class="readiness-head"><strong>OSS foundation readiness criteria</strong><span id="readinessSummary"></span></div>
@@ -365,7 +371,9 @@ function renderDashboard({ compact, basePath, authorization }) {
       const state = { dashboard: null, activityEventCount: 0, runs: loadRunHistory(), staleDays: 30, loadedAt: null };
       ${buildOssRepoMarkdownReport.toString()}
       ${createQueryNavigation.toString()}
+      const OSS_REPORT_SECTIONS = ${JSON.stringify(OSS_REPORT_SECTIONS)};
       ${createOssReportNavigation.toString()}
+      ${createReportSections.toString()}
       const fontStorageKey = "agentic-app.fontPreferences";
       const repoInput = document.getElementById("repoInput");
       const questionInput = document.getElementById("questionInput");
@@ -376,7 +384,9 @@ function renderDashboard({ compact, basePath, authorization }) {
       const fontScaleSelect = document.getElementById("fontScaleSelect");
       let reportRequest, requestGeneration = 0;
       function cancelReportRequest() { reportRequest?.abort(); requestGeneration++; setRunButtonBusy(false); }
+      const reportSections = createReportSections({ sections: OSS_REPORT_SECTIONS, onSelect: tab => reportNavigation.section(tab) });
       const reportNavigation = createOssReportNavigation({
+        onSection: tab => reportSections.select(tab),
         appPath: basePath,
         initialRepo: repoInput.value,
         getRuns: () => state.runs,
@@ -538,8 +548,7 @@ function renderDashboard({ compact, basePath, authorization }) {
         renderReportCardPanels(state.dashboard);
         renderActionCards(state.dashboard);
         renderDataStatus(state.dashboard);
-        document.getElementById("reportNav").hidden = false;
-        document.getElementById("actionsPanel").hidden = false;
+        reportSections.setAvailable(true);
         document.getElementById("downloadMarkdown").disabled = false;
         if (options.persist !== false) persistRun(state.dashboard);
         publishAssistantContext("dashboard");
@@ -550,37 +559,28 @@ function renderDashboard({ compact, basePath, authorization }) {
         state.loadedAt = null;
         document.getElementById("downloadMarkdown").disabled = true;
         document.getElementById("summaryCards").innerHTML = '<div class="report-welcome"><span class="welcome-mark" aria-hidden="true">&lt;/&gt;</span><p class="eyebrow">Know where your project stands</p><h2>One repository. A more complete picture.</h2><p>' + escapeHtml(message) + '</p><div class="welcome-topics"><span>Adoption &amp; activity</span><span>Community health</span><span>Security evidence</span></div><span class="welcome-hint">Enter a GitHub repository above to get started.</span></div>';
-        document.getElementById("reportNav").hidden = true;
-        document.getElementById("actionsPanel").hidden = true;
+        reportSections.setAvailable(false);
         document.getElementById("insightsStrip").hidden = true;
         document.getElementById("repoProfile").hidden = true;
-        document.getElementById("trendsPanel").hidden = true;
-        document.getElementById("healthPanel").hidden = true;
         document.getElementById("actionCards").innerHTML = '<div class="empty-state"><strong>No maintainer actions yet</strong><p>Actions are derived from a verified GitHub snapshot after the repository loads.</p></div>';
       }
 
       function renderLoadingDashboard(repo) {
-        document.getElementById("reportNav").hidden = true;
-        document.getElementById("actionsPanel").hidden = true;
+        reportSections.setAvailable(false);
         document.getElementById("summaryCards").innerHTML = '<div class="empty-state"><strong>Loading ' + escapeHtml(repo) + '</strong><p>Reading source-backed issue and pull request signals from GitHub.</p></div>';
         document.getElementById("insightsStrip").hidden = true;
         document.getElementById("repoProfile").hidden = true;
-        document.getElementById("trendsPanel").hidden = true;
-        document.getElementById("healthPanel").hidden = true;
         document.getElementById("actionCards").innerHTML = '<div class="empty-state"><strong>Computing maintainer priorities</strong><p>Reconciling critical, stale, triage, blocked, and review queues.</p></div>';
       }
 
       function renderLoadError(repo, message) {
-        document.getElementById("reportNav").hidden = true;
-        document.getElementById("actionsPanel").hidden = true;
+        reportSections.setAvailable(false);
         state.dashboard = null;
         state.loadedAt = null;
         document.getElementById("downloadMarkdown").disabled = true;
         document.getElementById("summaryCards").innerHTML = '<div class="empty-state"><strong>Could not load ' + escapeHtml(repo) + '</strong><p>' + escapeHtml(message) + '</p></div>';
         document.getElementById("insightsStrip").hidden = true;
         document.getElementById("repoProfile").hidden = true;
-        document.getElementById("trendsPanel").hidden = true;
-        document.getElementById("healthPanel").hidden = true;
         document.getElementById("actionCards").innerHTML = '<div class="empty-state"><strong>Source access needs attention</strong><p>Check the repository name and server-side GitHub credential, then retry.</p></div>';
         document.getElementById("dataStatus").innerHTML = '<span class="status-chip good">Access verified</span><span class="status-chip warn">GitHub request failed</span><span>' + escapeHtml(message) + '</span>';
         copilotMessage.textContent = "Repository context was not published because the GitHub source could not be verified.";
@@ -685,7 +685,6 @@ function renderDashboard({ compact, basePath, authorization }) {
         const trends = dashboard.trends || {};
         const coverage = trends.coverage || {};
         const starPoints = mergeCachedStarHistory(dashboard);
-        document.getElementById("trendsPanel").hidden = false;
         renderAdoptionPanel(dashboard.adoption || {});
         document.getElementById("starTrend").innerHTML = renderLineChart("Star history", starPoints, coverage.stars || "Timestamped report-card snapshots.");
         document.getElementById("engagementTrend").innerHTML = renderBarChart("Issue engagement", trends.engagementPerWeek || [], coverage.engagement || "No issue engagement coverage.");
@@ -714,7 +713,6 @@ function renderDashboard({ compact, basePath, authorization }) {
           practices.unshift(practiceCard("OpenSSF Scorecard", Number(scorecard.score).toFixed(1) + " / 10", Number(scorecard.score) >= 7));
           (scorecard.checks || []).slice(0, 3).forEach((check) => practices.push(practiceCard("Scorecard · " + (check.name || "check"), Number(check.score).toFixed(0) + " / 10", Number(check.score) >= 7)));
         }
-        document.getElementById("healthPanel").hidden = false;
         document.getElementById("healthPractices").innerHTML = practices.join("");
         renderReadinessCriteria(dashboard.readiness || {});
         document.getElementById("frameworkLinks").innerHTML = (dashboard.frameworks || []).map((framework) =>
