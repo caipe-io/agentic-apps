@@ -51,3 +51,12 @@ npm run check
 node --test ui/apps/agentic-apps/oss-repo-management/*.test.mjs
 npm run smoke
 ```
+
+## Report URLs
+
+- `?repo=example/project` opens the current report using the server cache when available.
+- `?repo=example/project&report=latest` opens the newest saved snapshot in this browser.
+- `?repo=example/project&report=<snapshot-id>` opens that exact saved snapshot; selecting or generating a report updates the address bar.
+- `staleDays=60` preserves the stale-issue threshold (1–365; default 30).
+- Back/Forward restores report selection. Existing assistant parameters and section anchors survive report changes.
+- Saved snapshots are browser-local and limited to 20 reports. An unavailable snapshot displays a message without substituting fresh data. These URLs identify snapshots; they do not grant repository access or transfer the report to another browser.

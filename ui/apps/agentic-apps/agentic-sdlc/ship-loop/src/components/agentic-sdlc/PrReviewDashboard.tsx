@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { ChevronDown, Loader2, Search, Tag } from "lucide-react";
 import type { PrDashboardItem } from "@/lib/agentic-sdlc/pr-dashboard";
 
+import { useAppQuery } from "./QueryNavigationProvider";
 import { reviewTaskProgress } from "@/lib/agentic-sdlc/manual-review-client";
 import { reviewRunState, reviewStatePresentation, type ReviewRunState } from "@/lib/agentic-sdlc/review-run-state.mjs";
 import { ReviewBody } from "./ReviewBody";
@@ -52,16 +53,21 @@ export function PrReviewDashboard({
   repo: string;
   revision?: number;
 }) {
-  const [state, setState] = useState("open");
-  const [query, setQuery] = useState("");
-  const [label, setLabel] = useState("");
-  const [checks, setChecks] = useState("");
-  const [review, setReview] = useState("");
-  const [scope, setScope] = useState("");
-  const [agent, setAgent] = useState("");
-  const [authorHandle, setAuthorHandle] = useState("");
-  const [reviewerHandle, setReviewerHandle] = useState("");
-  const [reviewerRole, setReviewerRole] = useState("either");
+  const { params, setParams } = useAppQuery();
+  const read = (key: string, fallback = "") => (params.get(key) || fallback).slice(0, 256);
+  const state = ["open", "closed", "all"].includes(read("state")) ? read("state") : "open";
+  const query = read("q"), label = read("label"), checks = read("checks"), review = read("review"), scope = read("scope"), agent = read("agent");
+  const authorHandle = read("author"), reviewerHandle = read("reviewer"), reviewerRole = read("reviewerRole", "either");
+  const setState = (value: string) => setParams({ state: value === "open" ? null : value });
+  const setQuery = (value: string) => setParams({ q: value }, "replace");
+  const setLabel = (value: string) => setParams({ label: value });
+  const setChecks = (value: string) => setParams({ checks: value });
+  const setReview = (value: string) => setParams({ review: value });
+  const setScope = (value: string) => setParams({ scope: value });
+  const setAgent = (value: string) => setParams({ agent: value });
+  const setAuthorHandle = (value: string) => setParams({ author: value }, "replace");
+  const setReviewerHandle = (value: string) => setParams({ reviewer: value }, "replace");
+  const setReviewerRole = (value: string) => setParams({ reviewerRole: value === "either" ? null : value });
   const handlesId = useId();
   const requestKey = JSON.stringify([owner, repo, state]);
   // Retain one successful snapshot for this mounted dashboard, never a shared
@@ -96,17 +102,6 @@ export function PrReviewDashboard({
     void poll();
     return () => { controller.abort(); clearTimeout(timer); };
   }, [data?.review_task_id, requestKey, revision]);
-  useEffect(() => {
-    setLabel("");
-    setChecks("");
-    setReview("");
-    setScope("");
-    setAgent("");
-    setQuery("");
-    setAuthorHandle("");
-    setReviewerHandle("");
-    setReviewerRole("either");
-  }, [owner, repo]);
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const refresh = (event: Event) => {
@@ -408,16 +403,7 @@ export function PrReviewDashboard({
           <button
             type="button"
             onClick={() => {
-              setQuery("");
-              setLabel("");
-              setChecks("");
-              setReview("");
-              setScope("");
-              setAgent("");
-              setState("open");
-              setAuthorHandle("");
-              setReviewerHandle("");
-              setReviewerRole("either");
+              setParams({ q: null, label: null, checks: null, review: null, scope: null, agent: null, author: null, reviewer: null, reviewerRole: null, state: null });
             }}
             className="text-xs text-muted-foreground hover:text-primary"
           >

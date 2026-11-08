@@ -21,6 +21,8 @@ import {
 } from "./github-dashboard.mjs";
 import { buildOssRepoMarkdownReport } from "./markdown-report.mjs";
 import { adoptionSnapshotForRepo, loadAdoptionSnapshots } from "./adoption-metrics.mjs";
+import { createQueryNavigation } from "../../_lib/query-navigation.mjs";
+import { createOssReportNavigation } from "./report-navigation.mjs";
 import { registerOssReportCardMcpTools } from "./mcp.mjs";
 
 const port = Number(process.env.OSS_REPO_MANAGEMENT_APP_PORT ?? "3040");
@@ -362,6 +364,8 @@ function renderDashboard({ compact, basePath, authorization }) {
       const basePath = ${JSON.stringify(basePath)};
       const state = { dashboard: null, activityEventCount: 0, runs: loadRunHistory(), staleDays: 30, loadedAt: null };
       ${buildOssRepoMarkdownReport.toString()}
+      ${createQueryNavigation.toString()}
+      ${createOssReportNavigation.toString()}
       const fontStorageKey = "agentic-app.fontPreferences";
       const repoInput = document.getElementById("repoInput");
       const questionInput = document.getElementById("questionInput");
@@ -370,6 +374,30 @@ function renderDashboard({ compact, basePath, authorization }) {
       const fontCustomizer = document.getElementById("fontCustomizer");
       const fontFamilySelect = document.getElementById("fontFamilySelect");
       const fontScaleSelect = document.getElementById("fontScaleSelect");
+      let reportRequest, requestGeneration = 0;
+      function cancelReportRequest() { reportRequest?.abort(); requestGeneration++; setRunButtonBusy(false); }
+      const reportNavigation = createOssReportNavigation({
+        appPath: basePath,
+        initialRepo: repoInput.value,
+        getRuns: () => state.runs,
+        onLive(repo, staleDays) {
+          cancelReportRequest(); repoInput.value = repo; state.staleDays = staleDays;
+          document.getElementById("runHistory").value = "";
+          if (repo) void loadGitHubSummary({ restoring: true });
+          else renderEmptyDashboard();
+        },
+        onSnapshot(run, staleDays) {
+          cancelReportRequest(); repoInput.value = run.dashboard.repo; state.staleDays = staleDays;
+          applyDashboard(run.dashboard, { persist: false, origin: "cached" });
+          document.getElementById("runHistory").value = run.id;
+          copilotMessage.textContent = "Saved report loaded from " + new Date(run.updatedAt).toLocaleString() + ". Generate a report card to refresh source data.";
+        },
+        onUnavailable(message, repo) {
+          cancelReportRequest(); if (repo) repoInput.value = repo;
+          document.getElementById("runHistory").value = "";
+          renderEmptyDashboard(message); copilotMessage.textContent = message;
+        },
+      }, createQueryNavigation);
 
       document.getElementById("runAnalysis").addEventListener("click", () => loadGitHubSummary({ forceRefresh: true }));
       document.getElementById("downloadMarkdown").addEventListener("click", downloadMarkdownReport);
@@ -384,7 +412,7 @@ function renderDashboard({ compact, basePath, authorization }) {
       fontScaleSelect.addEventListener("change", writeFontPreferences);
       window.addEventListener("caipe:microfrontend-initialize", (event) => {
         const staleDays = Number(event.detail?.preferences?.staleDays);
-        if (Number.isFinite(staleDays) && staleDays >= 1 && staleDays <= 365) {
+        if (!new URLSearchParams(location.search).has("report") && !new URLSearchParams(location.search).has("staleDays") && Number.isFinite(staleDays) && staleDays >= 1 && staleDays <= 365) {
           state.staleDays = Math.round(staleDays);
           renderDataStatus(state.dashboard);
         }
@@ -392,34 +420,38 @@ function renderDashboard({ compact, basePath, authorization }) {
 
       applyFontPreferences();
       renderRunHistory();
-      if (repoInput.value.trim()) loadGitHubSummary();
-      else renderEmptyDashboard();
+      reportNavigation.initialize();
 
-      async function loadGitHubSummary({ forceRefresh = false } = {}) {
+      async function loadGitHubSummary({ forceRefresh = false, restoring = false } = {}) {
         const repo = repoInput.value.trim();
         if (!repo) {
           renderEmptyDashboard("Enter a repository as owner/repo to load live GitHub metrics.");
           repoInput.focus();
           return;
         }
+        reportRequest?.abort();
+        const controller = reportRequest = new AbortController();
+        const generation = ++requestGeneration;
+        if (!restoring) reportNavigation.live(repo, state.staleDays);
         setRunButtonBusy(true);
         renderLoadingDashboard(repo);
         try {
           const refresh = forceRefresh ? "&refresh=1" : "";
           const response = await fetch(appUrl("/api/summary?repo=" + encodeURIComponent(repo) + "&staleDays=" + state.staleDays + refresh), {
-            headers: { accept: "application/json" },
+            headers: { accept: "application/json" }, signal: controller.signal,
           });
           const payload = await response.json();
           if (!response.ok) {
             const code = payload.error ? " [" + payload.error + "]" : "";
             throw new Error((payload.message || "Could not load repository data") + code);
           }
+          if (controller.signal.aborted || generation !== requestGeneration) return;
           applyDashboard(payload);
           copilotMessage.textContent = "Live GitHub snapshot loaded. Open Repo Report Card Assistant to work with this context.";
         } catch (error) {
-          renderLoadError(repo, error instanceof Error ? error.message : "Could not load repository data");
+          if (!controller.signal.aborted && generation === requestGeneration) renderLoadError(repo, error instanceof Error ? error.message : "Could not load repository data");
         } finally {
-          setRunButtonBusy(false);
+          if (generation === requestGeneration) setRunButtonBusy(false);
         }
       }
 
@@ -1078,10 +1110,12 @@ function renderDashboard({ compact, basePath, authorization }) {
       function persistRun(dashboard) {
         const updatedAt = dashboard.generatedAt || new Date().toISOString();
         const id = dashboard.repo + "::" + updatedAt;
-        const run = { id, updatedAt, dashboard };
+        const run = { id, updatedAt, dashboard, staleDays: state.staleDays };
         state.runs = [run, ...state.runs.filter((item) => item.id !== id)].slice(0, 20);
         try { localStorage.setItem("oss-repo-report-card.cachedReports.v1", JSON.stringify(state.runs)); } catch {}
         renderRunHistory();
+        document.getElementById("runHistory").value = id;
+        reportNavigation.remember(run, state.staleDays);
       }
 
       function renderRunHistory() {
@@ -1101,13 +1135,7 @@ function renderDashboard({ compact, basePath, authorization }) {
       }
 
       function loadSelectedRun() {
-        const id = document.getElementById("runHistory").value;
-        const run = state.runs.find((item) => item.id === id);
-        if (run?.dashboard) {
-          repoInput.value = run.dashboard.repo || repoInput.value;
-          applyDashboard(run.dashboard, { persist: false, origin: "cached" });
-          copilotMessage.textContent = "Cached report card loaded from " + new Date(run.updatedAt).toLocaleString() + ". Generate a new report card to refresh source data.";
-        }
+        reportNavigation.select(document.getElementById("runHistory").value);
       }
 
       function toggleFontSettings() {

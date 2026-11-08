@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 // assisted-by Codex Codex-sonnet-4-6
+import { createQueryNavigation } from "../../_lib/query-navigation.mjs";
+import { bindQueryControls } from "../../_lib/query-controls.mjs";
 import { createServer } from "node:http";
 
 import { renderAgenticAppConversationClient } from "../../_lib/conversation-client.mjs";
@@ -452,6 +454,8 @@ function renderDashboard({ compact, basePath }) {
     <script>
       const basePath = ${JSON.stringify(basePath)};
       const state = { dashboard: null, activityEventCount: 0, runs: loadRunHistory() };
+      ${createQueryNavigation.toString()}
+      ${bindQueryControls.toString()}
       const fontStorageKey = "agentic-app.fontPreferences";
       const jiraProjectInput = document.getElementById("jiraProjectInput");
       const dashboardKind = document.getElementById("dashboardKind");
@@ -470,6 +474,11 @@ function renderDashboard({ compact, basePath }) {
       fontFamilySelect.addEventListener("change", writeFontPreferences);
       fontScaleSelect.addEventListener("change", writeFontPreferences);
 
+      bindQueryControls({ appId: "jira-project-dashboard", appPath: basePath, fields: [
+        { name: "project", id: "jiraProjectInput" }, { name: "view", id: "dashboardKind" },
+      ], onRestore: ({ initial, valid }) => { if (!initial && valid) void loadLocalSummary(); },
+        onInvalid: message => { copilotMessage.textContent = message; },
+      }, createQueryNavigation);
       applyFontPreferences();
       renderRunHistory();
       loadLocalSummary();

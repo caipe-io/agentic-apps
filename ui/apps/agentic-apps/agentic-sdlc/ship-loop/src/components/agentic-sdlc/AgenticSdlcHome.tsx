@@ -44,7 +44,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "@/components/agentic-sdlc/AppLink";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useAppQuery } from "./QueryNavigationProvider";
 
 import { LiveStatusIndicator } from "@/components/agentic-sdlc/LiveStatusIndicator";
 import {
@@ -125,9 +125,7 @@ function parseAgenticSdlcTab(raw: string | null): AgenticSdlcTab {
 }
 
 export function AgenticSdlcHome() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const { params: searchParams, setParams } = useAppQuery();
   const currentTab = parseAgenticSdlcTab(searchParams.get("tab"));
   const [activeTab, setActiveTab] = useState<AgenticSdlcTab>(currentTab);
   const portfolioLive = useAgenticSdlcPortfolioLiveRefresh({ enabled: true });
@@ -138,9 +136,7 @@ export function AgenticSdlcHome() {
 
   function selectTab(tab: AgenticSdlcTab) {
     setActiveTab(tab);
-    const nextParams = new URLSearchParams(searchParams.toString());
-    nextParams.set("tab", tab);
-    router.push(`${pathname}?${nextParams.toString()}`, { scroll: false });
+    setParams({ tab });
   }
 
   return (
