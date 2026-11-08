@@ -13,7 +13,7 @@
 ## Artifact downloads
 
 - Activity includes daily GHCR container pulls and lifetime GitHub release-asset counts by release. These are separate measures.
-- GHCR discovery uses the repository owner’s public package listing, up to two pages / 60 linked container packages. Package pages supply up to 31 reported daily counts. Eight concurrent requests share a 15-second budget; source bodies and redirects are bounded. No API credentials or browser cookies are sent to the public HTML source.
+- GHCR discovery uses the repository owner’s public package listing, up to two pages / 60 linked container packages. Each package’s canonical page must confirm the same repository association before it is counted. Package pages supply up to 31 reported daily counts. Eight concurrent requests share a 15-second budget; source bodies and redirects are bounded. No API credentials or browser cookies are sent to the public HTML source.
 - GitHub’s package-page chart is not a documented API. Markup changes, missing days, throttling and unavailable packages produce unavailable values or explicitly labeled lower bounds, never invented zeros. Private/unlinked packages and other registries are outside coverage.
 - Public GHCR discovery is disabled for custom GitHub API hosts.
 - Release counts use the existing GitHub API client, cover at most 300 published releases including prereleases, and exclude drafts. They are lifetime asset counters, not download activity during the publication month. Generated source archives have no download counters. Daily historical release-download counts cannot be reconstructed from current counters.

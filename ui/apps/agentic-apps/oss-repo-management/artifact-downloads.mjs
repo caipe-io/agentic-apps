@@ -107,6 +107,7 @@ export async function fetchGhcrDownloads({ repo, now = new Date(), fetchImpl = f
         const item = packages[next++];
         try {
           const source = await publicHtml(ORIGIN + item.path, fetchImpl, signal);
+          if (!new URL(source.url).pathname.toLowerCase().startsWith("/" + repo.toLowerCase() + "/pkgs/container/")) throw new Error("Package repository association unavailable");
           Object.assign(item, parsePackageDownloads(source.html, today), { status: "available", sourceUrl: source.url });
         } catch (error) {
           item.reason = "Public package download counts unavailable";

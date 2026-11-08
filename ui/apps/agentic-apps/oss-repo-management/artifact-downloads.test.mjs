@@ -7,6 +7,9 @@ import { buildOssRepoMarkdownReport } from "./markdown-report.mjs";
 const html = (points = [["2026-08-01", 0], ["2026-08-02", 20]]) => '<span>Total downloads</span><h3 title="12345">12K</h3><div aria-label="Downloads for the last 30 days"><svg>' + points.map(([date, count]) => `<rect data-date="${date}" data-merge-count="${count}"></rect>`).join("") + '</svg></div>';
 const link = name => `<a href="/orgs/example/packages/container/package/${name}">Package</a>`;
 const now = new Date("2026-08-02T12:00:00Z");
+const packagePage = url => url.includes('/packages/container/package/')
+  ? new Response(null, { status: 302, headers: { location: '/example/project/pkgs/container/' + url.split('/package/')[1] } })
+  : new Response(html());
 
 test("uses exact daily and all-time counts, retaining real zeros and marking the current day partial", () => {
   const result = parsePackageDownloads(html(), "2026-08-02");
@@ -35,7 +38,7 @@ test("reads public GHCR pages without credentials and continues when one package
     requests.push({ url, options });
     if (url.includes('?repo_name=')) return new Response(link("app") + link("missing"));
     if (url.endsWith('/missing')) return new Response('Rate limited', { status: 429 });
-    return new Response(html());
+    return packagePage(url);
   };
   const result = await fetchGhcrDownloads({ repo: "example/project", now, fetchImpl });
   assert.equal(result.status, 'partial');
@@ -64,7 +67,7 @@ test("a source body limit fails closed", async () => {
 test("bounded discovery is marked partial even if all discovered package pages succeed", async () => {
   const result = await fetchGhcrDownloads({ repo: "example/project", now, fetchImpl: async url => {
     if (url.includes('?repo_name=')) return new Response(link("app") + '<a href="?page=' + (url.endsWith('page=1') ? '2' : '3') + '&amp;repo_name=project">Next</a>');
-    return new Response(html());
+    return packagePage(url);
   } });
   assert.equal(result.truncated, true);
   assert.equal(result.status, 'partial');
@@ -73,10 +76,10 @@ test("bounded discovery is marked partial even if all discovered package pages s
 
 test("coalesces concurrent report refreshes and caches the public source", async () => {
   let requests = 0;
-  const reader = createGhcrDownloadReader({ fetchImpl: async url => { requests++; return new Response(url.includes('?repo_name=') ? link('app') : html()); } });
+  const reader = createGhcrDownloadReader({ fetchImpl: async url => { requests++; return url.includes('?repo_name=') ? new Response(link('app')) : packagePage(url); } });
   await Promise.all([reader('example/project'), reader('EXAMPLE/PROJECT')]);
   await reader('example/project');
-  assert.equal(requests, 2);
+  assert.equal(requests, 3);
 });
 
 test("release assets use lifetime download counters, exclude drafts and deduplicate assets", async () => {
@@ -126,7 +129,7 @@ test("release pagination is bounded and partial pages retain only observed count
 });
 
 test("supports public container packages owned by a personal repository", async () => {
-  const result = await fetchGhcrDownloads({ repo: 'example/project', ownerType: 'User', now, fetchImpl: async url => new Response(url.includes('repo_name=') ? '<a href="/users/example/packages/container/package/app">Package</a>' : html()) });
+  const result = await fetchGhcrDownloads({ repo: 'example/project', ownerType: 'User', now, fetchImpl: async url => url.includes('repo_name=') ? new Response('<a href="/users/example/packages/container/package/app">Package</a>') : packagePage(url) });
   assert.equal(result.status, 'available');
   assert.equal(result.availablePackages, 1);
 });
@@ -148,4 +151,15 @@ test("browser-export serialization includes the artifact Markdown helper", () =>
   assert.match(markdown, /Daily GHCR container pulls/);
   assert.match(markdown, /2026-08-02 \| 10/);
   assert.match(markdown, /Observed: 2026-08-02T12:00:00Z/);
+});
+
+test("does not count a package whose canonical page belongs to another repository", async () => {
+  const result = await fetchGhcrDownloads({ repo: 'example/project', now, fetchImpl: async url => {
+    if (url.includes('repo_name=')) return new Response(link('app'));
+    if (url.includes('/package/')) return new Response(null, { status: 302, headers: { location: '/example/secondary/pkgs/container/app' } });
+    return new Response(html());
+  } });
+  assert.equal(result.availablePackages, 0);
+  assert.equal(result.status, 'unavailable');
+  assert.deepEqual(result.points, []);
 });
