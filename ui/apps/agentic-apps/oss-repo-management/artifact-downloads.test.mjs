@@ -132,13 +132,13 @@ test("supports public container packages owned by a personal repository", async 
 });
 
 test("view and export preserve source limits and old saved reports remain readable", () => {
-  const data = { ghcr: { status: 'partial', availablePackages: 1, discoveredPackages: 2, points: [{ date: '2026-08-02', value: 20, complete: false, partial: true }], packages: [{ name: '<script>bad</script>', sourceUrl: 'javascript:alert(1)' }] }, releases: { status: 'available', releases: [{ release: '<script>bad</script>', assetCount: 1, value: 5 }] } };
+  const data = { ghcr: { status: 'partial', availablePackages: 1, discoveredPackages: 2, points: [{ date: '2026-08-02', value: 20, complete: false, partial: true }], packages: [{ name: '<ScRiPt>bad</ScRiPt>', sourceUrl: 'javascript:alert(1)' }] }, releases: { status: 'available', releases: [{ release: '<ScRiPt>bad</ScRiPt>', assetCount: 1, value: 5 }] } };
   const view = renderArtifactDownloadTrend(data);
   assert.match(view, /At least 20/);
   assert.match(view, /partial day/);
-  assert.doesNotMatch(view, /<script>|href="javascript:/);
+  assert.doesNotMatch(view, /<script>|href="javascript:/i);
   assert.match(artifactDownloadsMarkdown(data).join('\n'), /At least 20/);
-  assert.doesNotMatch(artifactDownloadsMarkdown(data).join('\n'), /<script>/);
+  assert.doesNotMatch(artifactDownloadsMarkdown(data).join('\n'), /<script>/i);
   assert.match(renderArtifactDownloadTrend(), /saved report has no artifact-download evidence/);
 });
 
