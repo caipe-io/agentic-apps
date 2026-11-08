@@ -13,6 +13,7 @@
   --popover-foreground: var(--foreground);
   --primary: 173 80% 35%;
   --primary-foreground: 0 0% 100%;
+  --primary-ink: light-dark(color-mix(in srgb, hsl(var(--primary)) 65%, black), hsl(var(--primary)));
   --secondary: 220 14% 96%;
   --secondary-foreground: var(--foreground);
   --muted: var(--secondary);
@@ -73,37 +74,37 @@
   --color-sky-200: light-dark(#0369a1, #7dd3fc);
   --color-sky-300: light-dark(#0369a1, #7dd3fc);
   --color-sky-400: light-dark(#0369a1, #7dd3fc);
-  --color-cyan-50: hsl(var(--primary));
-  --color-cyan-100: hsl(var(--primary));
-  --color-cyan-200: hsl(var(--primary));
-  --color-cyan-300: hsl(var(--primary));
-  --color-cyan-400: hsl(var(--primary));
-  --color-cyan-500: hsl(var(--primary));
-  --color-teal-50: hsl(var(--primary));
-  --color-teal-100: hsl(var(--primary));
-  --color-teal-200: hsl(var(--primary));
-  --color-teal-300: hsl(var(--primary));
-  --color-teal-400: hsl(var(--primary));
-  --color-teal-500: hsl(var(--primary));
-  --color-violet-50: hsl(var(--primary));
-  --color-violet-100: hsl(var(--primary));
-  --color-violet-200: hsl(var(--primary));
-  --color-violet-300: hsl(var(--primary));
-  --color-violet-400: hsl(var(--primary));
-  --color-violet-500: hsl(var(--primary));
-  --color-purple-50: hsl(var(--primary));
-  --color-purple-100: hsl(var(--primary));
-  --color-purple-200: hsl(var(--primary));
-  --color-purple-300: hsl(var(--primary));
-  --color-purple-400: hsl(var(--primary));
-  --color-purple-500: hsl(var(--primary));
+  --color-cyan-50: var(--primary-ink);
+  --color-cyan-100: var(--primary-ink);
+  --color-cyan-200: var(--primary-ink);
+  --color-cyan-300: var(--primary-ink);
+  --color-cyan-400: var(--primary-ink);
+  --color-cyan-500: var(--primary-ink);
+  --color-teal-50: var(--primary-ink);
+  --color-teal-100: var(--primary-ink);
+  --color-teal-200: var(--primary-ink);
+  --color-teal-300: var(--primary-ink);
+  --color-teal-400: var(--primary-ink);
+  --color-teal-500: var(--primary-ink);
+  --color-violet-50: var(--primary-ink);
+  --color-violet-100: var(--primary-ink);
+  --color-violet-200: var(--primary-ink);
+  --color-violet-300: var(--primary-ink);
+  --color-violet-400: var(--primary-ink);
+  --color-violet-500: var(--primary-ink);
+  --color-purple-50: var(--primary-ink);
+  --color-purple-100: var(--primary-ink);
+  --color-purple-200: var(--primary-ink);
+  --color-purple-300: var(--primary-ink);
+  --color-purple-400: var(--primary-ink);
+  --color-purple-500: var(--primary-ink);
 }
 body { margin: 0; background: hsl(var(--background)); color: hsl(var(--foreground)); font-family: ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
 .agentic-sdlc-app { min-height: 100vh; background: hsl(var(--background)); }
-.gradient-text { color: hsl(var(--primary)); }
+.gradient-text { color: var(--primary-ink); }
 .glass-panel { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); box-shadow: 0 1px 3px rgb(0 0 0 / .04); }
 .sdlc-header { border: 1px solid hsl(var(--border)); border-radius: 14px; padding: 20px; background: hsl(var(--card)); }
-.sdlc-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: 9px; color: hsl(var(--primary)); background: hsl(var(--primary) / .1); }
+.sdlc-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: 9px; color: var(--primary-ink); background: hsl(var(--primary) / .1); }
 .sdlc-section-heading { display: flex; align-items: center; gap: 10px; }
 .sdlc-section-heading::after { content: ""; flex: 1; height: 1px; background: hsl(var(--border)); }
 :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }

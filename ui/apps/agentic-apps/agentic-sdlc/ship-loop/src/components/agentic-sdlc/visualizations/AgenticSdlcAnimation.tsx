@@ -267,7 +267,7 @@ export function AgenticSdlcAnimation({
                 width={24}
                 height={24}
                 strokeWidth={1.8}
-                color="hsl(var(--primary))"
+                color="var(--primary-ink)"
                 aria-hidden
               />
               {/* Alternate label position above/below to avoid the

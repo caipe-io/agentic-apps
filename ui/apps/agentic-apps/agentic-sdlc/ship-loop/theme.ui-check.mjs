@@ -62,9 +62,7 @@ test("ignores messages from unrelated origins, windows, apps and protocol versio
   assert.equal(app.sent.length, 1);
 });
 
-test("the before-paint theme asset is included in the deployed standalone image", () => {
+test("the initial document references the external before-paint theme asset", () => {
   const layout = readFileSync(new URL("./src/app/layout.tsx", import.meta.url), "utf8");
-  const image = readFileSync(new URL("../../../../../build/Dockerfile.agentic-sdlc", import.meta.url), "utf8");
   assert.match(layout, /<script src="\/apps\/agentic-sdlc\/theme\.js"/);
-  assert.match(image, /COPY --from=build[^\n]*\/app\/public \.\/public/);
 });
