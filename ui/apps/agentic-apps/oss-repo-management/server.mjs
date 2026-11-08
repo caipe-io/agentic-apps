@@ -20,7 +20,13 @@ import {
   normalizeRepoName,
 } from "./github-dashboard.mjs";
 import { buildOssRepoMarkdownReport } from "./markdown-report.mjs";
+import { adoptionSnapshotForRepo, loadAdoptionSnapshots } from "./adoption-metrics.mjs";
+import { createQueryNavigation } from "../../_lib/query-navigation.mjs";
+import { createOssReportNavigation, OSS_REPORT_SECTIONS } from "./report-navigation.mjs";
+import { createReportSections } from "./report-sections.mjs";
 import { registerOssReportCardMcpTools } from "./mcp.mjs";
+import { createGhcrDownloadReader } from "./artifact-downloads.mjs";
+import { artifactDownloadsMarkdown, renderArtifactDownloadTrend } from "./artifact-download-view.mjs";
 
 const port = Number(process.env.OSS_REPO_MANAGEMENT_APP_PORT ?? "3040");
 const configuredBasePath = normalizeBasePath(process.env.OSS_REPO_MANAGEMENT_APP_BASE_PATH ?? "/apps/oss-repo-management");
@@ -31,6 +37,8 @@ const githubApiBase = process.env.OSS_REPO_MANAGEMENT_GITHUB_API_URL ?? "https:/
 const configuredReportCacheTtlMs = Number(process.env.OSS_REPO_MANAGEMENT_REPORT_CACHE_TTL_MS || 900_000);
 const reportCacheTtlMs = Number.isFinite(configuredReportCacheTtlMs) ? Math.max(60_000, configuredReportCacheTtlMs) : 900_000;
 const reportCache = new Map();
+const readGhcrDownloads = createGhcrDownloadReader();
+const adoptionSnapshots = loadAdoptionSnapshots(process.env.OSS_REPO_MANAGEMENT_ADOPTION_SNAPSHOTS_FILE);
 
 const verifier = createRequiredAgenticAppJwtVerifier({
   appId: "oss-repo-management",
@@ -183,6 +191,10 @@ async function loadRepoReportCard({ repo, staleDays = 30, refresh = false }) {
     token: githubToken,
     apiBase: githubApiBase,
   });
+  dashboard.adoption.snapshot = adoptionSnapshotForRepo(adoptionSnapshots, dashboard.repo);
+  dashboard.artifactDownloads.ghcr = new URL(githubApiBase).origin === "https://api.github.com"
+    ? await readGhcrDownloads(dashboard.repo, dashboard.repository?.ownerType)
+    : { status: "unavailable", points: [], packages: [], coverage: "Public GHCR history is not queried for a custom GitHub API host." };
   const cachedAt = Date.now();
   reportCache.set(cacheKey, { cachedAt, dashboard });
   return {
@@ -284,13 +296,17 @@ function renderDashboard({ compact, basePath, authorization }) {
   <body class="${compact ? "compact" : "standalone"}">
     <main>
       <header class="page-header">
-        <div><h1>OSS Repo Report Card</h1><p class="subtitle">Explore repository adoption, delivery, community health, and security controls.</p></div>
-        <div class="actions"><button id="downloadMarkdown" type="button" disabled>Download Markdown</button><button id="settingsToggle" type="button" aria-expanded="false" aria-controls="fontCustomizer">View settings</button><button id="openAssistantChat" type="button">Ask GitHub</button></div>
+        <div><h1>OSS Report Card</h1></div>
+        <div class="actions"><button id="downloadMarkdown" type="button" disabled>Export Markdown</button><button id="settingsToggle" type="button" aria-expanded="false" aria-controls="fontCustomizer">View settings</button><button id="openAssistantChat" class="assistant-launch" type="button">Ask Report Card <span aria-hidden="true">↗</span></button></div>
       </header>
       <section class="panel scope-panel" aria-label="Repository scope">
-        <div class="controls"><label class="grow">Repository<input id="repoInput" value="${escapeHtml(defaultRepoName)}" aria-label="Repository owner/repo" placeholder="owner/repo or GitHub URL" /></label><button id="runAnalysis" class="primary">Refresh repository</button><a class="button" href="${basePath}/example">Static example</a></div>
-        <div class="data-status" id="dataStatus" role="status" aria-live="polite"><span class="status-chip good">Access verified</span><span class="status-chip ${githubToken ? "good" : "warn"}">GitHub ${githubToken ? "connected" : "public API"}</span><span>Enter a repository to load a live snapshot.</span></div>
-        <details class="view-settings"><summary>Saved report cards</summary><div class="run-history"><select id="runHistory" aria-label="Cached OSS repo report cards"><option value="">No cached report cards yet</option></select></div></details>
+        <div class="controls"><label class="grow">GitHub repository<input id="repoInput" value="${escapeHtml(defaultRepoName)}" aria-label="Repository owner/repo" placeholder="owner/repo or GitHub URL" /></label><button id="runAnalysis" class="primary">Generate report</button></div>
+        <div class="scope-meta">
+          <p class="report-freshness" id="reportFreshness" role="status" aria-live="polite">Choose a repository to get started.</p>
+          <details class="report-details" id="reportDetails"><summary>Report details</summary><div class="data-status" id="dataStatus"><span class="status-chip ${githubToken ? "good" : "warn"}">GitHub ${githubToken ? "connected" : "public API"}</span><span>Read-only insights, backed by source evidence.</span></div></details>
+          <details class="saved-reports"><summary>Saved reports <span id="savedReportCount"></span></summary><div class="run-history"><select id="runHistory" aria-label="Cached OSS repo report cards"><option value="">No cached report cards yet</option></select></div></details>
+          <a class="example-link" href="${basePath}/example">Example <span aria-hidden="true">↗</span></a>
+        </div>
       </section>
       <div class="font-customizer" id="fontCustomizer" aria-label="Font customization" hidden>
         <span class="font-dock-title">View settings</span>
@@ -298,15 +314,27 @@ function renderDashboard({ compact, basePath, authorization }) {
         <label>Size<select id="fontScaleSelect" aria-label="Text size"><option value="small">Small</option><option value="default">Default</option><option value="large">Large</option><option value="xl">XL</option></select></label>
       </div>
 
-      <section class="summary-section">
-        <h2>Report card summary</h2>
+      <div class="report-nav" id="reportNav" role="tablist" aria-label="Report sections" hidden>
+        <button type="button" role="tab" id="report-tab-overview" data-section="overview" aria-controls="overview" aria-selected="true">Overview</button>
+        <button type="button" role="tab" id="report-tab-priorities" data-section="priorities" aria-controls="actionsPanel" aria-selected="false" tabindex="-1">Maintainer priorities</button>
+        <button type="button" role="tab" id="report-tab-activity" data-section="activity" aria-controls="trendsPanel" aria-selected="false" tabindex="-1">Activity</button>
+        <button type="button" role="tab" id="report-tab-community" data-section="community" aria-controls="healthPanel" aria-selected="false" tabindex="-1">Community &amp; security</button>
+      </div>
+      <section class="summary-section" id="overview" role="tabpanel" aria-labelledby="report-tab-overview">
+        <div class="repo-profile" id="repoProfile" hidden></div>
         <div class="kpi-strip" id="summaryCards"></div>
         <div class="insights-strip" id="insightsStrip" hidden></div>
-        <div class="repo-profile" id="repoProfile" hidden></div>
       </section>
 
-      <div class="panel" id="trendsPanel" hidden>
-        <h2>12-week trends</h2>
+      <section class="panel priorities-panel" id="actionsPanel" role="tabpanel" aria-labelledby="report-tab-priorities" hidden>
+        <div class="section-heading"><div><p class="eyebrow">What needs attention</p><h2>Maintainer priorities</h2></div><span class="section-note">Grounded in the current snapshot</span></div><div class="action-grid" id="actionCards"></div>
+      </section>
+
+      <div class="panel" id="trendsPanel" role="tabpanel" aria-labelledby="report-tab-activity" hidden>
+        <div class="section-heading"><div><p class="eyebrow">Project momentum</p><h2>Activity over time</h2></div><span class="section-note">Coverage and dates shown per chart</span></div>
+        <article class="repo-health-card artifact-download-card" id="artifactDownloadTrend"></article>
+        <article class="repo-health-card monthly-card" id="monthlyPrTrend"></article>
+        <details class="snapshot-panel" id="adoptionSnapshot" hidden><summary>Historical adoption snapshot</summary><div id="adoptionSnapshotContent"></div></details>
         <div class="report-grid">
           <article class="repo-health-card chart-card" id="starTrend"></article>
           <article class="repo-health-card chart-card" id="engagementTrend"></article>
@@ -315,8 +343,8 @@ function renderDashboard({ compact, basePath, authorization }) {
         </div>
       </div>
 
-      <div class="panel" id="healthPanel" hidden>
-        <h2>Community &amp; security posture</h2>
+      <div class="panel" id="healthPanel" role="tabpanel" aria-labelledby="report-tab-community" hidden>
+        <div class="section-heading"><div><p class="eyebrow">Project resilience</p><h2>Community &amp; security</h2></div><span class="section-note">Missing evidence is shown explicitly</span></div>
         <div class="practice-grid" id="healthPractices"></div>
         <div class="readiness-head"><strong>OSS foundation readiness criteria</strong><span id="readinessSummary"></span></div>
         <p class="coverage" id="readinessCaveat"></p>
@@ -324,19 +352,16 @@ function renderDashboard({ compact, basePath, authorization }) {
         <div class="framework-links" id="frameworkLinks"></div>
       </div>
 
-      <section class="panel">
-        <h2>Maintainer actions</h2><div class="action-grid" id="actionCards"></div>
-      </section>
       <details class="panel assistant">
         <summary>Repository analysis</summary>
         <p class="subtitle">Ask about triage, review queues, or release readiness using the current repository snapshot.</p>
         <div class="assistant-fields"><label>Question<textarea id="questionInput" aria-label="Repository question" placeholder="What needs maintainer attention in this repository?"></textarea></label></div>
         <details class="advanced"><summary>Advanced options</summary><label>Agent identifier<input id="githubAgentId" aria-label="GitHub agent id" value="${escapeHtml(defaultGithubAgentId)}" /></label></details>
         <div class="actions"><button id="askRepoCopilot" ${defaultGithubAgentId ? "" : "hidden"}>Generate optional agent brief</button></div>
-        <div class="message" id="copilotMessage">${defaultGithubAgentId ? "Optional GitHub agent is configured." : "Open Ask GitHub to discuss the current repository snapshot."}</div>
+        <div class="message" id="copilotMessage">${defaultGithubAgentId ? "Optional GitHub agent is configured." : "Open Ask Report Card to discuss the current repository snapshot."}</div>
       </details>
 
-      <footer class="activity-footer" id="activityFooter" ${defaultGithubAgentId ? "" : "hidden"}>
+      <footer class="activity-footer" id="activityFooter" hidden>
         <details id="activityDrawer">
           <summary>
             <span class="run-status" id="runStatus"><span class="status-dot"></span>Ready</span>
@@ -356,6 +381,12 @@ function renderDashboard({ compact, basePath, authorization }) {
       const basePath = ${JSON.stringify(basePath)};
       const state = { dashboard: null, activityEventCount: 0, runs: loadRunHistory(), staleDays: 30, loadedAt: null };
       ${buildOssRepoMarkdownReport.toString()}
+      ${createQueryNavigation.toString()}
+      const OSS_REPORT_SECTIONS = ${JSON.stringify(OSS_REPORT_SECTIONS)};
+      ${createOssReportNavigation.toString()}
+      ${createReportSections.toString()}
+      ${renderArtifactDownloadTrend.toString()}
+      ${artifactDownloadsMarkdown.toString()}
       const fontStorageKey = "agentic-app.fontPreferences";
       const repoInput = document.getElementById("repoInput");
       const questionInput = document.getElementById("questionInput");
@@ -364,6 +395,32 @@ function renderDashboard({ compact, basePath, authorization }) {
       const fontCustomizer = document.getElementById("fontCustomizer");
       const fontFamilySelect = document.getElementById("fontFamilySelect");
       const fontScaleSelect = document.getElementById("fontScaleSelect");
+      let reportRequest, requestGeneration = 0;
+      function cancelReportRequest() { reportRequest?.abort(); requestGeneration++; setRunButtonBusy(false); }
+      const reportSections = createReportSections({ sections: OSS_REPORT_SECTIONS, onSelect: tab => reportNavigation.section(tab) });
+      const reportNavigation = createOssReportNavigation({
+        onSection: tab => reportSections.select(tab),
+        appPath: basePath,
+        initialRepo: repoInput.value,
+        getRuns: () => state.runs,
+        onLive(repo, staleDays) {
+          cancelReportRequest(); repoInput.value = repo; state.staleDays = staleDays;
+          document.getElementById("runHistory").value = "";
+          if (repo) void loadGitHubSummary({ restoring: true });
+          else renderEmptyDashboard();
+        },
+        onSnapshot(run, staleDays) {
+          cancelReportRequest(); repoInput.value = run.dashboard.repo; state.staleDays = staleDays;
+          applyDashboard(run.dashboard, { persist: false, origin: "cached" });
+          document.getElementById("runHistory").value = run.id;
+          copilotMessage.textContent = "Saved report loaded from " + new Date(run.updatedAt).toLocaleString() + ". Generate a report card to refresh source data.";
+        },
+        onUnavailable(message, repo) {
+          cancelReportRequest(); if (repo) repoInput.value = repo;
+          document.getElementById("runHistory").value = "";
+          renderEmptyDashboard(message); copilotMessage.textContent = message;
+        },
+      }, createQueryNavigation);
 
       document.getElementById("runAnalysis").addEventListener("click", () => loadGitHubSummary({ forceRefresh: true }));
       document.getElementById("downloadMarkdown").addEventListener("click", downloadMarkdownReport);
@@ -378,7 +435,7 @@ function renderDashboard({ compact, basePath, authorization }) {
       fontScaleSelect.addEventListener("change", writeFontPreferences);
       window.addEventListener("caipe:microfrontend-initialize", (event) => {
         const staleDays = Number(event.detail?.preferences?.staleDays);
-        if (Number.isFinite(staleDays) && staleDays >= 1 && staleDays <= 365) {
+        if (!new URLSearchParams(location.search).has("report") && !new URLSearchParams(location.search).has("staleDays") && Number.isFinite(staleDays) && staleDays >= 1 && staleDays <= 365) {
           state.staleDays = Math.round(staleDays);
           renderDataStatus(state.dashboard);
         }
@@ -386,34 +443,38 @@ function renderDashboard({ compact, basePath, authorization }) {
 
       applyFontPreferences();
       renderRunHistory();
-      if (repoInput.value.trim()) loadGitHubSummary();
-      else renderEmptyDashboard();
+      reportNavigation.initialize();
 
-      async function loadGitHubSummary({ forceRefresh = false } = {}) {
+      async function loadGitHubSummary({ forceRefresh = false, restoring = false } = {}) {
         const repo = repoInput.value.trim();
         if (!repo) {
           renderEmptyDashboard("Enter a repository as owner/repo to load live GitHub metrics.");
           repoInput.focus();
           return;
         }
+        reportRequest?.abort();
+        const controller = reportRequest = new AbortController();
+        const generation = ++requestGeneration;
+        if (!restoring) reportNavigation.live(repo, state.staleDays);
         setRunButtonBusy(true);
         renderLoadingDashboard(repo);
         try {
           const refresh = forceRefresh ? "&refresh=1" : "";
           const response = await fetch(appUrl("/api/summary?repo=" + encodeURIComponent(repo) + "&staleDays=" + state.staleDays + refresh), {
-            headers: { accept: "application/json" },
+            headers: { accept: "application/json" }, signal: controller.signal,
           });
           const payload = await response.json();
           if (!response.ok) {
             const code = payload.error ? " [" + payload.error + "]" : "";
             throw new Error((payload.message || "Could not load repository data") + code);
           }
+          if (controller.signal.aborted || generation !== requestGeneration) return;
           applyDashboard(payload);
           copilotMessage.textContent = "Live GitHub snapshot loaded. Open Repo Report Card Assistant to work with this context.";
         } catch (error) {
-          renderLoadError(repo, error instanceof Error ? error.message : "Could not load repository data");
+          if (!controller.signal.aborted && generation === requestGeneration) renderLoadError(repo, error instanceof Error ? error.message : "Could not load repository data");
         } finally {
-          setRunButtonBusy(false);
+          if (generation === requestGeneration) setRunButtonBusy(false);
         }
       }
 
@@ -500,6 +561,7 @@ function renderDashboard({ compact, basePath, authorization }) {
         renderReportCardPanels(state.dashboard);
         renderActionCards(state.dashboard);
         renderDataStatus(state.dashboard);
+        reportSections.setAvailable(true);
         document.getElementById("downloadMarkdown").disabled = false;
         if (options.persist !== false) persistRun(state.dashboard);
         publishAssistantContext("dashboard");
@@ -508,35 +570,38 @@ function renderDashboard({ compact, basePath, authorization }) {
       function renderEmptyDashboard(message = "Choose a repository to see live issue and pull request health.") {
         state.dashboard = null;
         state.loadedAt = null;
+        renderDataStatus(null);
         document.getElementById("downloadMarkdown").disabled = true;
-        document.getElementById("summaryCards").innerHTML = '<div class="empty-state"><strong>Start with a repository</strong><p>' + escapeHtml(message) + ' The GitHub credential remains on the server.</p></div>';
+        document.getElementById("summaryCards").innerHTML = '<div class="report-welcome"><span class="welcome-mark" aria-hidden="true">&lt;/&gt;</span><p class="eyebrow">Know where your project stands</p><h2>One repository. A more complete picture.</h2><p>' + escapeHtml(message) + '</p><div class="welcome-topics"><span>Adoption &amp; activity</span><span>Community health</span><span>Security evidence</span></div><span class="welcome-hint">Enter a GitHub repository above to get started.</span></div>';
+        reportSections.setAvailable(false);
         document.getElementById("insightsStrip").hidden = true;
         document.getElementById("repoProfile").hidden = true;
-        document.getElementById("trendsPanel").hidden = true;
-        document.getElementById("healthPanel").hidden = true;
         document.getElementById("actionCards").innerHTML = '<div class="empty-state"><strong>No maintainer actions yet</strong><p>Actions are derived from a verified GitHub snapshot after the repository loads.</p></div>';
       }
 
       function renderLoadingDashboard(repo) {
+        document.getElementById("reportFreshness").textContent = "Loading report…";
+        document.getElementById("reportFreshness").classList.remove("warning");
+        reportSections.setAvailable(false);
         document.getElementById("summaryCards").innerHTML = '<div class="empty-state"><strong>Loading ' + escapeHtml(repo) + '</strong><p>Reading source-backed issue and pull request signals from GitHub.</p></div>';
         document.getElementById("insightsStrip").hidden = true;
         document.getElementById("repoProfile").hidden = true;
-        document.getElementById("trendsPanel").hidden = true;
-        document.getElementById("healthPanel").hidden = true;
         document.getElementById("actionCards").innerHTML = '<div class="empty-state"><strong>Computing maintainer priorities</strong><p>Reconciling critical, stale, triage, blocked, and review queues.</p></div>';
       }
 
       function renderLoadError(repo, message) {
+        reportSections.setAvailable(false);
         state.dashboard = null;
         state.loadedAt = null;
         document.getElementById("downloadMarkdown").disabled = true;
         document.getElementById("summaryCards").innerHTML = '<div class="empty-state"><strong>Could not load ' + escapeHtml(repo) + '</strong><p>' + escapeHtml(message) + '</p></div>';
         document.getElementById("insightsStrip").hidden = true;
         document.getElementById("repoProfile").hidden = true;
-        document.getElementById("trendsPanel").hidden = true;
-        document.getElementById("healthPanel").hidden = true;
         document.getElementById("actionCards").innerHTML = '<div class="empty-state"><strong>Source access needs attention</strong><p>Check the repository name and server-side GitHub credential, then retry.</p></div>';
-        document.getElementById("dataStatus").innerHTML = '<span class="status-chip good">Access verified</span><span class="status-chip warn">GitHub request failed</span><span>' + escapeHtml(message) + '</span>';
+        document.getElementById("dataStatus").innerHTML = '<span class="status-chip warn">GitHub request failed</span><span>' + escapeHtml(message) + '</span>';
+        document.getElementById("reportFreshness").textContent = "GitHub request failed";
+        document.getElementById("reportFreshness").classList.add("warning");
+        document.getElementById("reportDetails").open = true;
         copilotMessage.textContent = "Repository context was not published because the GitHub source could not be verified.";
       }
 
@@ -560,7 +625,16 @@ function renderDashboard({ compact, basePath, authorization }) {
 
       function renderDataStatus(dashboard) {
         const node = document.getElementById("dataStatus");
-        const source = dashboard?.source === "github-api" ? "GitHub REST API" : "Not loaded";
+        const caption = document.getElementById("reportFreshness");
+        caption.classList.remove("warning");
+        caption.textContent = state.loadedAt
+          ? (state.reportOrigin === "cached" ? "Saved report · " : "Report generated · ") + state.loadedAt.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+          : "Choose a repository to get started.";
+        if (!dashboard) {
+          node.innerHTML = '<span class="status-chip">No report loaded</span><span>Read-only insights, backed by source evidence.</span>';
+          return;
+        }
+        const source = dashboard?.source === "github-api" ? (dashboard.artifactDownloads?.ghcr?.points?.length ? "GitHub API + package pages" : "GitHub REST API") : "Not loaded";
         const freshness = state.loadedAt
           ? (state.reportOrigin === "cached" ? "Cached report generated " : "Generated ") + state.loadedAt.toLocaleString()
           : "Freshness: not loaded";
@@ -584,61 +658,43 @@ function renderDashboard({ compact, basePath, authorization }) {
       }
 
       function renderSummaryCards(dashboard) {
-        const repo = dashboard.repo || "owner/repo";
         const repository = dashboard.repository || {};
         const community = dashboard.community || {};
-        const securityScore = dashboard.security?.scorecard?.score;
+        const adoption = dashboard.adoption || {};
+        const snapshot = adoption.snapshot;
+        const downloads = snapshot?.metrics?.packageDownloads;
         const openPRs = dashboard.pullRequests.open ?? 0;
         const awaitingReview = dashboard.pullRequests.awaitingReview ?? 0;
-        const confidence = dashboard.confidence || "unknown";
         document.getElementById("summaryCards").innerHTML = [
-          kpiTile({
-            label: "Repository",
-            value: repo,
-            sub: "Confidence: " + escapeHtml(confidence),
-            accent: "attention",
-            valueClass: "kpi-repo",
-          }),
           kpiTile({
             label: "Stars",
             value: formatCount(repository.stars),
-            sub: formatCount(repository.forks) + " forks",
+            sub: "Current GitHub snapshot",
             accent: "good",
           }),
           kpiTile({
-            label: "Contributors",
-            value: (community.totalContributorsIsLowerBound ? "≥" : "") + formatCount(community.totalContributors),
-            sub: formatCount(community.activeContributors) + " active in trend sample",
+            label: "PRs merged · all time",
+            value: adoption.pullRequestsMerged == null ? "N/A" : formatCount(adoption.pullRequestsMerged),
+            sub: adoption.pullRequestsMerged == null ? "Search count unavailable" : "GitHub Search count",
             accent: "attention",
           }),
           kpiTile({
-            label: "Engagement",
-            value: formatCount(community.engagementInteractions),
-            sub: "issues + comments in " + formatCount(community.engagementSampleSize) + " sampled issues",
+            label: "Contributor identities",
+            value: community.totalContributors == null ? "N/A" : (community.totalContributorsIsLowerBound ? "≥" : "") + formatCount(community.totalContributors),
+            sub: "Includes bots and anonymous accounts",
             accent: "attention",
           }),
+          kpiTile({ label: "Package downloads · reported", value: downloads == null ? "N/A" : new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 2 }).format(downloads), sub: snapshot && downloads != null ? "Snapshot " + escapeHtml(snapshot.asOf) + " · automated/repeated pulls included" : "No registry download source configured", accent: "attention" }),
+          kpiTile({ label: "PRs opened · all time", value: adoption.pullRequestsOpened == null ? "N/A" : formatCount(adoption.pullRequestsOpened), sub: adoption.pullRequestsOpened == null ? "Search count unavailable" : "GitHub Search count", accent: "attention" }),
+          kpiTile({ label: "Forks", value: formatCount(repository.forks), sub: "Current GitHub snapshot", accent: "attention" }),
+          kpiTile({ label: "Open issues", value: formatCount(dashboard.issues.open), sub: formatCount(dashboard.issues.stale) + " stale · " + formatCount(dashboard.issues.needsTriage) + " need triage", accent: dashboard.issues.stale ? "warn" : "good" }),
           kpiTile({
             label: "Open PRs",
             value: formatCount(openPRs),
             sub: formatCount(awaitingReview) + " need review attention",
             accent: awaitingReview ? "warn" : "good",
           }),
-          kpiTile({
-            label: "OpenSSF score",
-            value: securityScore == null ? "N/A" : Number(securityScore).toFixed(1),
-            sub: securityScore == null ? "Not available" : "0–10 security practices",
-            accent: securityScore == null ? "attention" : securityScore >= 7 ? "good" : securityScore >= 5 ? "warn" : "danger",
-            bar: securityScore == null ? null : Number(securityScore) * 10,
-          }),
         ].join("");
-
-        const repoLabel = document.querySelector(".kpi-repo");
-        if (repoLabel) {
-          repoLabel.style.fontSize = "1.05rem";
-          repoLabel.style.overflow = "hidden";
-          repoLabel.style.textOverflow = "ellipsis";
-          repoLabel.style.whiteSpace = "nowrap";
-        }
       }
 
       function renderRepoProfile(dashboard) {
@@ -650,19 +706,15 @@ function renderDashboard({ compact, basePath, authorization }) {
           return;
         }
         profile.hidden = false;
-        profile.innerHTML = [
-          '<article class="repo-health-card"><div class="label">Repository</div><strong><a class="repo-link" href="' + escapeAttribute(repository.htmlUrl) + '" target="_blank" rel="noreferrer">' + escapeHtml(dashboard.repo) + '</a></strong><p>' + escapeHtml(repository.description || "") + '</p></article>',
-          '<article class="repo-health-card"><div class="label">Visibility</div><strong>' + escapeHtml(repository.visibility || "unknown") + '</strong><p>Default branch: ' + escapeHtml(repository.defaultBranch || "unknown") + '</p></article>',
-          '<article class="repo-health-card"><div class="label">Community</div><strong>' + formatCount(repository.stars) + ' stars</strong><p>' + formatCount(repository.forks) + ' forks</p></article>',
-          '<article class="repo-health-card"><div class="label">Latest push</div><strong>' + escapeHtml(repository.pushedAt ? new Date(repository.pushedAt).toLocaleDateString() : "Unknown") + '</strong><p>' + (repository.archived ? "Archived repository" : "Active repository") + '</p></article>',
-        ].join("");
+        profile.innerHTML = '<div class="repo-identity"><span class="repo-avatar" aria-hidden="true">' + escapeHtml((dashboard.repo || '').slice(0, 1).toUpperCase()) + '</span><div><p class="eyebrow">Repository overview</p><h2><a class="repo-link" href="' + escapeAttribute(repository.htmlUrl) + '" target="_blank" rel="noreferrer">' + escapeHtml(dashboard.repo) + ' <span aria-hidden="true">↗</span></a></h2><p>' + escapeHtml(repository.description || "") + '</p></div></div><div class="repo-meta"><span>' + escapeHtml(repository.visibility || "unknown") + '</span><span>Branch: ' + escapeHtml(repository.defaultBranch || "unknown") + '</span><span>' + (repository.archived ? 'Archived' : 'Last push ' + escapeHtml(repository.pushedAt ? new Date(repository.pushedAt).toLocaleDateString() : 'unknown')) + '</span></div>';
       }
 
       function renderReportCardPanels(dashboard) {
         const trends = dashboard.trends || {};
         const coverage = trends.coverage || {};
         const starPoints = mergeCachedStarHistory(dashboard);
-        document.getElementById("trendsPanel").hidden = false;
+        renderAdoptionPanel(dashboard.adoption || {});
+        document.getElementById("artifactDownloadTrend").innerHTML = renderArtifactDownloadTrend(dashboard.artifactDownloads);
         document.getElementById("starTrend").innerHTML = renderLineChart("Star history", starPoints, coverage.stars || "Timestamped report-card snapshots.");
         document.getElementById("engagementTrend").innerHTML = renderBarChart("Issue engagement", trends.engagementPerWeek || [], coverage.engagement || "No issue engagement coverage.");
         document.getElementById("prTrend").innerHTML = renderBarChart("PRs per week", trends.pullRequestsPerWeek || [], coverage.pullRequests || "No pull request trend coverage.");
@@ -690,7 +742,6 @@ function renderDashboard({ compact, basePath, authorization }) {
           practices.unshift(practiceCard("OpenSSF Scorecard", Number(scorecard.score).toFixed(1) + " / 10", Number(scorecard.score) >= 7));
           (scorecard.checks || []).slice(0, 3).forEach((check) => practices.push(practiceCard("Scorecard · " + (check.name || "check"), Number(check.score).toFixed(0) + " / 10", Number(check.score) >= 7)));
         }
-        document.getElementById("healthPanel").hidden = false;
         document.getElementById("healthPractices").innerHTML = practices.join("");
         renderReadinessCriteria(dashboard.readiness || {});
         document.getElementById("frameworkLinks").innerHTML = (dashboard.frameworks || []).map((framework) =>
@@ -715,6 +766,25 @@ function renderDashboard({ compact, basePath, authorization }) {
             '<p>' + escapeHtml(check.evidence || "No evidence available.") + '<br>Source: ' + escapeHtml(check.source || "unknown") + '</p>' +
           '</article>'
         ).join("");
+      }
+
+      function renderAdoptionPanel(adoption) {
+        const points = adoption.monthlyPullRequestsOpened || [];
+        const maximum = Math.max(1, ...points.map(point => Number(point.value || 0)));
+        const bars = points.map(point => {
+          const date = new Date(point.month + "-01T00:00:00Z");
+          const label = date.toLocaleDateString(undefined, { month: "short", year: "2-digit", timeZone: "UTC" });
+          const value = point.value == null ? "N/A" : formatCount(point.value);
+          return '<div class="month-column"><span class="month-value">' + value + '</span><span class="month-bar' + (point.partial ? ' partial' : '') + (point.value == null ? ' unavailable' : '') + '" style="height:' + (point.value == null ? 3 : Math.max(3, point.value / maximum * 130)) + 'px" title="' + escapeAttribute(label + ': ' + value + (point.partial ? ' (partial month)' : '')) + '"></span><span class="month-label">' + escapeHtml(label) + (point.partial ? '*' : '') + '</span></div>';
+        }).join('');
+        document.getElementById("monthlyPrTrend").innerHTML = '<div class="chart-head"><strong>Monthly pull requests opened</strong><span>Calendar months · UTC</span></div>' + (points.length ? '<div class="monthly-chart">' + bars + '</div>' : '<div class="empty-state"><strong>Monthly activity unavailable</strong><p>A connected GitHub credential and Search API access are required.</p></div>') + '<p class="coverage">' + escapeHtml(adoption.coverage || 'No monthly count source available.') + '</p>';
+        const snapshot = adoption.snapshot;
+        document.getElementById("adoptionSnapshot").hidden = !snapshot;
+        if (!snapshot) return;
+        const metrics = snapshot.metrics || {};
+        const labels = {stars:'Stars',pullRequestsMerged:'PRs merged',contributorIdentities:'Contributor identities',packageDownloads:'Package downloads (reported)',pullRequestsOpened:'PRs opened',forks:'Forks',legacyPackageDownloads:'Legacy package downloads',currentPackageDownloads:'Current package downloads'};
+        const rows = Object.entries(labels).filter(([key]) => metrics[key] != null).map(([key,label]) => '<tr><th scope="row">' + label + '</th><td>' + formatCount(metrics[key]) + '</td></tr>').join('');
+        document.getElementById("adoptionSnapshotContent").innerHTML = '<p class="coverage">As of ' + escapeHtml(snapshot.asOf) + ' · Source: ' + escapeHtml(snapshot.source) + '. These historical counts are separate from the live snapshot.</p><table class="snapshot-table"><tbody>' + rows + '</tbody></table><ul class="snapshot-caveats">' + (snapshot.caveats || []).map(value => '<li>' + escapeHtml(value) + '</li>').join('') + '</ul>';
       }
 
       function practiceCard(label, value, healthy) {
@@ -846,8 +916,7 @@ function renderDashboard({ compact, basePath, authorization }) {
       function formatCount(value) {
         const num = Number(value || 0);
         if (!isFinite(num)) return "0";
-        if (Math.abs(num) >= 1000) return (num / 1000).toFixed(num >= 10000 ? 0 : 1) + "k";
-        return String(num);
+        return num.toLocaleString();
       }
 
       function renderActionCards(dashboard) {
@@ -862,6 +931,7 @@ function renderDashboard({ compact, basePath, authorization }) {
       }
 
       function initializeActivityFeed() {
+        document.getElementById("activityFooter").hidden = false;
         state.activityEventCount = 0;
         document.getElementById("agentProgress").innerHTML = "";
         document.getElementById("streamedContent").textContent = "";
@@ -890,7 +960,7 @@ function renderDashboard({ compact, basePath, authorization }) {
       function setRunButtonBusy(isBusy) {
         const button = document.getElementById("runAnalysis");
         button.disabled = isBusy;
-        button.textContent = isBusy ? "Generating report card..." : "Generate report card";
+        button.textContent = isBusy ? "Generating…" : "Generate report";
       }
 
       async function consumeAgentStream(response) {
@@ -1067,13 +1137,16 @@ function renderDashboard({ compact, basePath, authorization }) {
       function persistRun(dashboard) {
         const updatedAt = dashboard.generatedAt || new Date().toISOString();
         const id = dashboard.repo + "::" + updatedAt;
-        const run = { id, updatedAt, dashboard };
+        const run = { id, updatedAt, dashboard, staleDays: state.staleDays };
         state.runs = [run, ...state.runs.filter((item) => item.id !== id)].slice(0, 20);
         try { localStorage.setItem("oss-repo-report-card.cachedReports.v1", JSON.stringify(state.runs)); } catch {}
         renderRunHistory();
+        document.getElementById("runHistory").value = id;
+        reportNavigation.remember(run, state.staleDays);
       }
 
       function renderRunHistory() {
+        document.getElementById("savedReportCount").textContent = "(" + state.runs.length + ")";
         const runHistory = document.getElementById("runHistory");
         runHistory.innerHTML = '<option value="">Cached report cards · ' + state.runs.length + '</option>' + state.runs.map((run) => '<option value="' + escapeAttribute(run.id) + '">' + escapeHtml(run.dashboard?.repo || "repo") + " · " + new Date(run.updatedAt).toLocaleString() + '</option>').join("");
       }
@@ -1090,13 +1163,7 @@ function renderDashboard({ compact, basePath, authorization }) {
       }
 
       function loadSelectedRun() {
-        const id = document.getElementById("runHistory").value;
-        const run = state.runs.find((item) => item.id === id);
-        if (run?.dashboard) {
-          repoInput.value = run.dashboard.repo || repoInput.value;
-          applyDashboard(run.dashboard, { persist: false, origin: "cached" });
-          copilotMessage.textContent = "Cached report card loaded from " + new Date(run.updatedAt).toLocaleString() + ". Generate a new report card to refresh source data.";
-        }
+        reportNavigation.select(document.getElementById("runHistory").value);
       }
 
       function toggleFontSettings() {

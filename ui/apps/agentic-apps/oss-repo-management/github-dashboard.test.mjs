@@ -17,6 +17,29 @@ test("normalizes owner/repo values and GitHub URLs", () => {
   assert.throws(() => normalizeRepoName("example-repo"), GitHubDashboardError);
 });
 
+test("batches adoption queries and keeps GraphQL field failures separate from successful month counts", async () => {
+  let batches = 0;
+  const fetchImpl = async (url, options) => {
+    if (url.endsWith('/graphql')) {
+      batches++;
+      assert.equal(options.method, 'POST');
+      const { query } = JSON.parse(options.body);
+      assert.match(query, /created:2026-07-01\.\.2026-07-31/);
+      assert.doesNotMatch(query, /created:>=/);
+      return jsonResponse({data:{count0:{issueCount:55},count1:{issueCount:40},count2:null,count3:{issueCount:9}},errors:[{path:['count2'],message:'Source unavailable'}]});
+    }
+    if (url.endsWith('/repos/example-org/example-repo')) return jsonResponse({full_name:'example-org/example-repo',created_at:'2026-07-12T00:00:00Z'});
+    if (url.includes('/search/issues')) return jsonResponse({total_count:0});
+    return jsonResponse([]);
+  };
+  const dashboard = await fetchGitHubRepoDashboard({repo:'example-org/example-repo',token:'test-token',now:new Date('2026-08-02'),fetchImpl});
+  assert.equal(batches,1);
+  assert.equal(dashboard.adoption.pullRequestsOpened,55);
+  assert.equal(dashboard.adoption.pullRequestsMerged,40);
+  assert.deepEqual(dashboard.adoption.monthlyPullRequestsOpened,[{month:'2026-07',value:null,partial:false},{month:'2026-08',value:9,partial:true}]);
+  assert.match(dashboard.adoption.coverage,/Some adoption counts are unavailable/);
+});
+
 test("builds a source-backed repository dashboard from GitHub responses", async () => {
   const counts = new Map([
     ["is:issue is:open", 12],
@@ -100,7 +123,7 @@ test("uses bounded core REST data without consuming the public Search API limit"
     fetchImpl,
   });
 
-  assert.equal(urls.length, 10);
+  assert.equal(urls.length, 11);
   assert.equal(urls.some((url) => url.includes("/search/issues")), false);
   assert.equal(dashboard.confidence, "bounded");
   assert.deepEqual(dashboard.issues, { open: 5, stale: 1, p0: 1, needsTriage: 1 });

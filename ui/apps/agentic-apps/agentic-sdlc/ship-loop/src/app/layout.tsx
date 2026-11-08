@@ -1,4 +1,5 @@
 import { RuntimeBridge } from "@/components/agentic-sdlc/RuntimeBridge";
+import { QueryNavigationProvider } from "@/components/agentic-sdlc/QueryNavigationProvider";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { isPrWorkspace } from "@/lib/agentic-sdlc/view-mode";
@@ -43,7 +44,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               </span>
             </span>
           </div>
-          {children}
+          <QueryNavigationProvider>{children}</QueryNavigationProvider>
           <RuntimeBridge prOnly={isPrWorkspace()} />
         </div>
       </body>

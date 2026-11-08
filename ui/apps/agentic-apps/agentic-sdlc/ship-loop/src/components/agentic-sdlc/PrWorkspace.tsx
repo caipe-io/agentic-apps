@@ -1,7 +1,8 @@
 "use client";
 
+import { useAppQuery } from "./QueryNavigationProvider";
 import { ArrowLeft, ExternalLink, GitPullRequest, Loader2 } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "./AppLink";
 import { LiveStatusIndicator } from "./LiveStatusIndicator";
 import { PrReviewDashboard } from "./PrReviewDashboard";
@@ -20,10 +21,10 @@ type Repository = {
 
 export function PrWorkspaceHome() {
   const [repos, setRepos] = useState<Repository[] | null>(null);
-  const [selected, setSelected] = useState("");
+  const { params, setParams } = useAppQuery();
+  const requestedRepo = params.get("repo") || "";
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
-  const preferred = useRef("");
   useAgenticSdlcPortfolioLiveRefresh({ enabled: true });
 
   useEffect(() => {
@@ -49,18 +50,12 @@ export function PrWorkspaceHome() {
         if (stop.signal.aborted) return;
         const items: Repository[] = body.items ?? [];
         setRepos(items);
-        setSelected((current) =>
-          items.some((r) => r.full_name === preferred.current)
-            ? preferred.current
-            : items.some((r) => r.full_name === current)
-              ? current
-              : (items[0]?.full_name ?? ""),
-        );
+        if (items.length && !new URLSearchParams(window.location.search).has("repo")) setParams({ repo: items[0].full_name }, "replace");
       } catch (cause) {
         if (!stop.signal.aborted) {
           // Clear the previous selection if access or connectivity changed.
           setRepos(null);
-          setSelected("");
+
           setError(
             cause instanceof Error
               ? cause.message
@@ -79,7 +74,9 @@ export function PrWorkspaceHome() {
     };
   }, [retry]);
 
+  const selected = requestedRepo || repos?.[0]?.full_name || "";
   const repository = repos?.find((r) => r.full_name === selected);
+  const unavailableRepo = Boolean(repos?.length && requestedRepo && !repository);
   return (
     <main className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 p-5 pb-24 md:p-8 md:pb-24">
       <CompactPrHeader
@@ -94,8 +91,7 @@ export function PrWorkspaceHome() {
               aria-label="Repository"
               value={selected}
               onChange={(event) => {
-                preferred.current = event.target.value;
-                setSelected(event.target.value);
+                setParams({ repo: event.target.value });
               }}
               className="max-w-full rounded-md border border-border bg-background px-3 py-2"
             >
@@ -111,7 +107,7 @@ export function PrWorkspaceHome() {
           <RepoConnectionControls
             repository={selected || undefined}
             onConnected={(name) => {
-              preferred.current = name;
+              setParams({ repo: name });
               setRetry((value) => value + 1);
             }}
           />
@@ -125,12 +121,12 @@ export function PrWorkspaceHome() {
           )}
         </div>
       </div>
-      {error ? (
+      {error || unavailableRepo ? (
         <div
           role="alert"
           className="space-y-3 rounded-xl border border-destructive/40 p-5 text-sm"
         >
-          <p>{error}</p>
+          <p>{error || "The repository in this link is not available in your scope."}</p>
           <button
             type="button"
             onClick={() => setRetry((value) => value + 1)}

@@ -40,3 +40,21 @@ publishes the following same-origin messages to the CAIPE host:
 
 Messages use version `1.0` and `window.location.origin` as the target origin. Dashboard context is
 navigation metadata only; agents must call their declared MCP tools for factual answers.
+
+## Saved URL state
+
+Embedded apps use `ui/apps/_lib/query-navigation.mjs` to keep a single history owner in the host address bar. The shared control binding restores ordinary filters without invoking agents. Query parameters select presentation state; runtime authorization still checks the caller.
+
+| App | URL state |
+| --- | --- |
+| OSS report card | `repo`, exact `report` snapshot ID or `report=latest`, `staleDays` |
+| SDLC | `tab`, `repo`, PR `q`, `state`, `checks`, `review`, `agent`, `scope`, `label`, `author`, `reviewer`, `reviewerRole` |
+| SecOps | `profile`, `region`, `repo`, IAM `search`, `olderUsers`, `olderUse`, `olderKeys` |
+| Weather | `city`, `unit`, `intent` |
+| Jira | `project`, `view` |
+| EC2, FinOps, model gateway | Existing query navigation retains its tabs, scopes, filters and paging. |
+
+- Reload and Back/Forward restore controls. Ordinary text edits avoid one history entry per keystroke.
+- Unrelated query parameters and section anchors remain intact.
+- Reading a URL never invokes an agent or a mutating tool.
+- OSS snapshots remain in browser storage (up to 20), rather than in a shared report database. A missing exact snapshot is shown explicitly instead of being replaced with current data.
