@@ -33,7 +33,7 @@ export default {
         ].map((k) => [
           k,
           {
-            DEFAULT: `hsl(var(--${k}))`,
+            DEFAULT: k === "primary" ? "var(--primary-ink)" : `hsl(var(--${k}))`,
             foreground: `hsl(var(--${k}-foreground))`,
           },
         ]),

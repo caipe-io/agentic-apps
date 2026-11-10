@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { ChevronDown, Loader2, Search, Tag } from "lucide-react";
+import { CheckCircle2, ChevronDown, Circle, Clock3, GitPullRequest, HelpCircle, Loader2, MessageSquare, RotateCw, Search, Tag, TriangleAlert, XCircle, type LucideIcon } from "lucide-react";
 import type { PrDashboardItem } from "@/lib/agentic-sdlc/pr-dashboard";
 
 import { useAppQuery } from "./QueryNavigationProvider";
@@ -32,16 +32,16 @@ const agentLabels: Record<PrDashboardItem["agent_review"]["status"], string> = {
 
 const agentPresentation: Record<
   PrDashboardItem["agent_review"]["status"],
-  { icon: string; tone: string }
+  { icon: LucideIcon; tone: string }
 > = {
-  no_findings: { icon: "✅", tone: "review-status-success" },
-  findings: { icon: "💬", tone: "review-status-warning" },
-  incomplete: { icon: "⚠️", tone: "review-status-warning" },
-  reviewed: { icon: "🔵", tone: "review-status-info" },
-  stale: { icon: "🔄", tone: "border-border text-muted-foreground" },
-  not_reviewed: { icon: "⏳", tone: "border-border text-muted-foreground" },
-  unverified: { icon: "⚠️", tone: "review-status-warning" },
-  unknown: { icon: "❔", tone: "border-border text-muted-foreground" },
+  no_findings: { icon: CheckCircle2, tone: "review-status-success" },
+  findings: { icon: MessageSquare, tone: "review-status-warning" },
+  incomplete: { icon: TriangleAlert, tone: "review-status-warning" },
+  reviewed: { icon: Circle, tone: "review-status-info" },
+  stale: { icon: RotateCw, tone: "border-border text-muted-foreground" },
+  not_reviewed: { icon: Clock3, tone: "border-border text-muted-foreground" },
+  unverified: { icon: TriangleAlert, tone: "review-status-warning" },
+  unknown: { icon: HelpCircle, tone: "border-border text-muted-foreground" },
 };
 
 export function PrReviewDashboard({
@@ -215,8 +215,9 @@ export function PrReviewDashboard({
 
   return (
     <section aria-label="Pull request reviews" className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="mr-auto text-lg font-semibold">
+      <div className="flex flex-wrap items-center gap-3 border-b border-border pb-4">
+        <h2 className="sdlc-section-heading mr-auto text-lg font-semibold">
+          <span className="sdlc-icon"><GitPullRequest className="h-4 w-4" aria-hidden /></span>
           Pull requests
           {data && (
             <span className="ml-2 text-xs font-normal text-muted-foreground">
@@ -480,6 +481,8 @@ export function PrReviewDashboard({
 }
 
 export function PrCard({ pr, owner, repo, execution }: { pr: PrDashboardItem; owner: string; repo: string; execution?: ReviewRunState | null }) {
+  const AgentIcon = agentPresentation[pr.agent_review.status].icon;
+  const CheckIcon = pr.ci.status === "passing" ? CheckCircle2 : pr.ci.status === "failing" ? XCircle : pr.ci.status === "pending" ? Clock3 : HelpCircle;
   const [history, setHistory] = useState(false);
   const [detail, setDetail] = useState<
     "checks" | "reviews" | "comments" | null
@@ -535,7 +538,7 @@ export function PrCard({ pr, owner, repo, execution }: { pr: PrDashboardItem; ow
           <span
             className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 ${pr.ci.status === "passing" ? "review-status-success" : pr.ci.status === "failing" ? "review-status-error" : pr.ci.status === "pending" ? "review-status-warning" : "border-border text-muted-foreground"}`}
           >
-            <span aria-hidden="true">{pr.ci.status === "passing" ? "✅" : pr.ci.status === "failing" ? "❌" : pr.ci.status === "pending" ? "⏳" : "❔"}</span>
+            <CheckIcon className="h-3.5 w-3.5" aria-hidden />
             Checks: {pr.ci.status}
           </span>
           <span className="rounded-md border border-border px-2.5 py-1 text-muted-foreground">
@@ -545,7 +548,7 @@ export function PrCard({ pr, owner, repo, execution }: { pr: PrDashboardItem; ow
             title="Agent-reported outcome for this commit, not GitHub approval, CI clearance or compliance certification."
             className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 ${agentPresentation[pr.agent_review.status].tone}`}
           >
-            <span aria-hidden="true">{agentPresentation[pr.agent_review.status].icon}</span>
+            <AgentIcon className="h-3.5 w-3.5" aria-hidden />
             {pr.agent_review.url ? (
               <a
                 href={pr.agent_review.url}
