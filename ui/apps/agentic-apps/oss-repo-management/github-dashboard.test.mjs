@@ -165,7 +165,7 @@ test("surfaces contributor, trend, community, and security signals when availabl
       { login: "example-user", contributions: 42 },
       { login: "example-user-2", contributions: 17 },
     ]);
-    if (url.includes("/community/profile")) return jsonResponse({ health_percentage: 88, files: { contributing: {}, security: {}, license: {} } });
+    if (url.includes("/community/profile")) return jsonResponse({ health_percentage: 88, files: { contributing: {}, license: {} } });
     if (url.includes("/contents/MAINTAINERS.md")) {
       return jsonResponse({
         encoding: "base64",
@@ -202,6 +202,10 @@ test("surfaces contributor, trend, community, and security signals when availabl
   assert.equal(dashboard.community.totalContributors, 2);
   assert.equal(dashboard.community.activeContributors, 1);
   assert.equal(dashboard.community.communityHealthPercent, 88);
+  assert.equal(dashboard.community.hasSecurityPolicy, true);
+  const policyCheck = dashboard.readiness.checks.find(check => check.criterion === "Security policy");
+  assert.equal(policyCheck.status, "pass");
+  assert.equal(policyCheck.evidence, dashboard.community.securityPolicy.detail);
   assert.equal(dashboard.community.engagementInteractions, 4);
   assert.equal(dashboard.security.scorecard.score, 8.4);
   assert.equal(dashboard.trends.pullRequestsPerWeek.at(-1).value, 1);
@@ -226,4 +230,21 @@ function jsonResponse(payload, status = 200) {
       return payload;
     },
   };
+}
+
+for (const [httpStatus, expected, readinessStatus] of [[404, false, "warn"], [403, null, "unavailable"], [500, null, "unavailable"]]) {
+  test(`owner default HTTP ${httpStatus} is classified consistently through the GitHub client`, async () => {
+    const fetchImpl = async url => {
+      if (url === "https://api.github.com/repos/example/project") return jsonResponse({ full_name: "example/project", default_branch: "main" });
+      if (url === "https://api.github.com/repos/example/.github") return jsonResponse({ message: "Unavailable" }, httpStatus);
+      if (url.includes("/git/trees/")) return jsonResponse({ tree: [], truncated: false });
+      if (url.startsWith("https://api.scorecard.dev/")) return jsonResponse({}, 404);
+      return jsonResponse([]);
+    };
+    const dashboard = await fetchGitHubRepoDashboard({ repo: "example/project", fetchImpl });
+    const check = dashboard.readiness.checks.find(item => item.criterion === "Security policy");
+    assert.equal(dashboard.community.hasSecurityPolicy, expected);
+    assert.equal(check.status, readinessStatus);
+    assert.equal(check.evidence, dashboard.community.securityPolicy.detail);
+  });
 }

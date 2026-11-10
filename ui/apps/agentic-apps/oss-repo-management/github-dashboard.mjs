@@ -1,3 +1,4 @@
+import { fetchSecurityPolicy } from "./security-policy.mjs";
 import { fetchAdoptionMetrics } from "./adoption-metrics.mjs";
 import { fetchReleaseAssetDownloads } from "./artifact-downloads.mjs";
 
@@ -61,6 +62,7 @@ export async function fetchGitHubRepoDashboard({
   const communityProfile = objectData(communityResult);
   const repositoryPathMap = extractRepositoryPathMap(repoTreeResult);
   const repositoryPaths = new Set(repositoryPathMap.keys());
+  const securityPolicy = await fetchSecurityPolicy({ client, repo: canonicalRepo, treeResult: repoTreeResult });
   const ownership = await fetchOwnershipEvidence({
     client,
     encodedRepo,
@@ -110,10 +112,10 @@ export async function fetchGitHubRepoDashboard({
           : "Current count plus timestamped report-card snapshots; the GitHub star timeline requires repository access.",
       },
     },
-    community: buildCommunity({ commits, contributors, contributorsResult, communityProfile, repository, recentIssues }),
+    community: buildCommunity({ commits, contributors, contributorsResult, communityProfile, repository, recentIssues, securityPolicy }),
     ownership,
     security: { scorecard: scorecardResult, githubAlerts: githubSecurity },
-    readiness: buildReadinessAssessment({ repository, repositoryPaths, commits, scorecard: scorecardResult }),
+    readiness: buildReadinessAssessment({ repository, repositoryPaths, commits, scorecard: scorecardResult, securityPolicy }),
     frameworks: [
       { name: "CHAOSS", focus: "community health and responsiveness", url: "https://www.chaoss.community/kb/metrics-model-starter-project-health/" },
       { name: "CNCF CLOMonitor", focus: "project-practice checks", url: "https://clomonitor.io/docs/" },
@@ -216,7 +218,7 @@ async function fetchOpenSsfScorecard({ repo, apiBase, fetchImpl }) {
   }
 }
 
-function buildCommunity({ commits, contributors, contributorsResult, communityProfile, repository, recentIssues }) {
+function buildCommunity({ commits, contributors, contributorsResult, communityProfile, repository, recentIssues, securityPolicy }) {
   const active = new Set();
   for (const item of commits) {
     const identity = item?.author?.login || item?.commit?.author?.email || item?.commit?.author?.name;
@@ -233,13 +235,14 @@ function buildCommunity({ commits, contributors, contributorsResult, communityPr
     communityHealthPercent: numberOrNull(communityProfile.health_percentage),
     hasContributing: Boolean(files.contributing),
     hasCodeOfConduct: Boolean(files.code_of_conduct),
-    hasSecurityPolicy: Boolean(files.security),
+    hasSecurityPolicy: securityPolicy.status === "unavailable" ? null : securityPolicy.status === "present",
+    securityPolicy,
     hasLicense: Boolean(files.license || repository.license),
     coverage: contributorsResult.status === "available" ? describeBoundedCoverage(contributorsResult, contributors, "contributors") : "Contributor count unavailable from GitHub.",
   };
 }
 
-function buildReadinessAssessment({ repository, repositoryPaths, commits, scorecard }) {
+function buildReadinessAssessment({ repository, repositoryPaths, commits, scorecard, securityPolicy }) {
   const spdx = repository.license?.spdx_id || null;
   const allowedLicense = new Set(["Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause", "ISC", "MPL-2.0"]);
   const commitMessages = commits.map((item) => String(item?.commit?.message || ""));
@@ -257,7 +260,7 @@ function buildReadinessAssessment({ repository, repositoryPaths, commits, scorec
     readinessCheck("Community", "Code of conduct", doc("code_of_conduct.md", ".github/code_of_conduct.md") ? "pass" : "warn", doc("code_of_conduct.md", ".github/code_of_conduct.md") ? "Code of conduct detected." : "No CODE_OF_CONDUCT.md was detected.", "Git tree"),
     readinessCheck("Community", "Roadmap", doc("roadmap.md", "docs/roadmap.md") ? "pass" : "warn", doc("roadmap.md", "docs/roadmap.md") ? "Roadmap detected." : "No ROADMAP.md was detected.", "Git tree"),
     readinessCheck("Community", "Independent adoption", doc("adopters.md", "users.md") ? "manual" : "warn", doc("adopters.md", "users.md") ? "Adopter evidence file detected; independence and production usage require review." : "No standard adopter evidence file was detected.", "Git tree + manual review"),
-    readinessCheck("Security", "Security policy", doc("security.md", ".github/security.md") ? "pass" : "warn", doc("security.md", ".github/security.md") ? "SECURITY.md detected." : "No SECURITY.md was detected.", "Git tree"),
+    readinessCheck("Security", "Security policy", securityPolicy.status === "present" ? "pass" : securityPolicy.status === "missing" ? "warn" : "unavailable", securityPolicy.detail, securityPolicy.source),
     readinessCheck("Security", "OpenSSF practices", scorecard.status === "available" ? (Number(scorecard.score) >= 7 ? "pass" : "warn") : "unavailable", scorecard.status === "available" ? `OpenSSF Scorecard: ${Number(scorecard.score).toFixed(1)}/10.` : "OpenSSF Scorecard data was unavailable.", "OpenSSF Scorecard"),
     readinessCheck("Neutrality", "Vendor-neutral governance", "manual", "Review maintainer affiliations, voting caps, decision records, cross-organization reviews, and neutral project infrastructure.", "Manual governance review"),
     readinessCheck("Foundation", "Transfer and contribution agreements", "manual", "When applicable, verify project-transfer consensus, trademark/domain ownership, and signed contribution agreements.", "Manual foundation-process review"),
@@ -465,7 +468,7 @@ function createGitHubClient({ token, apiBase, fetchImpl }) {
     get: request,
     async tryGet(path, options) {
       try { return { status: "available", data: await request(path, options) }; }
-      catch (error) { return unavailable(error instanceof Error ? error.message : "request failed"); }
+      catch (error) { return { ...unavailable(error instanceof Error ? error.message : "request failed"), httpStatus: error instanceof GitHubDashboardError ? error.status : null }; }
     },
     search(query) { return request(`/search/issues?per_page=1&q=${encodeURIComponent(query)}`); },
     async searchCounts(queries) {
