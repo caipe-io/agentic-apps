@@ -1,3 +1,4 @@
+import { reconcileSecurityPolicy } from "./security-policy.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { aggregatePackageDownloads, createGhcrDownloadReader, fetchGhcrDownloads, fetchReleaseAssetDownloads, packageLinks, parsePackageDownloads } from "./artifact-downloads.mjs";
@@ -146,7 +147,7 @@ test("view and export preserve source limits and old saved reports remain readab
 });
 
 test("browser-export serialization includes the artifact Markdown helper", () => {
-  const render = new Function(artifactDownloadsMarkdown.toString() + "\n" + buildOssRepoMarkdownReport.toString() + "\nreturn buildOssRepoMarkdownReport;")();
+  const render = new Function(reconcileSecurityPolicy.toString() + "\n" + artifactDownloadsMarkdown.toString() + "\n" + buildOssRepoMarkdownReport.toString() + "\nreturn buildOssRepoMarkdownReport;")();
   const markdown = render({ repo: "example/project", artifactDownloads: { ghcr: { points: [{ date: "2026-08-02", value: 10, complete: true }], fetchedAt: "2026-08-02T12:00:00Z" }, releases: { releases: [] } } });
   assert.match(markdown, /Daily GHCR container pulls/);
   assert.match(markdown, /2026-08-02 \| 10/);

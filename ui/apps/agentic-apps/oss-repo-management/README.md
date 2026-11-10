@@ -1,5 +1,13 @@
 # OSS Report Card
 
+## Security policy evidence
+
+- Community & security and foundation readiness share one deterministic file-presence check.
+- Look for `SECURITY.md` in `.github/`, repository root, then `docs/` on the default branch. If none is present, check the owner's public `.github` repository for the same paths, following [GitHub community-file defaults](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file).
+- A detected file is **Present** / **pass** with its path and provenance. Only complete negative evidence is **Missing** / **warn**. Failed or incomplete evidence is **Not verified** / **unavailable**.
+- This checks presence, not policy content, enforcement, or the private vulnerability-reporting setting. No repository-settings permission is required; private repositories need Contents read access.
+- Older saved reports reuse positive readiness evidence in both sections. Other legacy policy results require regeneration; normalization does not change stored snapshots.
+
 ## Adoption and usage
 
 - Live GitHub snapshot: stars, forks, contributor identities, open issue/PR queues.

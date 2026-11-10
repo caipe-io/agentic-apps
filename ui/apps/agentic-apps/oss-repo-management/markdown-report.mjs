@@ -1,8 +1,9 @@
 // assisted-by Codex
+import { reconcileSecurityPolicy } from "./security-policy.mjs";
 import { artifactDownloadsMarkdown } from "./artifact-download-view.mjs";
 
 export function buildOssRepoMarkdownReport(dashboard, { reportOrigin = "live" } = {}) {
-  const value = dashboard || {};
+  const value = reconcileSecurityPolicy(dashboard);
   const repo = text(value.repo, "owner/repo");
   const repository = value.repository || {};
   const issues = value.issues || {};
@@ -112,7 +113,8 @@ export function buildOssRepoMarkdownReport(dashboard, { reportOrigin = "live" } 
     row("Community health", community.communityHealthPercent == null ? "Unavailable" : `${community.communityHealthPercent}%`),
     row("Contributing guide", present(community.hasContributing)),
     row("Code of conduct", present(community.hasCodeOfConduct)),
-    row("Security policy", present(community.hasSecurityPolicy)),
+    row("Security policy", community.hasSecurityPolicy == null ? "Not verified" : present(community.hasSecurityPolicy)),
+    row("Security policy evidence", community.securityPolicy.detail),
     row("License", present(community.hasLicense)),
     row("OpenSSF Scorecard", security.scorecard?.status === "available" ? `${security.scorecard.score}/10` : "Unavailable"),
     row("Dependabot alerts", nullableCount(security.githubAlerts?.dependabotOpen)),

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // assisted-by Codex Codex-sonnet-4-6
+import { reconcileSecurityPolicy } from "./security-policy.mjs";
 import { createServer } from "node:http";
 
 import { handleAppMcpRequest } from "../../_lib/app-mcp-server.mjs";
@@ -379,6 +380,7 @@ function renderDashboard({ compact, basePath }) {
     <script>
       const basePath = ${JSON.stringify(basePath)};
       const state = { dashboard: null, activityEventCount: 0, runs: loadRunHistory(), staleDays: 30, loadedAt: null };
+      ${reconcileSecurityPolicy.toString()}
       ${buildOssRepoMarkdownReport.toString()}
       ${createQueryNavigation.toString()}
       const OSS_REPORT_SECTIONS = ${JSON.stringify(OSS_REPORT_SECTIONS)};
@@ -605,6 +607,7 @@ function renderDashboard({ compact, basePath }) {
       }
 
       function normalizeDashboard(dashboard, fallbackRepo) {
+        dashboard = reconcileSecurityPolicy(dashboard);
         return {
           ...dashboard,
           repo: dashboard?.repo || fallbackRepo || "owner/repo",
@@ -730,7 +733,7 @@ function renderDashboard({ compact, basePath }) {
           practiceCard("Active contributors", formatCount(community.activeContributors), Number(community.activeContributors) > 0),
           practiceCard("Declared maintainers", maintainerHandles.length ? maintainerHandles.join(", ") : (ownership.maintainers?.path ? "File detected" : "Not declared"), maintainerHandles.length > 0),
           practiceCard("CODEOWNERS", codeownerHandles.length ? codeownerHandles.join(", ") : (ownership.codeowners?.path ? "File detected" : "Not declared"), codeownerHandles.length > 0),
-          practiceCard("Security policy", community.hasSecurityPolicy ? "Present" : "Missing", community.hasSecurityPolicy),
+          practiceCard("Security policy", community.hasSecurityPolicy == null ? "Not verified" : community.hasSecurityPolicy ? "Present" : "Missing", community.hasSecurityPolicy, community.securityPolicy?.detail),
           practiceCard("Contributing guide", community.hasContributing ? "Present" : "Missing", community.hasContributing),
           practiceCard("Code of conduct", community.hasCodeOfConduct ? "Present" : "Missing", community.hasCodeOfConduct),
           practiceCard("License", community.hasLicense ? "Detected" : "Missing", community.hasLicense),
@@ -786,8 +789,8 @@ function renderDashboard({ compact, basePath }) {
         document.getElementById("adoptionSnapshotContent").innerHTML = '<p class="coverage">As of ' + escapeHtml(snapshot.asOf) + ' · Source: ' + escapeHtml(snapshot.source) + '. These historical counts are separate from the live snapshot.</p><table class="snapshot-table"><tbody>' + rows + '</tbody></table><ul class="snapshot-caveats">' + (snapshot.caveats || []).map(value => '<li>' + escapeHtml(value) + '</li>').join('') + '</ul>';
       }
 
-      function practiceCard(label, value, healthy) {
-        return '<article class="practice ' + (healthy ? "good" : "warn") + '"><div class="label">' + escapeHtml(label) + '</div><strong>' + escapeHtml(String(value)) + '</strong></article>';
+      function practiceCard(label, value, healthy, detail) {
+        return '<article class="practice ' + (healthy ? "good" : "warn") + '"><div class="label">' + escapeHtml(label) + '</div><strong>' + escapeHtml(String(value)) + '</strong>' + (detail ? '<p class="coverage">' + escapeHtml(detail) + '</p>' : '') + '</article>';
       }
 
       function renderBarChart(title, points, coverage) {
