@@ -68,6 +68,15 @@
       "image": "agentic-apps-secops",
       "port": 3045,
       "dockerfile": "build/Dockerfile.secops"
+    },
+    {
+      "id": "presentations",
+      "displayName": "Presentation Generator",
+      "sourcePath": "ui/apps/agentic-apps/presentations",
+      "serverPath": "ui/apps/agentic-apps/presentations/server.mjs",
+      "image": "agentic-apps-presentations",
+      "port": 8088,
+      "dockerfile": "build/Dockerfile.presentations"
     }
   ]
 }

@@ -19,6 +19,7 @@ remains in the separate `platform-apps-deployment` repository.
 
 | Application | Mount path | Port | Dedicated agent | Purpose |
 | --- | --- | ---: | --- | --- |
+| Presentation Generator | `/apps/presentations` | 8088 | Any authorized agent | Private PowerPoint history, shared templates and editable deck rendering · [configuration](ui/apps/agentic-apps/presentations/README.md) |
 | SecOps Review | `/apps/secops` | 3045 | `agent-secops` | AWS exposure, IAM-user and GitHub control review |
 | FinOps Command Center | `/apps/finops` | 3010 | `agent-finops` | Cached AWS cost analytics · [configuration](ui/apps/agentic-apps/finops/README.md) |
 | Weather Lab | `/apps/weather` | 3020 | `agent-weather-agent` | Open-Meteo forecast and air-quality data |
@@ -28,7 +29,11 @@ remains in the separate `platform-apps-deployment` repository.
 | OSS Repo Report Card | `/apps/oss-repo-management` | 3040 | `agent-oss-repo-report-card` | Repository health and OSS readiness evidence |
 | Jira Project Dashboard | `/apps/jira-project-dashboard` | 3041 | `agent-jira-agent` | Jira project and delivery metrics |
 
-The source-backed applications follow the CAIPE app-agent-MCP triplet:
+Presentation Generator uses the canonical v2 app contract and exposes shared MCP
+tools to any authorized agent, without requiring a dedicated popup assistant.
+Its Node 24 runtime has isolated dependencies and a dedicated Dockerfile.
+
+The other source-backed applications follow the CAIPE app-agent-MCP triplet:
 
 ```text
 Signed-in user -> CAIPE app gateway -> app runtime -> dedicated agent -> app MCP -> source system
@@ -50,7 +55,9 @@ Requirements: a patched Node.js release (22.23.4+, 24.22.1+, or 26.12.1+) and Do
 
 ```bash
 npm ci
+npm ci --prefix ui/apps/agentic-apps/presentations --ignore-scripts
 npm ci --prefix ui/apps/agentic-apps/ec2 --ignore-scripts
+npm ci --prefix ui/apps/agentic-apps/secops --ignore-scripts
 npm ci --prefix ui/apps/agentic-apps/finops --ignore-scripts
 npm run check
 npm test
