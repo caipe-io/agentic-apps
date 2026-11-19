@@ -10,6 +10,12 @@ exports the same manifest. Any authorized agent can use its native tools, so it
 has no required dedicated assistant or app-popup binding. Environment deployment,
 private layout mappings, template binaries and fonts stay outside this repository.
 
+The app's **Create with chat** links start a fresh conversation in its bound
+host assistant using `assistant_chat=new`; they never link to `/chat` (which
+resumes the user's last conversation). Configure `ui.assistant` and the private
+installation's assistant resource binding to enable this app flow. It requires
+a host with fresh assistant deep-link support. Existing chats remain in History.
+
 ## Tools and workflow
 
 1. `presentations_list_templates` returns the caller's available template IDs,

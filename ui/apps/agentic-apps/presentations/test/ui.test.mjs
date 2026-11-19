@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Script } from 'node:vm';
-import { clientScript, readHostAppearance } from '../src/ui.mjs';
+import { clientScript, page, readHostAppearance } from '../src/ui.mjs';
 
 test('appearance accepts only the matching same-origin parent and limits context to theme preferences', () => {
   const parent = {};
@@ -16,4 +16,11 @@ test('appearance accepts only the matching same-origin parent and limits context
 
 test('served browser module parses as JavaScript', () => {
   assert.doesNotThrow(() => new Script(clientScript));
+});
+
+test('creation links request a fresh bound app assistant instead of resuming global chat', () => {
+  const html = page('/apps/presentations');
+  assert.match(html, /href="\/apps\/presentations\?assistant_chat=new"/);
+  assert.doesNotMatch(html, /href="\/chat"/);
+  assert.match(clientScript, /link.href=base\+'\?assistant_chat=new'/);
 });
