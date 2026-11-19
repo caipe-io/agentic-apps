@@ -6,7 +6,7 @@ configured deployment; local fixture tests do not establish those outcomes.
 
 | Case | Expected behavior | Automated adapters |
 | --- | --- | --- |
-| MCP-06.01 | Caller-private searchable/sortable history; host appearance; admin-only owner picker; bounded exact-ranked owner/share search; removable sharing chips; owner exclusion; automatic configured upload mapping; Create with chat starts a fresh app-bound conversation and retains old conversations in History | `test/{ui,picker,http}.test.mjs`; browser acceptance on configured host |
+| MCP-06.01 | Caller-private searchable/sortable history; host appearance; admin-only owner picker; bounded exact-ranked owner/share search; removable sharing chips; owner exclusion; automatic configured upload mapping; No redundant sidebar creation card; empty-history Create with chat starts a fresh app-bound conversation and retains old conversations in History | `test/{ui,picker,http}.test.mjs`; browser acceptance on configured host |
 | MCP-06.02 | Authorized upload → tool discovery → plan → approved editable render → protected download; stable app ID, three tool names, immutable template version, original theme/master and full notes | `test/{http,renderer,template.integration,manifest}.test.mjs` |
 | MCP-06.03 | Wrong/expired JWTs, non-admin uploads, outside-team templates, other-user downloads, revoked memberships, stale versions and unsafe packages fail closed | `test/{auth,http,mongo,renderer}.test.mjs` |
 | MCP-06.04 | Seven-day expiry; creator-only Keep removes TTL, Resume starts seven days without retry extension, Delete removes bytes; expired records cannot be revived | `test/{http,mongo}.test.mjs`; browser confirmation/cancel on configured host |
