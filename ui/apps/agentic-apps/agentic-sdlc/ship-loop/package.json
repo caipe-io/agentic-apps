@@ -9,7 +9,7 @@
     "test:ui": "node --test review-skills.ui-check.mjs review-body.ui-check.mjs"
   },
   "dependencies": {
-    "next": "16.4.3",
+    "next": "16.4.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "@octokit/rest": "22.0.0",
