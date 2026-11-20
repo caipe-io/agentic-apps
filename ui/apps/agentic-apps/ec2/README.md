@@ -266,3 +266,7 @@ Configure repository URLs and source tag names with `INFRA_SOURCE_CONFIG` or
 `INFRA_SOURCE_CONFIG_FILE`. See the [shared source-correlation guide](../../_lib/infrastructure-sources.md)
 for configuration, tagging examples, cache behavior, permissions, and coverage limits.
 Associations are tag-provided; they are not Terraform state verification.
+
+### Ask about infrastructure source
+
+**Ask about source** opens the host assistant with an editable question for the selected instance, account, region, and tag-derived source evidence. Missing tags remain explicitly unknown. The question is a composer draft, never automatically submitted. This requires host support for the optional `draft: { id, text }` field on `caipe.agenticApp.assistant.open.v1`; older hosts only open the assistant. Existing generic Ask AWS buttons still open without a draft.
