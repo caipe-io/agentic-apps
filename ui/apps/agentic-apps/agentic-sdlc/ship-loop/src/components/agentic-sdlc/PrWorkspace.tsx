@@ -236,10 +236,10 @@ function CompactPrHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_360px]">
+    <header className="sdlc-header grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_360px]">
       <div className="min-w-0 space-y-2">
         <p className="flex items-center gap-2 text-sm font-medium text-primary">
-          <GitPullRequest className="h-4 w-4" aria-hidden />
+          <span className="sdlc-icon"><GitPullRequest className="h-4 w-4" aria-hidden /></span>
           Agentic SDLC
         </p>
         <h1 className="break-words text-2xl font-semibold tracking-tight">

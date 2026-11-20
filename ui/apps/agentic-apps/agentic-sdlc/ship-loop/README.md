@@ -455,3 +455,10 @@ UI rendering checks run with `npm run test:ui` and are also required by the
 app's build command, so the existing CI/release build jobs run them after
 installing the pinned UI dependencies. Root `npm test` covers parsing and
 projection without needing UI dependencies in the general test job.
+
+## Appearance
+
+- Follows Grid light/dark mode and validated host palette updates without reloading.
+- Standalone pages follow the system preference. The external `public/theme.js` initializes before paint and validates the same-origin parent handshake.
+- Neutral surfaces, teal outlined stage icons, and section dividers share Grid’s visual language. Status colors adapt to both modes.
+- Run `npm run test:ui`, `npm run typecheck`, and `npm run build` to verify the frontend.

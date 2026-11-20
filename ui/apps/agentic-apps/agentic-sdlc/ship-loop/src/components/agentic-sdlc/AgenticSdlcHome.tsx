@@ -141,37 +141,6 @@ export function AgenticSdlcHome() {
 
   return (
     <div className="relative flex-1 overflow-y-auto">
-      {/* Atmospheric gradient mesh -- two soft radials in the product
-          palette, very low opacity so the rest of the app's chrome
-          still wins for contrast. Pointer-events disabled so it
-          never intercepts clicks. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-      >
-        <div
-          className="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full opacity-30 blur-3xl"
-          style={{
-            background:
-              "radial-gradient(closest-side, hsl(var(--gradient-start) / 0.45), transparent)",
-          }}
-        />
-        <div
-          className="absolute -top-20 right-0 h-[480px] w-[480px] rounded-full opacity-25 blur-3xl"
-          style={{
-            background:
-              "radial-gradient(closest-side, hsl(var(--gradient-mid) / 0.45), transparent)",
-          }}
-        />
-        <div
-          className="absolute top-[260px] left-1/3 h-[420px] w-[420px] rounded-full opacity-20 blur-3xl"
-          style={{
-            background:
-              "radial-gradient(closest-side, hsl(var(--gradient-end) / 0.4), transparent)",
-          }}
-        />
-      </div>
-
       <div className="relative mx-auto flex min-h-full max-w-[1600px] flex-col gap-6 p-6 md:p-8 lg:px-12">
         <section className="glass-panel rounded-2xl border border-border/40 p-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -360,7 +329,7 @@ function HomeActiveReposRow({
     <section className="space-y-3" aria-label="Your active repos">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <h2 className="sdlc-section-heading text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Your active repos
           </h2>
           <p className="mt-1 text-xs text-muted-foreground/75">
@@ -559,7 +528,7 @@ function HomeActionCard({
 
   return (
     <div className={`glass-panel rounded-xl border p-4 ${toneClasses}`}>
-      <Icon className="h-4 w-4" aria-hidden />
+      <span className="sdlc-icon"><Icon className="h-4 w-4" aria-hidden /></span>
       <h2 className="mt-3 text-sm font-semibold text-foreground">{title}</h2>
       <p className="mt-1 min-h-10 text-xs text-muted-foreground">{detail}</p>
       <div className="mt-4">{children}</div>
@@ -573,7 +542,7 @@ function ReposDashboard() {
       <section id="repos" className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <h2 className="sdlc-section-heading text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Repo tiles
             </h2>
             <p className="mt-1 text-xs text-muted-foreground/75">
@@ -728,7 +697,7 @@ function MetricsDashboard() {
               ? heatmapCells.map((cell, idx) => (
                   <div
                     key={`${cell.repo_id}:${cell.stage}`}
-                    className={`min-h-14 rounded-md border border-white/5 p-2 ${heatmapTone(idx, cell.count)}`}
+                    className={`min-h-14 rounded-md border border-border/50 p-2 ${heatmapTone(idx, cell.count)}`}
                     title={`${cell.repo_name} • ${stageLabel(cell.stage)} • ${cell.count}`}
                   >
                     <div className="truncate text-[11px] font-medium text-foreground/90">
@@ -745,7 +714,7 @@ function MetricsDashboard() {
               : Array.from({ length: 10 }, (_, idx) => (
                   <div
                     key={idx}
-                    className={`h-14 rounded-md border border-white/5 ${heatmapTone(idx, 0)} opacity-50`}
+                    className={`h-14 rounded-md border border-border/50 ${heatmapTone(idx, 0)} opacity-50`}
                     aria-hidden
                   />
                 ))}
@@ -826,7 +795,7 @@ function AgenticSdlcSettings() {
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        <h2 className="sdlc-section-heading text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Settings
         </h2>
         <p className="mt-1 text-xs text-muted-foreground/75">
@@ -987,7 +956,7 @@ function TabButton({
           : "border-border/40 bg-background/30 text-muted-foreground hover:text-foreground",
       ].join(" ")}
     >
-      <Icon className="h-4 w-4" aria-hidden />
+      <span className="sdlc-icon"><Icon className="h-4 w-4" aria-hidden /></span>
       {label}
       {badge ? (
         <span className="rounded-full border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-primary/80">
@@ -1019,7 +988,7 @@ function MetricsCard({
   }[tone];
 
   return (
-    <div className="rounded-xl border border-white/10 bg-background/35 p-4 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
+    <div className="rounded-xl border border-border bg-background/35 p-4 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
       <Icon className={`h-4 w-4 ${toneClass}`} aria-hidden />
       <p className="mt-3 text-[11px] uppercase tracking-widest text-muted-foreground">
         {title}

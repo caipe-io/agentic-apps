@@ -25,7 +25,10 @@ export default function Layout({ children }: { children: ReactNode }) {
         ? `${version} · ${revision}`
         : version || revision || "unavailable";
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script src="/apps/agentic-sdlc/theme.js" />
+      </head>
       <body>
         <div className="agentic-sdlc-app min-h-screen">
           <div className="sticky top-0 z-40 flex justify-end border-b border-border/50 bg-background/95 px-6 py-2 text-xs text-muted-foreground backdrop-blur">

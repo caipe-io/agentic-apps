@@ -1,22 +1,116 @@
 @import "tailwindcss";
 @config "../../tailwind.config.mjs";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Grid defaults; validated host palettes take precedence through inline tokens. */
 :root {
-  --gradient-start: 174 80% 40%;
-  --gradient-mid: 267 65% 55%;
-  --gradient-end: 320 75% 55%;
+  color-scheme: light;
+  --background: 220 18% 94%;
+  --foreground: 224 71% 4%;
+  --card: 0 0% 100%;
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: 173 80% 35%;
+  --primary-foreground: 0 0% 100%;
+  --primary-ink: light-dark(color-mix(in srgb, hsl(var(--primary)) 65%, black), hsl(var(--primary)));
+  --secondary: 220 14% 96%;
+  --secondary-foreground: var(--foreground);
+  --muted: var(--secondary);
+  --muted-foreground: 220 9% 40%;
+  --accent: var(--secondary);
+  --accent-foreground: var(--foreground);
+  --destructive: 0 72% 45%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 13% 86%;
+  --input: var(--border);
+  --ring: var(--primary);
+  --gradient-start: var(--primary);
+  --gradient-mid: var(--primary);
+  --gradient-end: var(--primary);
 }
-:root {color-scheme:dark; --background:228 30% 5%; --foreground:220 24% 94%; --card:228 25% 8%; --card-foreground:220 24% 94%; --popover:228 25% 8%; --popover-foreground:220 24% 94%; --primary:174 80% 40%; --primary-foreground:0 0% 100%; --secondary:230 20% 15%; --secondary-foreground:220 24% 94%; --muted:225 18% 15%; --muted-foreground:220 15% 62%; --accent:267 65% 55%; --accent-foreground:0 0% 100%; --destructive:0 70% 55%; --destructive-foreground:0 0% 100%; --border:225 20% 17%; --input:225 20% 17%; --ring:174 80% 40%; }
-body {margin:0; background:hsl(var(--background)); color:hsl(var(--foreground)); font-family:ui-sans-serif,system-ui,sans-serif;}
-.agentic-sdlc-app {background:radial-gradient(ellipse at 0 10%,hsl(174 80% 40% / .09),transparent 50%),radial-gradient(ellipse at 90% 0,hsl(267 65% 55% / .1),transparent 45%);}
-.gradient-text {background:linear-gradient(100deg,#10b9a8,#9b5de5);background-clip:text;color:transparent;}
-.glass-panel {background:hsl(var(--card) / .55);border:1px solid hsl(var(--border) / .65);backdrop-filter:blur(10px);}
-@media (prefers-reduced-motion:reduce) {*,*::before,*::after {animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}}
+:root[data-caipe-theme="dark"] {
+  color-scheme: dark;
+  --background: 230 25% 5%;
+  --foreground: 210 40% 98%;
+  --card: 230 25% 7%;
+  --primary: 173 80% 40%;
+  --primary-foreground: 173 80% 8%;
+  --secondary: 230 20% 12%;
+  --muted-foreground: 215 20% 65%;
+  --destructive: 0 70% 55%;
+  --border: 230 20% 18%;
+}
 
-:root[data-caipe-palette="host"] .agentic-sdlc-app {background: hsl(var(--background));}
-:root[data-caipe-palette="host"] .gradient-text {background: none; color: hsl(var(--primary));}
+/* Existing status utilities stay legible on either surface, including opacity modifiers. */
+@theme {
+  --color-emerald-50: light-dark(#15803d, #6ee7b7);
+  --color-emerald-100: light-dark(#15803d, #6ee7b7);
+  --color-emerald-200: light-dark(#15803d, #6ee7b7);
+  --color-emerald-300: light-dark(#15803d, #6ee7b7);
+  --color-emerald-400: light-dark(#15803d, #6ee7b7);
+  --color-amber-50: light-dark(#92400e, #fcd34d);
+  --color-amber-100: light-dark(#92400e, #fcd34d);
+  --color-amber-200: light-dark(#92400e, #fcd34d);
+  --color-amber-300: light-dark(#92400e, #fcd34d);
+  --color-amber-400: light-dark(#92400e, #fcd34d);
+  --color-red-50: light-dark(#b91c1c, #fca5a5);
+  --color-red-100: light-dark(#b91c1c, #fca5a5);
+  --color-red-200: light-dark(#b91c1c, #fca5a5);
+  --color-red-300: light-dark(#b91c1c, #fca5a5);
+  --color-red-400: light-dark(#b91c1c, #fca5a5);
+  --color-rose-50: light-dark(#be123c, #fda4af);
+  --color-rose-100: light-dark(#be123c, #fda4af);
+  --color-rose-200: light-dark(#be123c, #fda4af);
+  --color-rose-300: light-dark(#be123c, #fda4af);
+  --color-rose-400: light-dark(#be123c, #fda4af);
+  --color-blue-50: light-dark(#1d4ed8, #93c5fd);
+  --color-blue-100: light-dark(#1d4ed8, #93c5fd);
+  --color-blue-200: light-dark(#1d4ed8, #93c5fd);
+  --color-blue-300: light-dark(#1d4ed8, #93c5fd);
+  --color-blue-400: light-dark(#1d4ed8, #93c5fd);
+  --color-sky-50: light-dark(#0369a1, #7dd3fc);
+  --color-sky-100: light-dark(#0369a1, #7dd3fc);
+  --color-sky-200: light-dark(#0369a1, #7dd3fc);
+  --color-sky-300: light-dark(#0369a1, #7dd3fc);
+  --color-sky-400: light-dark(#0369a1, #7dd3fc);
+  --color-cyan-50: var(--primary-ink);
+  --color-cyan-100: var(--primary-ink);
+  --color-cyan-200: var(--primary-ink);
+  --color-cyan-300: var(--primary-ink);
+  --color-cyan-400: var(--primary-ink);
+  --color-cyan-500: var(--primary-ink);
+  --color-teal-50: var(--primary-ink);
+  --color-teal-100: var(--primary-ink);
+  --color-teal-200: var(--primary-ink);
+  --color-teal-300: var(--primary-ink);
+  --color-teal-400: var(--primary-ink);
+  --color-teal-500: var(--primary-ink);
+  --color-violet-50: var(--primary-ink);
+  --color-violet-100: var(--primary-ink);
+  --color-violet-200: var(--primary-ink);
+  --color-violet-300: var(--primary-ink);
+  --color-violet-400: var(--primary-ink);
+  --color-violet-500: var(--primary-ink);
+  --color-purple-50: var(--primary-ink);
+  --color-purple-100: var(--primary-ink);
+  --color-purple-200: var(--primary-ink);
+  --color-purple-300: var(--primary-ink);
+  --color-purple-400: var(--primary-ink);
+  --color-purple-500: var(--primary-ink);
+}
+body { margin: 0; background: hsl(var(--background)); color: hsl(var(--foreground)); font-family: ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.agentic-sdlc-app { min-height: 100vh; background: hsl(var(--background)); }
+.gradient-text { color: var(--primary-ink); }
+.glass-panel { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); box-shadow: 0 1px 3px rgb(0 0 0 / .04); }
+.sdlc-header { border: 1px solid hsl(var(--border)); border-radius: 14px; padding: 20px; background: hsl(var(--card)); }
+.sdlc-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: 9px; color: var(--primary-ink); background: hsl(var(--primary) / .1); }
+.sdlc-section-heading { display: flex; align-items: center; gap: 10px; }
+.sdlc-section-heading::after { content: ""; flex: 1; height: 1px; background: hsl(var(--border)); }
+:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
 
-/* Follow the host's color-scheme, including standalone dark mode. */
-.review-status-success {color:light-dark(#166534,#86efac);border-color:light-dark(#86efac,#166534);background-color:light-dark(#f0fdf4,#052e16);}
-.review-status-warning {color:light-dark(#854d0e,#fde68a);border-color:light-dark(#fcd34d,#854d0e);background-color:light-dark(#fffbeb,#422006);}
-.review-status-info {color:light-dark(#1e40af,#93c5fd);border-color:light-dark(#93c5fd,#1e40af);background-color:light-dark(#eff6ff,#172554);}
-.review-status-error {color:light-dark(#991b1b,#fca5a5);border-color:light-dark(#fca5a5,#991b1b);background-color:light-dark(#fef2f2,#450a0a);}
+.review-status-success { color: light-dark(#15803d, #6ee7b7); border-color: color-mix(in srgb, #6ee7b7 30%, hsl(var(--border))); background-color: color-mix(in srgb, #6ee7b7 8%, hsl(var(--card))); }
+.review-status-warning { color: light-dark(#92400e, #fcd34d); border-color: color-mix(in srgb, #fcd34d 30%, hsl(var(--border))); background-color: color-mix(in srgb, #fcd34d 8%, hsl(var(--card))); }
+.review-status-error { color: light-dark(#b91c1c, #fca5a5); border-color: color-mix(in srgb, #fca5a5 30%, hsl(var(--border))); background-color: color-mix(in srgb, #fca5a5 8%, hsl(var(--card))); }
+.review-status-info { color: light-dark(#1d4ed8, #93c5fd); border-color: color-mix(in srgb, #93c5fd 30%, hsl(var(--border))); background-color: color-mix(in srgb, #93c5fd 8%, hsl(var(--card))); }
