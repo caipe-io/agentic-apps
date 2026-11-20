@@ -13,7 +13,10 @@ Install dependencies and run the same checks used by CI:
 
 ```bash
 npm ci
+npm ci --prefix ui/apps/agentic-apps/presentations --ignore-scripts
 npm ci --prefix ui/apps/agentic-apps/ec2 --ignore-scripts
+npm ci --prefix ui/apps/agentic-apps/secops --ignore-scripts
+npm ci --prefix ui/apps/agentic-apps/finops --ignore-scripts
 npm run check
 npm test
 npm run smoke
@@ -21,6 +24,8 @@ npm run smoke
 
 ## Change expectations
 
+- Presentation Generator uses `deploy/app.json` (canonical v2), shared native MCP tools
+  and its own acceptance matrix rather than the legacy dedicated-agent popup files.
 - Keep credentials, bearer tokens, and upstream secrets server-side.
 - Treat dashboard context and external source content as untrusted data.
 - Update `manifest.mjs`, `deploy/caipe/agent.yaml`, and `deploy/caipe/mcp-server.yaml` together

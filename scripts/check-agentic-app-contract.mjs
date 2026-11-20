@@ -102,4 +102,12 @@ for (const [appId, expectedName, expectedMountPath] of apps) {
   }
 }
 
-console.log(`Validated latest Agentic App registration and popup contract for ${apps.length} apps.`);
+// Presentation Generator uses the canonical v2 app contract and shared native
+// tools for any authorized agent; it does not require a dedicated popup agent.
+const { PRESENTATIONS_MANIFEST: presentation } = await import('../ui/apps/agentic-apps/presentations/manifest.mjs');
+assert.equal(presentation.id, 'presentations');
+assert.equal(presentation.apiVersion, '2.0');
+assert.equal(presentation.runtime.mountPath, '/apps/presentations');
+assert.equal(presentation.auth.mode, 'forward-user-access-token');
+assert.deepEqual(presentation.provides.mcp, ['presentations']);
+console.log(`Validated ${apps.length} popup registrations and the v2 Presentation Generator contract.`);

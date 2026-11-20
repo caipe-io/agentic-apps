@@ -1,0 +1,140 @@
+{
+  "id": "presentations",
+  "displayName": "Presentation Generator",
+  "description": "Your private PowerPoint downloads and shared team templates.",
+  "apiVersion": "2.0",
+  "ui": {
+    "profiles": [
+      {
+        "id": "hosted",
+        "mode": "iframe"
+      }
+    ],
+    "routes": [
+      {
+        "id": "home",
+        "path": "/apps/presentations"
+      }
+    ]
+  },
+  "api": {
+    "mounts": []
+  },
+  "auth": {
+    "mode": "forward-user-access-token"
+  },
+  "runtime": {
+    "kind": "proxied-next-zone",
+    "mountPath": "/apps/presentations",
+    "maxRequestBodyBytes": 12582912
+  },
+  "surfaces": {
+    "showInHub": true,
+    "navOrder": 30,
+    "homeEligible": false
+  },
+  "access": {
+    "requiredRoles": [
+      "user"
+    ],
+    "tokenScopes": [],
+    "policyActions": [
+      {
+        "action": "proxy:GET",
+        "method": "GET",
+        "path": "/",
+        "defaultEffect": "allow"
+      },
+      {
+        "action": "proxy:GET",
+        "method": "GET",
+        "path": "/client.js",
+        "defaultEffect": "allow"
+      },
+      {
+        "action": "proxy:GET",
+        "method": "GET",
+        "path": "/api/config",
+        "defaultEffect": "allow"
+      },
+      {
+        "action": "proxy:GET",
+        "method": "GET",
+        "path": "/api/templates",
+        "defaultEffect": "allow"
+      },
+      {
+        "action": "proxy:GET",
+        "method": "GET",
+        "path": "/api/artifacts",
+        "defaultEffect": "allow"
+      },
+      {
+        "action": "proxy:GET",
+        "method": "GET",
+        "path": "/artifacts/:id",
+        "defaultEffect": "allow"
+      },
+      {
+        "action": "proxy:POST",
+        "method": "POST",
+        "path": "/api/templates",
+        "defaultEffect": "allow"
+      },
+      {
+        "action": "proxy:POST",
+        "method": "POST",
+        "path": "/mcp",
+        "defaultEffect": "allow"
+      },
+      {
+        "action": "proxy:PUT",
+        "method": "PUT",
+        "path": "/api/templates/:id",
+        "defaultEffect": "allow"
+      },
+      {
+        "action": "proxy:PUT",
+        "method": "PUT",
+        "path": "/api/artifacts/:id/retention",
+        "defaultEffect": "allow"
+      },
+      {
+        "action": "proxy:DELETE",
+        "method": "DELETE",
+        "path": "/api/artifacts/:id",
+        "defaultEffect": "allow"
+      }
+    ]
+  },
+  "provides": {
+    "mcp": [
+      "presentations"
+    ],
+    "agents": [],
+    "workflows": []
+  },
+  "consumes": {
+    "platformApis": [
+      {
+        "id": "app.gateway",
+        "version": "1.0",
+        "required": true
+      }
+    ]
+  },
+  "requestedPermissions": [],
+  "health": {
+    "endpoint": "/health/ready",
+    "timeoutMs": 1500
+  },
+  "catalog": {
+    "categories": [
+      "productivity"
+    ],
+    "capabilities": [
+      "presentation-rendering"
+    ]
+  },
+  "version": "0.1.0"
+}
