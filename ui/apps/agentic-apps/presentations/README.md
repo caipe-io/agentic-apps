@@ -180,3 +180,18 @@ The canonical host SDK test runs when `CAIPE_APP_SDK_ROOT` points to a compatibl
 host checkout's `ui/app-sdk` directory. CI always enables it against a pinned
 public host commit, alongside real Mongo tests and Microsoft Open XML validation.
 No enabled deployment or live model workflow is implied by unit tests.
+
+### Planning failures
+
+Tool discovery describes layout-specific inputs: metrics need an existing value
+in each of two or three groups; qualitative priorities use comparison or layers,
+and milestones use timeline. Do not invent values just to pass validation.
+Schema failures identify the offending input path. Layout planning failures
+return `isError: true` with an `error` object in both text and structured content:
+`code`, a zero-based `path` such as `["deck", "slides", 1, "visual"]`, `message`,
+and `suggestion`. Unexpected internal exception details remain redacted.
+
+Repair only the reported fields. Preserve authored notes, evidence, selected
+appearance/density and the agreed slide count; seek approval before a material
+outline change. Never blindly retry the same invalid deck. These diagnostics
+do not fetch sources or verify the truth of supplied measurements.

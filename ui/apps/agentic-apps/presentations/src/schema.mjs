@@ -20,14 +20,22 @@ export const profileSchema = z.object({
 }).strict();
 const text = z.string().max(2000);
 const url = z.string().url().max(2048).refine(value => ['https:', 'http:'].includes(new URL(value).protocol));
-const visualSchema = z.object({
-  layout: z.enum(visualLayouts),
-  groups: z.array(z.object({
-    label: z.string().trim().min(1).max(100), value: z.string().max(24).optional(),
-    items: z.array(z.string().trim().min(1).max(200)).max(3).default([]),
-    sources: z.array(url).max(12).default([]), verify: z.boolean().default(false),
-  }).strict()).min(2).max(5),
+const groupSchema = z.object({
+  label: z.string().trim().min(1).max(100), value: z.string().max(24).optional(),
+  items: z.array(z.string().trim().min(1).max(200)).max(3).default([]),
+  sources: z.array(url).max(12).default([]), verify: z.boolean().default(false),
 }).strict();
+const metricGroupSchema = groupSchema.extend({
+  value: z.string({ error: 'Metrics require explicit sourced values; use comparison for qualitative priorities, or timeline for milestones. Never invent a value.' })
+    .trim().min(1, 'Metrics require explicit sourced values; never invent a value.').max(24)
+    .describe('An existing measurement with its unit. Do not substitute ordinal labels or invent data to satisfy validation.'),
+});
+// Expose the conditional requirements to tool discovery as well as validation.
+const visualSchema = z.discriminatedUnion('layout', visualLayouts.map(layout => z.object({
+  layout: z.literal(layout),
+  groups: z.array(layout === 'metrics' ? metricGroupSchema : groupSchema)
+    .min(2).max(['metrics', 'comparison'].includes(layout) ? 3 : 5),
+}).strict())).describe('Use metrics only for supplied measurements. Use comparison/layers for qualitative priorities and timeline for milestones.');
 export const deckSchema = z.object({
   title: z.string().min(1).max(160), subtitle: z.string().max(300).default(''),
   mode: z.string().max(32), density: z.enum(['spacious', 'balanced', 'dense']).default('balanced'),

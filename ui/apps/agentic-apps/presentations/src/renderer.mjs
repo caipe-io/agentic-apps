@@ -4,6 +4,7 @@ import JSZip from 'jszip';
 import { DOMParser, XMLSerializer } from '@xmldom/xmldom';
 import { deckSchema, profileSchema } from './schema.mjs';
 import { planVisual } from './visuals.mjs';
+import { DeckValidationError } from './validation.mjs';
 export const MAX_FILE = 8 * 1024 * 1024;
 const P = 'http://schemas.openxmlformats.org/presentationml/2006/main';
 const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
@@ -117,18 +118,24 @@ export function planDeck(deckInput, profileInput) {
   const deck = deckSchema.parse(deckInput);
   const profile = profileSchema.parse(profileInput);
   const mode = profile.modes[deck.mode];
-  if (!mode) throw new Error('Choose a mode supported by the template');
+  if (!mode) throw new DeckValidationError('UNSUPPORTED_MODE', 'Choose a mode supported by the template', 'Use a mode returned by presentations_list_templates.', ['deck', 'mode']);
   const cap = { spacious: 35, balanced: 60, dense: 130 }[deck.density];
   const size = deck.density === 'dense' ? 16 : 18;
   const pages = [];
-  for (const slide of deck.slides) {
-    if (slide.visual && slide.kind !== 'content') throw new Error('Only content slides accept visuals');
-    if (slide.visual && slide.bullets.length) throw new Error('Put visual evidence in groups and notes, without duplicate bullets');
-    if (slide.kind === 'open_items' && !mode.open_items) throw new Error('Template has no open-items layout');
-    if (slide.kind === 'open_items' && slide.items.length > (profile.placeholders.items?.length || 0)) throw new Error('Split open items to fit the template rows');
-    if (slide.kind !== 'content') { if (slide.bullets.length) throw new Error('Only content slides accept bullets'); pages.push({ slide, rows: [] }); continue; }
+  for (const [slideIndex, slide] of deck.slides.entries()) {
+    const path = ['deck', 'slides', slideIndex];
+    if (slide.visual && slide.kind !== 'content') throw new DeckValidationError('VISUAL_ON_NONCONTENT_SLIDE', 'Only content slides accept visuals', 'Use a content slide for this visual, preserving the approved outline.', [...path, 'visual']);
+    if (slide.visual && slide.bullets.length) throw new DeckValidationError('DUPLICATE_VISUAL_BULLETS', 'Put visual evidence in groups and notes, without duplicate bullets', 'Keep the groups and move any additional detail to notes.', [...path, 'bullets']);
+    if (slide.kind === 'open_items' && !mode.open_items) throw new DeckValidationError('UNSUPPORTED_OPEN_ITEMS', 'Template has no open-items layout', 'Use a compatible template or propose an outline change for approval.', [...path, 'kind']);
+    if (slide.kind === 'open_items' && slide.items.length > (profile.placeholders.items?.length || 0)) throw new DeckValidationError('TOO_MANY_OPEN_ITEMS', 'Split open items to fit the template rows', 'Preserve all actions and ask approval if the slide count must change.', [...path, 'items']);
+    if (slide.kind !== 'content') { if (slide.bullets.length) throw new DeckValidationError('BULLETS_ON_NONCONTENT_SLIDE', 'Only content slides accept bullets', 'Use a content slide or move supporting detail into notes.', [...path, 'bullets']); pages.push({ slide, rows: [] }); continue; }
     if (slide.visual) {
-      pages.push({ slide, rows: [], visual: planVisual(slide.visual, profile, deck.density, slide.role) });
+      try {
+        pages.push({ slide, rows: [], visual: planVisual(slide.visual, profile, deck.density, slide.role) });
+      } catch (error) {
+        if (error instanceof DeckValidationError) throw error.at([...path, 'visual']);
+        throw error;
+      }
       continue;
     }
     const rows = slide.bullets.flatMap(bullet => {

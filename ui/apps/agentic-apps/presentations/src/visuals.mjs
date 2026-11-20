@@ -1,4 +1,5 @@
 // Template-relative, editable evidence compositions. No brand assets or remote content.
+import { DeckValidationError } from './validation.mjs';
 export const visualLayouts = ['metrics', 'comparison', 'flow', 'timeline', 'layers', 'ledger'];
 export function planVisual(visual, profile, density, role) {
   const [x, y, width, height] = profile.canvas;
@@ -7,9 +8,9 @@ export function planVisual(visual, profile, density, role) {
   const boxes = [], lines = [];
   const groups = visual.groups;
   const words = groups.flatMap(group => [group.label, group.value || '', ...group.items]).join(' ').trim().split(/\s+/u).length;
-  if (words > { spacious: 35, balanced: 60, dense: 130 }[density]) throw new Error('Visual exceeds the selected density; shorten labels or split its evidence before approval');
-  if (['metrics', 'comparison'].includes(visual.layout) && groups.length > 3) throw new Error('Use two or three groups for metrics or comparison');
-  if (visual.layout === 'metrics' && groups.some(group => !group.value?.trim())) throw new Error('Metrics require explicit sourced values; never infer a number');
+  if (words > { spacious: 35, balanced: 60, dense: 130 }[density]) throw new DeckValidationError('VISUAL_TOO_DENSE', 'Visual exceeds the selected density', 'Shorten on-slide text and preserve full details in notes. Keep the selected density and agreed slide count.');
+  if (['metrics', 'comparison'].includes(visual.layout) && groups.length > 3) throw new DeckValidationError('TOO_MANY_GROUPS', 'Use two or three groups for metrics or comparison', 'Use another suitable layout or ask approval before changing the slide count.', ['groups']);
+  if (visual.layout === 'metrics' && groups.some(group => !group.value?.trim())) throw new DeckValidationError('METRIC_VALUE_REQUIRED', 'Metrics require explicit sourced values; never infer a number', 'Use existing measurements, comparison for qualitative priorities, or timeline for milestones.', ['groups']);
   function text(value, left, top, w, fontSize, ink = 'tx1') {
     if (!value) return top;
     const capacity = Math.max(1, w * 72 / (fontSize * .6));
@@ -37,7 +38,7 @@ export function planVisual(visual, profile, density, role) {
       text([group.value, ...group.items].filter(Boolean).join(' · '), detailX, top + .14, detailW, size);
       if (visual.layout === 'layers' && i < groups.length - 1) lines.push({ x: x + .2, y: top + row - .25, w: 0, h: .2, color, arrow: true });
       const rowBoxes = boxes.filter(box => box.y >= top && box.y < top + row);
-      if (rowBoxes.some(box => box.y + box.h > top + row - .06)) throw new Error('Visual row is too dense; shorten its labels or use fewer groups');
+      if (rowBoxes.some(box => box.y + box.h > top + row - .06)) throw new DeckValidationError('VISUAL_ROW_TOO_DENSE', 'Visual row is too dense', 'Shorten this group’s labels or use fewer groups; preserve details in notes.', ['groups', i]);
     });
   } else {
     const gap = .36;
@@ -59,6 +60,6 @@ export function planVisual(visual, profile, density, role) {
     });
   }
   // Reject overflow rather than silently shrinking text, dropping content or rasterizing it.
-  if (lines.some(line => line.w < 0 || line.h < 0 || line.x < x || line.y < y || line.x + line.w > x + width + .001 || line.y + line.h > y + height + .001) || boxes.some(box => box.w <= 0 || box.x < x || box.y < y || box.x + box.w > x + width + .001 || box.y + box.h > y + height + .001)) throw new Error('Visual does not fit the template canvas; shorten labels or use fewer groups');
+  if (lines.some(line => line.w < 0 || line.h < 0 || line.x < x || line.y < y || line.x + line.w > x + width + .001 || line.y + line.h > y + height + .001) || boxes.some(box => box.w <= 0 || box.x < x || box.y < y || box.x + box.w > x + width + .001 || box.y + box.h > y + height + .001)) throw new DeckValidationError('VISUAL_CANVAS_OVERFLOW', 'Visual does not fit the template canvas', 'Shorten labels or use fewer groups; preserve full details in notes without changing mode or density.');
   return { layout: visual.layout, boxes, lines, words };
 }
