@@ -102,9 +102,8 @@ async function api(path, options) {
 function badge(text,kind) { const node=element('span','badge'+(kind?' '+kind:'')); if(kind==='default')node.append(icon('check')); node.append(document.createTextNode(text)); return node; }
 function date(value) { if(value==null)return null; const d=new Date(value); return Number.isFinite(d.getTime())?d:null; }
 function formatDate(value) { return date(value)?.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})||'Unavailable'; }
-function empty(container,heading,description,action=false) {
+function empty(container,heading,description) {
   const box=element('div','empty');const mark=element('div','empty-icon');mark.append(icon('file'));box.append(mark,element('h3','',heading),element('p','muted',description));
-  if(action){const link=element('a','button primary','Create with chat');link.href=base+'?assistant_chat=new';link.target='_top';link.append(icon('arrow'));box.append(link);}
   container.replaceChildren(box);
 }
 function renderArtifacts() {
@@ -116,7 +115,7 @@ function renderArtifacts() {
   const mode=byId('sort').value;
   matches.sort((a,b)=>mode==='name'?(a.title||a.filename).localeCompare(b.title||b.filename):mode==='expiry'?(date(a.expires_at)?.getTime()??Infinity)-(date(b.expires_at)?.getTime()??Infinity):(date(b.created_at)?.getTime()||0)-(date(a.created_at)?.getTime()||0));
   byId('deck-count').textContent=query?matches.length+' / '+all.length:String(all.length);
-  if(!matches.length){empty(list,query?'No matching PowerPoints':'Your next PowerPoint starts in chat',query?'Try another title or clear your search.':'Ask an agent to create a presentation. Only your generated PowerPoints appear here.',!query);return;}
+  if(!matches.length){empty(list,query?'No matching PowerPoints':'No PowerPoints yet',query?'Try another title or clear your search.':'Use the app assistant to create a presentation. Your generated PowerPoints will appear here.');return;}
   list.replaceChildren();
   for(const artifact of matches) {
     const row=element('article','deck-row');const mark=element('div','file-icon');mark.append(icon('file'));

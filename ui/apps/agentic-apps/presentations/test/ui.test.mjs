@@ -18,9 +18,10 @@ test('served browser module parses as JavaScript', () => {
   assert.doesNotThrow(() => new Script(clientScript));
 });
 
-test('empty-state creation requests a fresh bound assistant without a redundant sidebar card', () => {
+test('creation uses the configured host assistant without duplicate or unsupported chat links', () => {
   const html = page('/apps/presentations');
   assert.doesNotMatch(html, /Create with an agent|create-card|Open chat/);
   assert.doesNotMatch(html, /href="\/chat"/);
-  assert.match(clientScript, /link.href=base\+'\?assistant_chat=new'/);
+  assert.doesNotMatch(clientScript, /assistant_chat=new|Create with chat/);
+  assert.match(clientScript, /Use the app assistant to create a presentation/);
 });
